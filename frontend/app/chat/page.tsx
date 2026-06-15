@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useAuth } from "../auth-context";
 import { StreamingMarkdown } from "./streaming-markdown";
 
@@ -29,6 +29,7 @@ interface Agent {
 const AGENTS: Agent[] = [
   { name: "chat_agent", label: "Chat Agent", description: "AI assistant with multiply tool" },
   { name: "counter_agent", label: "Counter Agent", description: "Counter manager" },
+  { name: "quiz_agent", label: "Quiz Agent", description: "Generates quiz from text" },
 ];
 
 function getSessionId(agentName: string): string {
@@ -61,24 +62,12 @@ export default function ChatPage() {
     ? "http://localhost:4011"
     : "";
 
-  // Restore scroll position when agent changes
+  // Auto-scroll to bottom when new content arrives
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    const savedPos = scrollPositions.current[sessionId];
-    if (container && savedPos !== undefined && !loadingHistory) {
-      // Small delay to let messages render
-      requestAnimationFrame(() => {
-        container.scrollTop = savedPos;
-      });
-    } else if (container && !loadingHistory) {
-      // New session — scroll to bottom
-      messagesEndRef.current?.scrollIntoView();
+    if (streaming) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [sessionId, loadingHistory]);
-
-  const scrollDown = useCallback(() => {
-    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-  }, []);
+  }, [messages, streaming]);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -149,7 +138,6 @@ export default function ChatPage() {
                     : m
                 )
               );
-              scrollDown();
             } catch { /* skip bad json */ }
           } else if (type === "8") {
             // Tool call

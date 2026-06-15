@@ -1,9 +1,7 @@
 defmodule AshTsDemoWeb.ChatController do
   @moduledoc """
-  Chat streaming endpoint.
-
-  POST /api/chat
-    { "agent_name": "...", "session_id": "...", "messages": [...] }
+  Chat endpoint — uses AgentServer for multi-turn state,
+  but runs ReAct directly for tool event visibility.
   """
   use AshTsDemoWeb, :controller
 
@@ -14,32 +12,69 @@ defmodule AshTsDemoWeb.ChatController do
   def options(conn, _params), do: send_resp(conn, 204, "")
 
   def chat(conn, params) do
-    agent = params["agent_name"] || "chat_agent"
+    agent_name = params["agent_name"] || "chat_agent"
     sid = params["session_id"]
     msgs = params["messages"] || []
     user_msg = last_user_message(msgs)
-    config = agent_config(agent)
+    config = agent_config(agent_name)
 
     store_message(sid, "user", user_msg)
 
-    conn = conn
-    |> put_resp_content_type("text/event-stream")
-    |> put_resp_header("cache-control", "no-cache")
-    |> put_resp_header("x-accel-buffering", "no")
-    |> send_chunked(200)
+    # Build conversation history from DB
+    history = load_history_maps(sid)
 
-    result = Jido.AI.Reasoning.ReAct.run(user_msg, %{
-      model: config.model,
-      system_prompt: config.system_prompt,
-      tools: config.tools,
-      messages: load_history_maps(sid),
-      streaming: true,
-      max_iterations: 5
-    })
+    conn =
+      conn
+      |> put_resp_content_type("text/event-stream")
+      |> put_resp_header("cache-control", "no-cache")
+      |> put_resp_header("x-accel-buffering", "no")
+      |> send_chunked(200)
+
+    # Use ReAct.run directly for tool event visibility
+    # Include history in the prompt for multi-turn context
+    prompt = build_prompt(history, user_msg)
+
+    result =
+      Jido.AI.Reasoning.ReAct.run(prompt, %{
+        model: config.model,
+        system_prompt: config.system_prompt,
+        tools: config.tools,
+        streaming: true,
+        max_iterations: 5
+      })
 
     answer = Map.get(result, :result) || Map.get(result, :answer) || ""
 
-    # Stream character by character for smooth typing effect
+    # Send tool calls from trace
+    trace = result[:trace] || []
+    tool_events =
+      Enum.filter(trace, fn e -> e.kind in [:tool_started, :tool_completed] end)
+
+    for event <- tool_events do
+      case event.kind do
+        :tool_started ->
+          data = Jason.encode!(%{
+            type: "tool-call",
+            toolCallId: event.tool_call_id || "",
+            toolName: event.tool_name || "",
+            args: event.data[:arguments] || event.data
+          })
+          _ = Plug.Conn.chunk(conn, "8:#{data}\n")
+
+        :tool_completed ->
+          data = Jason.encode!(%{
+            type: "tool-result",
+            toolCallId: event.tool_call_id || "",
+            toolName: event.tool_name || "",
+            result: format_tool_output(event.data)
+          })
+          _ = Plug.Conn.chunk(conn, "8:#{data}\n")
+
+        _ -> :ok
+      end
+    end
+
+    # Stream answer character by character
     answer
     |> String.graphemes()
     |> Enum.each(fn c ->
@@ -58,28 +93,37 @@ defmodule AshTsDemoWeb.ChatController do
       conn
   end
 
+  # ─── agent configs ─────────────────────────────────────────
+
   defp agent_config("chat_agent") do
-    %{
-      model: :fast,
-      system_prompt: "You are a helpful assistant. Use markdown for formatting: code blocks with ```python, math with $...$ or $$...$$, tables, lists. Be concise.",
-      tools: %{}
-    }
+    %{model: :fast,
+      system_prompt: "You are a helpful assistant with web access and math. Use web_fetch for URLs. Be concise.",
+      tools: %{
+        multiply: AshTsDemo.Agents.MultiplyAction,
+        web_fetch: AshTsDemo.Agents.WebFetchAction
+      }}
   end
 
   defp agent_config("counter_agent") do
-    %{
-      model: :fast,
+    %{model: :fast,
       system_prompt: "You are a counter manager. Use the tools provided.",
       tools: %{
         increment: AshTsDemo.Agents.IncrementAction,
         decrement: AshTsDemo.Agents.DecrementAction,
         reset: AshTsDemo.Agents.ResetAction,
         set: AshTsDemo.Agents.SetAction
-      }
-    }
+      }}
+  end
+
+  defp agent_config("quiz_agent") do
+    %{model: :fast,
+      system_prompt: "You generate quiz questions. Use markdown. If tool fails, explain the error.",
+      tools: %{generate_quiz: AshTsDemo.Agents.QuizGeneratorAction}}
   end
 
   defp agent_config(_), do: agent_config("chat_agent")
+
+  # ─── helpers ───────────────────────────────────────────────
 
   defp last_user_message(msgs) do
     msgs
@@ -97,6 +141,28 @@ defmodule AshTsDemoWeb.ChatController do
   rescue
     _ -> []
   end
+
+  defp build_prompt(history, message) do
+    if history == [] do
+      message
+    else
+      context =
+        history
+        |> Enum.map(fn
+          %{role: :user, content: c} -> "User: #{c}"
+          %{role: :assistant, content: c} -> "Assistant: #{c}"
+        end)
+        |> Enum.join("\n")
+
+      "Previous conversation:\n#{context}\n\nCurrent message: #{message}"
+    end
+  end
+
+  defp format_tool_output(%{result: {:ok, data, _}}), do: inspect(data)
+  defp format_tool_output(%{result: {:ok, data}}), do: inspect(data)
+  defp format_tool_output(%{result: data}), do: inspect(data)
+  defp format_tool_output(%{"result" => data}), do: inspect(data)
+  defp format_tool_output(data), do: inspect(data)
 
   defp store_message(sid, role, content) do
     ChatMessage
