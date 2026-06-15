@@ -3,7 +3,7 @@
 
 import * as RpcHooks from "../rpcHooks";
 
-import type { AshRpcError, ChatMessageFilterInput, ChatMessageResourceSchema, ChatMessageSortField, ChatSessionFilterInput, ChatSessionResourceSchema, ChatSessionSortField, ConditionalPaginatedResultMixed, InferResult, SortString, TodoFilterInput, TodoResourceSchema, TodoSortField, UUID, UnifiedFieldSelection } from "./ash_types";
+import type { AshRpcError, ChatMessageFilterInput, ChatMessageResourceSchema, ChatMessageSortField, ChatSessionFilterInput, ChatSessionResourceSchema, ChatSessionSortField, ChatTaskFilterInput, ChatTaskResourceSchema, ChatTaskSortField, ConditionalPaginatedResultMixed, InferResult, SortString, TodoFilterInput, TodoResourceSchema, TodoSortField, UUID, UnifiedFieldSelection } from "./ash_types";
 export type * from "./ash_types";
 
 // RPC Action Hook Context Type
@@ -421,6 +421,126 @@ export async function listSessions<Fields extends ListSessionsFields, Config ext
   };
 
   return executeActionRpcRequest<ListSessionsResult<Fields, Config["page"]>>(
+    payload,
+    config
+  );
+}
+
+
+export type GetTaskInput = {
+  taskId: string;
+};
+
+export type GetTaskFields = UnifiedFieldSelection<ChatTaskResourceSchema>[];
+export type InferGetTaskResult<
+  Fields extends GetTaskFields,
+> = InferResult<ChatTaskResourceSchema, Fields>;
+
+export type GetTaskResult<Fields extends GetTaskFields> = | { success: true; data: InferGetTaskResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Read ChatTask records
+ *
+ * @ashActionType :read
+ */
+export async function getTask<Fields extends GetTaskFields>(
+  config: {
+  tenant?: string;
+  input: GetTaskInput;
+  hookCtx?: ActionHookContext;
+  fields: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<GetTaskResult<Fields>> {
+  const payload = {
+    action: "get_task",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    input: config.input,
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<GetTaskResult<Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type ListTasksFields = UnifiedFieldSelection<ChatTaskResourceSchema>[];
+
+
+export type InferListTasksResult<
+  Fields extends ListTasksFields | undefined,
+  Page extends ListTasksConfig["page"] = undefined
+> = ConditionalPaginatedResultMixed<Page, Array<InferResult<ChatTaskResourceSchema, Fields>>, {
+  results: Array<InferResult<ChatTaskResourceSchema, Fields>>;
+  hasMore: boolean;
+  limit: number;
+  offset: number;
+  count?: number | null;
+  type: "offset";
+}, {
+  results: Array<InferResult<ChatTaskResourceSchema, Fields>>;
+  hasMore: boolean;
+  limit: number;
+  after: string | null;
+  before: string | null;
+  previousPage: string;
+  nextPage: string;
+  count?: number | null;
+  type: "keyset";
+}>;
+
+export type ListTasksConfig = {
+  tenant?: string;
+  hookCtx?: ActionHookContext;
+  fields: ListTasksFields;
+  filter?: ChatTaskFilterInput;
+  sort?: SortString<ChatTaskSortField> | SortString<ChatTaskSortField>[];
+  page?: (
+    {
+      limit?: number;
+      offset?: number;
+      count?: boolean;
+    } | {
+      limit?: number;
+      after?: string;
+      before?: string;
+    }
+  );
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+};
+
+export type ListTasksResult<Fields extends ListTasksFields, Page extends ListTasksConfig["page"] = undefined> = | { success: true; data: InferListTasksResult<Fields, Page>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Read ChatTask records
+ *
+ * @ashActionType :read
+ */
+export async function listTasks<Fields extends ListTasksFields, Config extends ListTasksConfig = ListTasksConfig>(
+  config: Config & { fields: Fields }
+): Promise<ListTasksResult<Fields, Config["page"]>> {
+  const payload = {
+    action: "list_tasks",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    ...(config.fields !== undefined && { fields: config.fields }),
+    ...(config.filter && { filter: config.filter }),
+    ...(config.sort && { sort: Array.isArray(config.sort) ? config.sort.join(",") : config.sort }),
+    ...(config.page && { page: config.page })
+  };
+
+  return executeActionRpcRequest<ListTasksResult<Fields, Config["page"]>>(
     payload,
     config
   );

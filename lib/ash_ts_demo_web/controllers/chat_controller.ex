@@ -8,6 +8,7 @@ defmodule AshTsDemoWeb.ChatController do
   require Ash.Query
 
   alias AshTsDemo.Chat.ChatMessage
+  alias AshTsDemo.Workers.LongTaskWorker
 
   def options(conn, _params), do: send_resp(conn, 204, "")
 
@@ -18,10 +19,10 @@ defmodule AshTsDemoWeb.ChatController do
     user_msg = last_user_message(msgs)
     config = agent_config(agent_name)
 
-    store_message(sid, "user", user_msg)
+    user = conn.assigns[:current_user]
+    user_id = user && user.id
 
-    # Build conversation history from DB
-    history = load_history_maps(sid)
+    store_message(sid, "user", user_msg)
 
     conn =
       conn
@@ -30,12 +31,13 @@ defmodule AshTsDemoWeb.ChatController do
       |> put_resp_header("x-accel-buffering", "no")
       |> send_chunked(200)
 
-    # Use ReAct.run directly for tool event visibility
-    # Include history in the prompt for multi-turn context
-    prompt = build_prompt(history, user_msg)
-
+    # Use ReAct.run directly for tool event visibility.
+    # We only pass the *current* user message — conversation history is owned
+    # by the client (browser) and persisted in `chat_messages` for display
+    # purposes, but never concatenated into the prompt. This keeps each turn
+    # focused and prevents long-context hallucinations.
     result =
-      Jido.AI.Reasoning.ReAct.run(prompt, %{
+      Jido.AI.Reasoning.ReAct.run(user_msg, %{
         model: config.model,
         system_prompt: config.system_prompt,
         tools: config.tools,
@@ -62,6 +64,8 @@ defmodule AshTsDemoWeb.ChatController do
           _ = Plug.Conn.chunk(conn, "8:#{data}\n")
 
         :tool_completed ->
+          maybe_enqueue_long_task(event, agent_name, sid, user_id)
+
           data = Jason.encode!(%{
             type: "tool-result",
             toolCallId: event.tool_call_id || "",
@@ -93,14 +97,117 @@ defmodule AshTsDemoWeb.ChatController do
       conn
   end
 
+  # ─── background task plumbing ──────────────────────────────
+
+  # When the `start_long_task` tool completes, queue an Oban job so the work
+  # happens off the request thread. The tool returns a `task_id` already, so we
+  # reuse it when constructing the worker args.
+  defp maybe_enqueue_long_task(%{kind: :tool_completed, tool_name: "start_long_task"} = event,
+                              agent_name,
+                              session_id,
+                              user_id) do
+    result = extract_tool_result(event.data)
+    task_id = result[:task_id]
+    task_name = result[:task_name]
+    duration_ms = result[:duration_ms]
+
+    cond do
+      is_nil(task_id) or is_nil(task_name) ->
+        :skip
+
+      is_nil(user_id) ->
+        # No authenticated user → can't broadcast / persist a chat_task.
+        # Log and skip so the chat still works for anonymous demos.
+        require Logger
+        Logger.warning("start_long_task: missing user_id, skipping enqueue")
+
+      true ->
+        # Pre-create the ChatTask row so the SSE endpoint can show the
+        # indicator immediately, even if the Oban worker is briefly delayed
+        # in picking the job up. Worker will look it up by task_id and
+        # update it.
+        _ =
+          Ash.Changeset.for_create(AshTsDemo.Chat.ChatTask, :create, %{
+            task_id: task_id,
+            user_id: user_id,
+            session_id: session_id,
+            agent_name: agent_name,
+            task_name: task_name,
+            duration_ms: duration_ms || 15_000,
+            status: :pending
+          })
+          |> Ash.create()
+
+        {:ok, job} =
+          LongTaskWorker.new(%{
+            "task_id" => task_id,
+            "user_id" => user_id,
+            "session_id" => session_id,
+            "agent_name" => agent_name,
+            "task_name" => task_name,
+            "duration_ms" => duration_ms || 15_000
+          })
+          |> Oban.insert()
+
+        require Logger
+        Logger.info("start_long_task: enqueued job=#{job.id} task_id=#{task_id}")
+
+        broadcast_task_event(user_id, :task_started, %{
+          task_id: task_id,
+          task_name: task_name,
+          status: "pending",
+          session_id: session_id,
+          job_id: job.id,
+          duration_ms: duration_ms || 15_000
+        })
+
+        :ok
+    end
+  end
+
+  defp maybe_enqueue_long_task(_event, _agent_name, _session_id, _user_id) do
+    require Logger
+    kind = if is_map(_event), do: Map.get(_event, :kind) || Map.get(_event, :tool_name), else: nil
+    tool_name = if is_map(_event), do: Map.get(_event, :tool_name), else: nil
+    Logger.info("DBG: maybe_enqueue_long_task FELL THROUGH kind=#{inspect(kind)} tool_name=#{inspect(tool_name)}")
+    :ok
+  end
+
+  defp broadcast_task_event(user_id, type, payload) do
+    Phoenix.PubSub.broadcast(
+      AshTsDemo.PubSub,
+      "chat:user:#{user_id}:tasks",
+      {:task_event, type, payload}
+    )
+  rescue
+    _ -> :ok
+  end
+
+  # The trace event data can be shaped in a few ways depending on the Jido
+  # version. Normalise to a map of atoms so we can pluck out fields.
+  # Note: Jido 2.x emits 3-tuples `{:ok, data, metadata}` on tool completion,
+  # so the 3-tuple clause MUST come first (3-tuple is a 2-tuple as well and
+  # would otherwise match the 2-tuple clause with `data = {meta}`).
+  defp extract_tool_result(%{result: {:ok, %{} = data, _meta}}), do: data
+  defp extract_tool_result(%{result: {:ok, %{} = data}}), do: data
+  defp extract_tool_result(%{result: {:ok, data}}) when is_map(data), do: data
+  defp extract_tool_result(%{result: %{} = data}), do: data
+  defp extract_tool_result(%{"result" => %{} = data}), do: data
+  defp extract_tool_result(_), do: %{}
+
   # ─── agent configs ─────────────────────────────────────────
 
   defp agent_config("chat_agent") do
     %{model: :fast,
-      system_prompt: "You are a helpful assistant with web access and math. Use web_fetch for URLs. Be concise.",
+      system_prompt: """
+      You are a helpful assistant with web access, math, and background tasks.
+      Use web_fetch for URLs, multiply for math, and start_long_task whenever
+      the user wants to run something heavy in the background. Be concise.
+      """,
       tools: %{
         multiply: AshTsDemo.Agents.MultiplyAction,
-        web_fetch: AshTsDemo.Agents.WebFetchAction
+        web_fetch: AshTsDemo.Agents.WebFetchAction,
+        start_long_task: AshTsDemo.Agents.LongTaskAction
       }}
   end
 
@@ -121,6 +228,35 @@ defmodule AshTsDemoWeb.ChatController do
       tools: %{generate_quiz: AshTsDemo.Agents.QuizGeneratorAction}}
   end
 
+  # Minimal agent whose only tool is start_long_task. Useful for testing the
+  # background-task pipeline without the noise / context bloat of chat_agent.
+  defp agent_config("bg_task_agent") do
+    %{model: :fast,
+      system_prompt: """
+      You are a background task assistant. Your only job is to call the
+      `start_long_task` tool when the user asks for a background / async /
+      long-running / heavy job.
+
+      STRICT RULES:
+      1. Whenever the user wants a background task, you MUST invoke the
+         `start_long_task` tool. Plain text like "the task is started" is NOT
+         acceptable — the tool call is the only thing that actually starts a
+         task and produces the badge / completion notification in the UI.
+      2. After the tool returns, write a 1-2 sentence confirmation in Chinese
+         that includes the task name and the expected duration.
+      3. Do not use any other tools. If the user asks for math / web fetch /
+         jokes, politely say this agent only handles background tasks.
+
+      Tool parameters:
+        - task_name (required): short label shown in the UI banner
+        - duration_ms (optional, default 15000): simulated work duration in ms
+          → pass a smaller value (e.g. 3000) when the user says "3 秒"
+      """,
+      tools: %{
+        start_long_task: AshTsDemo.Agents.LongTaskAction
+      }}
+  end
+
   defp agent_config(_), do: agent_config("chat_agent")
 
   # ─── helpers ───────────────────────────────────────────────
@@ -130,32 +266,6 @@ defmodule AshTsDemoWeb.ChatController do
     |> Enum.filter(&(Map.get(&1, "role") == "user"))
     |> List.last()
     |> case do nil -> ""; m -> m["content"] || "" end
-  end
-
-  defp load_history_maps(sid) do
-    ChatMessage
-    |> Ash.Query.filter(session_id == ^sid)
-    |> Ash.Query.sort(inserted_at: :asc)
-    |> Ash.read!()
-    |> Enum.map(fn m -> %{role: String.to_atom(m.role), content: m.content} end)
-  rescue
-    _ -> []
-  end
-
-  defp build_prompt(history, message) do
-    if history == [] do
-      message
-    else
-      context =
-        history
-        |> Enum.map(fn
-          %{role: :user, content: c} -> "User: #{c}"
-          %{role: :assistant, content: c} -> "Assistant: #{c}"
-        end)
-        |> Enum.join("\n")
-
-      "Previous conversation:\n#{context}\n\nCurrent message: #{message}"
-    end
   end
 
   defp format_tool_output(%{result: {:ok, data, _}}), do: inspect(data)

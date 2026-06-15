@@ -17,6 +17,10 @@ export const createSessionSchema = z.object({
   title: z.string().min(1).optional(),
 });
 
+export const getTaskSchema = z.object({
+  taskId: z.string().min(1),
+});
+
 export const createTodoSchema = z.object({
   title: z.string().min(1).max(200),
   completed: z.boolean().optional(),

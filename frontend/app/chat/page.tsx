@@ -26,10 +26,24 @@ interface Agent {
   description: string;
 }
 
+type TaskStatus = "pending" | "running" | "completed" | "failed";
+
+interface TaskInfo {
+  task_id: string;
+  task_name: string;
+  status: TaskStatus;
+  session_id: string;
+  duration_ms?: number;
+  started_at?: string;
+  completed_at?: string;
+  job_id?: number;
+}
+
 const AGENTS: Agent[] = [
   { name: "chat_agent", label: "Chat Agent", description: "AI assistant with multiply tool" },
   { name: "counter_agent", label: "Counter Agent", description: "Counter manager" },
   { name: "quiz_agent", label: "Quiz Agent", description: "Generates quiz from text" },
+  { name: "bg_task_agent", label: "BG Task Agent", description: "Background tasks only (minimal context)" },
 ];
 
 function getSessionId(agentName: string): string {
@@ -43,6 +57,14 @@ function getSessionId(agentName: string): string {
   return id;
 }
 
+// Pull a single `name: value` line out of an SSE event block.
+function parseSseField(block: string, field: string): string {
+  for (const line of block.split("\n")) {
+    if (line.startsWith(field)) return line.slice(field.length).trim();
+  }
+  return "";
+}
+
 // ─── Main Page ──────────────────────────────────────────────
 export default function ChatPage() {
   const { isAuthenticated, logout, token } = useAuth();
@@ -51,10 +73,14 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [activeTasks, setActiveTasks] = useState<Record<string, TaskInfo>>({});
+  const [completionBanner, setCompletionBanner] = useState<TaskInfo | null>(null);
+  const [bannerVisible, setBannerVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositions = useRef<Record<string, number>>({});
+  const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sessionId = getSessionId(activeAgent.name);
   const baseUrl = typeof window !== "undefined" &&
@@ -68,6 +94,120 @@ export default function ChatPage() {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, streaming]);
+
+  // ── Subscribe to long-task lifecycle events (SSE) ──────────
+  useEffect(() => {
+    if (!token) return;
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch(`${baseUrl}/api/chat/events`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          signal: controller.signal,
+        });
+        if (!res.ok || !res.body) return;
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (!cancelled) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          // SSE events separated by blank lines
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() || "";
+
+          for (const part of parts) {
+            if (!part.trim()) continue;
+            const eventType = parseSseField(part, "event:");
+            const data = parseSseField(part, "data:");
+            if (!eventType || !data) continue;
+            try {
+              handleTaskEvent(eventType, JSON.parse(data));
+            } catch {
+              /* ignore malformed */
+            }
+          }
+        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        // network blip — let useEffect re-run
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+
+    function handleTaskEvent(type: string, data: TaskInfo | { tasks: TaskInfo[] }) {
+      if (type === "task-list") {
+        const tasks = (data as { tasks: TaskInfo[] }).tasks ?? [];
+        setActiveTasks(
+          Object.fromEntries(tasks.map((t) => [t.task_id, t]))
+        );
+        return;
+      }
+
+      const task = data as TaskInfo;
+      if (!task?.task_id) return;
+
+      const isTerminal = task.status === "completed" || task.status === "failed";
+
+      setActiveTasks((prev) => {
+        const next = { ...prev };
+        if (isTerminal) {
+          delete next[task.task_id];
+        } else {
+          next[task.task_id] = { ...(prev[task.task_id] || {}), ...task };
+        }
+        return next;
+      });
+
+      // Backend emits `task_completed` (underscore — derived from the
+      // `:task_completed` atom via `Atom.to_string/1`). Earlier versions of
+      // the frontend checked `"task-completed"` (hyphen) which never matched,
+      // so the banner logic below was dead code.
+      if (type === "task_completed") {
+        setCompletionBanner({ ...task, status: "completed" });
+        setBannerVisible(true);
+        if (bannerTimer.current) clearTimeout(bannerTimer.current);
+        bannerTimer.current = setTimeout(() => setBannerVisible(false), 6_000);
+
+        // Mirror the message the worker persists into `chat_messages` so the
+        // user sees the completion in the active chat without refreshing.
+        // On a later refresh `loadHistory` will replace this synthetic entry
+        // with the persisted row from DB; we dedupe by a stable id derived
+        // from `task_id` so a re-broadcast won't double-insert.
+        const seconds = Math.round((task.duration_ms || 0) / 1000);
+        const completionMsg: ChatMessage = {
+          id: `task-complete-${task.task_id}`,
+          role: "assistant",
+          content:
+            `后台任务完成通知：任务 \`${task.task_name}\`（ID \`${task.task_id}\`）已成功执行，` +
+            `耗时 ${seconds} 秒。你可以继续聊天，我会在这里等你。`,
+        };
+        setMessages((prev) =>
+          prev.some((m) => m.id === completionMsg.id)
+            ? prev
+            : [...prev, completionMsg]
+        );
+      }
+    }
+  }, [token, baseUrl]);
+
+  // Cleanup banner timer on unmount
+  useEffect(() => {
+    return () => {
+      if (bannerTimer.current) clearTimeout(bannerTimer.current);
+    };
+  }, []);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -281,13 +421,14 @@ export default function ChatPage() {
       {/* ── Chat Panel ──────────────────────────────── */}
       <main className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-3 dark:border-zinc-800">
-          <div>
+          <div className="flex items-center gap-3">
             <h1 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
               {activeAgent.label}
               {loadingHistory && (
                 <span className="ml-2 text-xs font-normal text-zinc-400">loading…</span>
               )}
             </h1>
+            <TaskStatusIndicator tasks={Object.values(activeTasks)} />
           </div>
           {streaming && (
             <button
@@ -298,6 +439,13 @@ export default function ChatPage() {
             </button>
           )}
         </header>
+
+        {/* Completion banner — slides down for a few seconds after a task finishes. */}
+        <CompletionBanner
+          task={completionBanner}
+          visible={bannerVisible}
+          onDismiss={() => setBannerVisible(false)}
+        />
 
         {/* Messages */}
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-4">
@@ -353,29 +501,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
         {msg.toolCalls && msg.toolCalls.length > 0 && (
           <div className="flex flex-col gap-1">
             {msg.toolCalls.map((tc) => (
-              <div
-                key={tc.id}
-                className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs dark:border-amber-800 dark:bg-amber-950"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-semibold text-amber-700 dark:text-amber-400">
-                    🔧 {tc.name}
-                  </span>
-                  {tc.status === "pending" && (
-                    <span className="inline-flex gap-0.5">
-                      <Dot delay="0s" /><Dot delay="0.15s" /><Dot delay="0.3s" />
-                    </span>
-                  )}
-                </div>
-                <div className="mt-1 text-amber-600 dark:text-amber-300">
-                  {JSON.stringify(tc.args, null, 0)}
-                </div>
-                {tc.result && (
-                  <div className="mt-1 rounded bg-white/50 px-2 py-1 font-mono text-amber-800 dark:bg-black/20 dark:text-amber-200">
-                    → {tc.result}
-                  </div>
-                )}
-              </div>
+              <ToolCallBubble key={tc.id} tc={tc} />
             ))}
           </div>
         )}
@@ -419,5 +545,141 @@ function TypingDots() {
       <Dot delay="0.1s" />
       <Dot delay="0.2s" />
     </span>
+  );
+}
+
+function ToolCallBubble({ tc }: { tc: ToolCall }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasResult = tc.result && tc.status === "done";
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-900">
+      <div className="flex items-center gap-2">
+        <span className="font-mono font-semibold text-slate-600 dark:text-slate-300">
+          🔧 {tc.name}
+        </span>
+        {tc.status === "pending" && (
+          <span className="inline-flex gap-0.5">
+            <Dot delay="0s" /><Dot delay="0.15s" /><Dot delay="0.3s" />
+          </span>
+        )}
+      </div>
+      <div className="mt-1 text-slate-500 dark:text-slate-400">
+        {JSON.stringify(tc.args, null, 0)}
+      </div>
+      {hasResult && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="mt-1 flex w-full items-center gap-1 rounded bg-white/60 px-2 py-1 text-left font-mono text-slate-600 hover:bg-white dark:bg-black/20 dark:text-slate-300 dark:hover:bg-black/30"
+        >
+          <span className="text-[10px]">{expanded ? "▼" : "▶"}</span>
+          <span className="truncate">
+            {expanded ? tc.result : String(tc.result).slice(0, 60) + "…"}
+          </span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Background Task Status ──────────────────────────────────
+function TaskStatusIndicator({ tasks }: { tasks: TaskInfo[] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (tasks.length === 0) return null;
+
+  return (
+    <div className="relative" onMouseLeave={() => setExpanded(false)}>
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/40"
+        title="后台任务进行中"
+      >
+        <Spinner />
+        <span>{tasks.length} 后台任务</span>
+      </button>
+      {expanded && (
+        <div className="absolute right-0 top-full z-20 mt-1 w-72 rounded-lg border border-amber-200 bg-white p-2 text-xs shadow-lg dark:border-amber-800 dark:bg-zinc-900">
+          {tasks.map((t) => (
+            <div
+              key={t.task_id}
+              className="flex items-center justify-between border-b border-zinc-100 px-2 py-1.5 last:border-0 dark:border-zinc-800"
+            >
+              <div className="min-w-0 flex-1 truncate">
+                <div className="truncate font-medium text-zinc-700 dark:text-zinc-200">
+                  {t.task_name}
+                </div>
+                <div className="truncate text-[10px] text-zinc-400">
+                  {t.status === "running"
+                    ? `处理中 · ${Math.round((t.duration_ms || 15000) / 1000)}s`
+                    : "排队中"}
+                </div>
+              </div>
+              <span className="ml-2 inline-flex h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg
+      className="h-3 w-3 animate-spin text-amber-600 dark:text-amber-400"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeOpacity="0.25"
+      />
+      <path
+        d="M21 12a9 9 0 0 0-9-9"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CompletionBanner({
+  task,
+  visible,
+  onDismiss,
+}: {
+  task: TaskInfo | null;
+  visible: boolean;
+  onDismiss: () => void;
+}) {
+  if (!task) return null;
+
+  return (
+    <div
+      className={
+        "overflow-hidden border-b border-emerald-200 bg-emerald-50 text-emerald-800 transition-all duration-300 ease-out dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 " +
+        (visible ? "max-h-24 opacity-100" : "max-h-0 opacity-0")
+      }
+    >
+      <div className="mx-auto flex max-w-3xl items-center gap-3 px-6 py-2.5 text-sm">
+        <span className="text-base">✅</span>
+        <div className="min-w-0 flex-1">
+          <span className="font-semibold">后台任务已完成：</span>
+          <span className="ml-1 truncate">{task.task_name}</span>
+        </div>
+        <button
+          onClick={onDismiss}
+          className="rounded p-1 text-emerald-700 hover:bg-emerald-100 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+          aria-label="dismiss"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
   );
 }

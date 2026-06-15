@@ -4,6 +4,7 @@
 import * as RpcHooks from "../rpcHooks";
 
 export type UUID = string;
+export type UtcDateTime = string;
 export type UtcDateTimeUsec = string;
 
 // ChatMessage Schema
@@ -53,6 +54,50 @@ export type ChatSessionAttributesOnlySchema = {
   title: string;
   insertedAt: UtcDateTimeUsec;
   updatedAt: UtcDateTimeUsec;
+};
+
+
+// ChatTask Schema
+export type ChatTaskResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "taskId" | "userId" | "sessionId" | "agentName" | "taskName" | "durationMs" | "status" | "jobId" | "result" | "errorMessage" | "insertedAt" | "updatedAt" | "startedAt" | "completedAt";
+  id: UUID;
+  taskId: string;
+  userId: UUID;
+  sessionId: string;
+  agentName: string;
+  taskName: string;
+  durationMs: number;
+  status: "completed" | "failed" | "pending" | "running";
+  jobId: number | null;
+  result: Record<string, any> | null;
+  errorMessage: string | null;
+  insertedAt: UtcDateTimeUsec;
+  updatedAt: UtcDateTimeUsec;
+  startedAt: UtcDateTime | null;
+  completedAt: UtcDateTime | null;
+};
+
+
+
+export type ChatTaskAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "taskId" | "userId" | "sessionId" | "agentName" | "taskName" | "durationMs" | "status" | "jobId" | "result" | "errorMessage" | "insertedAt" | "updatedAt" | "startedAt" | "completedAt";
+  id: UUID;
+  taskId: string;
+  userId: UUID;
+  sessionId: string;
+  agentName: string;
+  taskName: string;
+  durationMs: number;
+  status: "completed" | "failed" | "pending" | "running";
+  jobId: number | null;
+  result: Record<string, any> | null;
+  errorMessage: string | null;
+  insertedAt: UtcDateTimeUsec;
+  updatedAt: UtcDateTimeUsec;
+  startedAt: UtcDateTime | null;
+  completedAt: UtcDateTime | null;
 };
 
 
@@ -174,6 +219,133 @@ export type ChatSessionFilterInput = {
 
 
 };
+export type ChatTaskFilterInput = {
+  and?: Array<ChatTaskFilterInput>;
+  or?: Array<ChatTaskFilterInput>;
+  not?: Array<ChatTaskFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  taskId?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+  };
+
+  userId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  sessionId?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+  };
+
+  agentName?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+  };
+
+  taskName?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+  };
+
+  durationMs?: {
+    eq?: number;
+    notEq?: number;
+    greaterThan?: number;
+    greaterThanOrEqual?: number;
+    lessThan?: number;
+    lessThanOrEqual?: number;
+    in?: Array<number>;
+  };
+
+  status?: {
+    eq?: "completed" | "failed" | "pending" | "running";
+    notEq?: "completed" | "failed" | "pending" | "running";
+    in?: Array<"completed" | "failed" | "pending" | "running">;
+  };
+
+  jobId?: {
+    eq?: number;
+    notEq?: number;
+    greaterThan?: number;
+    greaterThanOrEqual?: number;
+    lessThan?: number;
+    lessThanOrEqual?: number;
+    in?: Array<number>;
+    isNil?: boolean;
+  };
+
+  result?: {
+    eq?: Record<string, any>;
+    notEq?: Record<string, any>;
+    in?: Array<Record<string, any>>;
+    isNil?: boolean;
+  };
+
+  errorMessage?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  insertedAt?: {
+    eq?: UtcDateTimeUsec;
+    notEq?: UtcDateTimeUsec;
+    greaterThan?: UtcDateTimeUsec;
+    greaterThanOrEqual?: UtcDateTimeUsec;
+    lessThan?: UtcDateTimeUsec;
+    lessThanOrEqual?: UtcDateTimeUsec;
+    in?: Array<UtcDateTimeUsec>;
+  };
+
+  updatedAt?: {
+    eq?: UtcDateTimeUsec;
+    notEq?: UtcDateTimeUsec;
+    greaterThan?: UtcDateTimeUsec;
+    greaterThanOrEqual?: UtcDateTimeUsec;
+    lessThan?: UtcDateTimeUsec;
+    lessThanOrEqual?: UtcDateTimeUsec;
+    in?: Array<UtcDateTimeUsec>;
+  };
+
+  startedAt?: {
+    eq?: UtcDateTime;
+    notEq?: UtcDateTime;
+    greaterThan?: UtcDateTime;
+    greaterThanOrEqual?: UtcDateTime;
+    lessThan?: UtcDateTime;
+    lessThanOrEqual?: UtcDateTime;
+    in?: Array<UtcDateTime>;
+    isNil?: boolean;
+  };
+
+  completedAt?: {
+    eq?: UtcDateTime;
+    notEq?: UtcDateTime;
+    greaterThan?: UtcDateTime;
+    greaterThanOrEqual?: UtcDateTime;
+    lessThan?: UtcDateTime;
+    lessThanOrEqual?: UtcDateTime;
+    in?: Array<UtcDateTime>;
+    isNil?: boolean;
+  };
+
+
+
+};
 export type TodoFilterInput = {
   and?: Array<TodoFilterInput>;
   or?: Array<TodoFilterInput>;
@@ -227,6 +399,9 @@ export type ChatMessageFilterField = (typeof chatMessageFilterFields)[number];
 export const chatSessionFilterFields = ["id", "userId", "agentName", "title", "insertedAt", "updatedAt"] as const;
 export type ChatSessionFilterField = (typeof chatSessionFilterFields)[number];
 
+export const chatTaskFilterFields = ["id", "taskId", "userId", "sessionId", "agentName", "taskName", "durationMs", "status", "jobId", "result", "errorMessage", "insertedAt", "updatedAt", "startedAt", "completedAt"] as const;
+export type ChatTaskFilterField = (typeof chatTaskFilterFields)[number];
+
 export const todoFilterFields = ["id", "title", "completed", "insertedAt", "updatedAt"] as const;
 export type TodoFilterField = (typeof todoFilterFields)[number];
 
@@ -236,6 +411,9 @@ export type ChatMessageSortField = (typeof chatMessageSortFields)[number];
 
 export const chatSessionSortFields = ["id", "userId", "agentName", "title", "insertedAt", "updatedAt"] as const;
 export type ChatSessionSortField = (typeof chatSessionSortFields)[number];
+
+export const chatTaskSortFields = ["id", "taskId", "userId", "sessionId", "agentName", "taskName", "durationMs", "status", "jobId", "result", "errorMessage", "insertedAt", "updatedAt", "startedAt", "completedAt"] as const;
+export type ChatTaskSortField = (typeof chatTaskSortFields)[number];
 
 export const todoSortFields = ["id", "title", "completed", "insertedAt", "updatedAt"] as const;
 export type TodoSortField = (typeof todoSortFields)[number];

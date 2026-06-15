@@ -18,10 +18,16 @@ defmodule AshTsDemo.ChatDomain do
       rpc_action(:list_messages, :read)
       rpc_action(:create_message, :create)
     end
+
+    resource AshTsDemo.Chat.ChatTask do
+      rpc_action(:list_tasks, :read)
+      rpc_action(:get_task, :by_task_id)
+    end
   end
 
   resources do
     resource AshTsDemo.Chat.ChatSession
     resource AshTsDemo.Chat.ChatMessage
+    resource AshTsDemo.Chat.ChatTask
   end
 end

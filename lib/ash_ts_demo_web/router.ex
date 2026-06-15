@@ -59,6 +59,13 @@ defmodule AshTsDemoWeb.Router do
     # Chat endpoint — SSE streaming responses from AI agents
     match :options, "/chat", ChatController, :options
     post "/chat", ChatController, :chat
+
+    # SSE stream of long-running task lifecycle events for the current user.
+    # The explicit `match :options` route is required so the CORS preflight
+    # actually reaches the `:api_auth` pipeline (where CORSPlug lives) instead
+    # of falling through to NoRouteError.
+    match :options, "/chat/events", ChatController, :options
+    get "/chat/events", ChatEventsController, :subscribe
   end
 
   # ── SPA fallback ───────────────────────────────────────────────────

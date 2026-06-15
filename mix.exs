@@ -108,6 +108,8 @@ defmodule AshTsDemo.MixProject do
       {:jido, "~> 2.0"},
       {:jido_ai, "~> 2.0"},
       {:jido_browser, "~> 2.0"},
+      # Background jobs
+      {:oban, "~> 2.18"},
       # Dev tooling: AGENTS.md / skill management from deps
       {:usage_rules, "~> 1.1", only: [:dev]},
       {:igniter, "~> 0.6", only: [:dev]}

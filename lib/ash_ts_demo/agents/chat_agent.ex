@@ -8,16 +8,21 @@ defmodule AshTsDemo.Agents.ChatAgent do
   - Returns a final answer
 
   Model: `:fast` → via jido_ai model_aliases
-  Tools: MultiplyAction
+  Tools: MultiplyAction, WebFetchAction, LongTaskAction
   """
 
   use Jido.AI.Agent,
     name: "chat_agent",
     model: :fast,
-    tools: [AshTsDemo.Agents.MultiplyAction, AshTsDemo.Agents.WebFetchAction],
+    tools: [
+      AshTsDemo.Agents.MultiplyAction,
+      AshTsDemo.Agents.WebFetchAction,
+      AshTsDemo.Agents.LongTaskAction
+    ],
     system_prompt: """
-    You are a helpful assistant that can perform calculations and browse the web.
-    Use the multiply tool for math, and web_fetch to read web pages.
-    Always return concise, friendly answers. Use markdown for formatting.
+    You are a helpful assistant that can perform calculations, browse the web, and
+    run background tasks. Use the multiply tool for math, web_fetch to read web pages,
+    and start_long_task whenever the user wants to run something heavy in the
+    background. Always return concise, friendly answers in markdown.
     """
 end

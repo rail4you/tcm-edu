@@ -89,6 +89,15 @@ config :ash_authentication,
     ]
   ]
 
+# Oban — background job processing. Uses the same PostgreSQL database as the
+# Ash Repo. The default queue is `:default` and jobs are inserted with
+# Oban.insert/1 in the chat controller.
+config :ash_ts_demo, Oban,
+  repo: AshTsDemo.Repo,
+  engine: Oban.Engines.Basic,
+  queues: [default: 5],
+  plugins: []
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

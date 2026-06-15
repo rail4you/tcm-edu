@@ -22,6 +22,8 @@ defmodule AshTsDemo.Application do
       {DNSCluster, query: Application.get_env(:ash_ts_demo, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: AshTsDemo.PubSub},
       {AshAuthentication.Supervisor, otp_app: :ash_ts_demo},
+      # Oban background job processor — must start after the Repo
+      {Oban, Application.fetch_env!(:ash_ts_demo, Oban)},
       # Start a worker by calling: AshTsDemo.Worker.start_link(arg)
       # {AshTsDemo.Worker, arg},
       # Jido agent runtime
