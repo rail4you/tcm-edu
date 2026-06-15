@@ -1,0 +1,132 @@
+defmodule AshTsDemo.MixProject do
+  use Mix.Project
+
+  def project do
+    [
+      app: :ash_ts_demo,
+      version: "0.1.0",
+      elixir: "~> 1.18",
+      elixirc_paths: elixirc_paths(Mix.env()),
+      start_permanent: Mix.env() == :prod,
+      aliases: aliases(),
+      deps: deps(),
+      listeners: [Phoenix.CodeReloader],
+      usage_rules: usage_rules()
+    ]
+  end
+
+  # Configuration for the OTP application.
+  #
+  # Type `mix help compile.app` for more information.
+  def application do
+    [
+      mod: {AshTsDemo.Application, []},
+      extra_applications: [:logger, :runtime_tools]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [precommit: :test]
+    ]
+  end
+
+  # Allow lazy_html to override the elixir_make version that was pinned by
+  # the lock file. Phoenix LiveView's test helpers require lazy_html, which
+  # in turn requires elixir_make ~> 0.9.0. The mix.lock had 0.10.0
+  # (transitively from picosat_elixir) and Hex refuses to downgrade
+  # automatically.
+  defp usage_rules do
+    [
+      file: "AGENTS.md",
+      usage_rules: [
+        :elixir,
+        :ash,
+        ~r/^ash_/,
+        :phoenix,
+        ~r/^phoenix_/
+      ],
+      skills: [
+        location: ".claude/skills",
+        deps: [:jido],
+        build: [
+          "ash-framework": [
+            description:
+              "Use when working with Ash Framework or any Ash extension (ash_postgres, ash_authentication, ash_typescript, etc). Always consult this for domain changes, resources, or Ash-related features.",
+            usage_rules: [:ash, ~r/^ash_/]
+          ],
+          "phoenix-framework": [
+            description:
+              "Use when working with Phoenix web layer, LiveView, controllers, router, or any Phoenix-related code.",
+            usage_rules: [:phoenix, ~r/^phoenix_/]
+          ]
+        ]
+      ]
+    ]
+  end
+
+  defp elixir_make_override do
+    [{:elixir_make, "~> 0.9.0", override: true}]
+  end
+
+  # Specifies which paths to compile per environment.
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
+  # Specifies your project dependencies.
+  #
+  # Type `mix help deps` for examples and options.
+  defp deps do
+    [
+      {:phoenix, "~> 1.8.8"},
+      {:phoenix_ecto, "~> 4.5"},
+      {:phoenix_live_view, "~> 1.0"},
+      {:ecto_sql, "~> 3.13"},
+      {:postgrex, ">= 0.0.0"},
+      {:telemetry_metrics, "~> 1.0"},
+      {:telemetry_poller, "~> 1.0"},
+      {:gettext, "~> 1.0"},
+      {:jason, "~> 1.2"},
+      {:dns_cluster, "~> 0.2.0"},
+      {:bandit, "~> 1.5"},
+      # Ash framework
+      {:ash, "~> 3.0"},
+      {:ash_postgres, "~> 2.0"},
+      {:ash_typescript, "~> 0.17"},
+      # SAT solver required by Ash.Policy.Authorizer
+      {:picosat_elixir, "~> 0.2"},
+      # Authentication
+      {:ash_authentication, "~> 4.0"},
+      {:ash_authentication_phoenix, "~> 2.0"},
+      {:bcrypt_elixir, "~> 3.0"},
+      # RPC / CORS support
+      {:jsonrpc2, "~> 1.0"},
+      {:cors_plug, "~> 3.0"},
+      # LiveView test helper (parses rendered HTML for assertions).
+      {:lazy_html, ">= 0.1.0", only: :test},
+      # Agent framework
+      {:jido, "~> 2.0"},
+      {:jido_ai, "~> 2.0"},
+      # Dev tooling: AGENTS.md / skill management from deps
+      {:usage_rules, "~> 1.1", only: [:dev]},
+      {:igniter, "~> 0.6", only: [:dev]}
+    ] ++ elixir_make_override()
+  end
+
+  # Aliases are shortcuts or tasks specific to the current project.
+  # For example, to install project dependencies and perform other setup tasks, run:
+  #
+  #     $ mix setup
+  #
+  # See the documentation for `Mix` for more info on aliases.
+  defp aliases do
+    [
+      setup: ["deps.get", "ash.setup"],
+      "ash.setup": ["ash.codegen --dev", "ash.migrate"],
+      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+      "ecto.reset": ["ecto.drop", "ecto.setup"],
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+    ]
+  end
+end

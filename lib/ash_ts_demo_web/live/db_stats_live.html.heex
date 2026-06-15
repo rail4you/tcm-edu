@@ -1,0 +1,99 @@
+<Layouts.app flash={@flash}>
+  <div class="counter-wrapper">
+    <h1 class="counter-title">Counter</h1>
+
+    <div class="counter-display">
+      <span class="counter-value"><%= @count %></span>
+    </div>
+
+    <div class="counter-actions">
+      <button phx-click="dec" class="btn btn-dec">-</button>
+      <button phx-click="reset" class="btn btn-reset">Reset</button>
+      <button phx-click="inc" class="btn btn-inc">+</button>
+    </div>
+  </div>
+
+  <style>
+    .counter-wrapper {
+      max-width: 400px;
+      margin: 80px auto;
+      text-align: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .counter-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 32px;
+    }
+
+    .counter-display {
+      margin-bottom: 32px;
+    }
+
+    .counter-value {
+      font-size: 80px;
+      font-weight: 800;
+      color: #16213e;
+      line-height: 1;
+    }
+
+    .counter-actions {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn-inc,
+    .btn-dec {
+      width: 60px;
+      height: 60px;
+      font-size: 28px;
+      border-radius: 50%;
+    }
+
+    .btn-inc {
+      background: #0f3460;
+      color: #fff;
+    }
+
+    .btn-inc:hover {
+      background: #1a4a85;
+    }
+
+    .btn-dec {
+      background: #e94560;
+      color: #fff;
+    }
+
+    .btn-dec:hover {
+      background: #d13350;
+    }
+
+    .btn-reset {
+      padding: 12px 28px;
+      background: #e2e8f0;
+      color: #334155;
+      border-radius: 8px;
+    }
+
+    .btn-reset:hover {
+      background: #cbd5e1;
+    }
+  </style>
+</Layouts.app>

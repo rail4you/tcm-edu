@@ -1,0 +1,63 @@
+# ============================================================
+# docker-compose.yml - ash-ts-demo 生产环境
+# ============================================================
+#
+# 单容器方案：Phoenix 同时承担
+#   - 静态资源服务（Next.js export → /app/*）
+#   - AshTypescript RPC（/api/rpc/*）
+#   - SPA fallback（/，由 FallbackController 返回 priv/app/index.html）
+#
+# 镜像由本地 Mac 通过 docker buildx 交叉构建（linux/amd64）并推送到
+# 阿里云容器镜像仓库。详见项目根目录的 build-and-push.sh。
+#
+# 数据库走外部 PostgreSQL，通过 .env 里的 DATABASE_URL 注入。
+#
+# 远程目录结构：
+#   ~/ash-ts-demo/
+#   ├── docker-compose.yml
+#   ├── .env                  从 .env.example 复制
+#   └── deploy.sh             服务管理
+#
+# 使用：
+#   ./deploy.sh up            启动
+#   ./deploy.sh down          停止
+#   ./deploy.sh restart       重启
+#   ./deploy.sh logs          实时日志
+#   ./deploy.sh status        状态
+#   ./deploy.sh pull          拉取最新镜像
+#   ./deploy.sh migrate       数据库迁移
+# ============================================================
+
+services:
+
+  # ─────────────────────────────────────────────────────────────
+  # ash-ts-demo 单进程 — Phoenix + 前端静态导出
+  # ─────────────────────────────────────────────────────────────
+  app:
+    image: ${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/ash-ts-demo:latest}
+    container_name: ash-ts-demo
+    hostname: ash-ts-demo
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-4000}:4000"
+    environment:
+      # Phoenix 服务端
+      - PHX_SERVER=true
+      - PORT=4000
+      - PHX_HOST=${PHX_HOST:-0.0.0.0}
+      # 数据库（外部 Postgres；可以是 RDS / 自建 / docker-host 上的实例）
+      - DATABASE_URL=${DATABASE_URL}
+      - POOL_SIZE=${POOL_SIZE:-10}
+      # 安全
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - TOKEN_SIGNING_SECRET=${TOKEN_SIGNING_SECRET}
+      # 时区与编码
+      - TZ=${TZ:-Asia/Shanghai}
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:4000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
