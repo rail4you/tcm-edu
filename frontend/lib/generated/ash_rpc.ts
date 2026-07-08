@@ -3,7 +3,7 @@
 
 import * as RpcHooks from "../rpcHooks";
 
-import type { AshRpcError, ChatMessageFilterInput, ChatMessageResourceSchema, ChatMessageSortField, ChatSessionFilterInput, ChatSessionResourceSchema, ChatSessionSortField, ChatTaskFilterInput, ChatTaskResourceSchema, ChatTaskSortField, ConditionalPaginatedResultMixed, InferResult, SortString, TodoFilterInput, TodoResourceSchema, TodoSortField, UUID, UnifiedFieldSelection } from "./ash_types";
+import type { AshRpcError, ChatMessageFilterInput, ChatMessageResourceSchema, ChatMessageSortField, ChatSessionFilterInput, ChatSessionResourceSchema, ChatSessionSortField, ChatTaskFilterInput, ChatTaskResourceSchema, ChatTaskSortField, ConditionalPaginatedResultMixed, InferResult, PermissionFilterInput, PermissionResourceSchema, PermissionSortField, PostFilterInput, PostResourceSchema, PostSortField, RoleFilterInput, RoleResourceSchema, RoleSortField, SortString, TodoFilterInput, TodoResourceSchema, TodoSortField, UUID, UnifiedFieldSelection, UserFilterInput, UserResourceSchema, UserSortField } from "./ash_types";
 export type * from "./ash_types";
 
 // RPC Action Hook Context Type
@@ -141,6 +141,387 @@ export async function executeActionRpcRequest<T>(
 
 
 
+
+
+export type ListPermissionsFields = UnifiedFieldSelection<PermissionResourceSchema>[];
+
+
+export type InferListPermissionsResult<
+  Fields extends ListPermissionsFields | undefined,
+  Page extends ListPermissionsConfig["page"] = undefined
+> = ConditionalPaginatedResultMixed<Page, Array<InferResult<PermissionResourceSchema, Fields>>, {
+  results: Array<InferResult<PermissionResourceSchema, Fields>>;
+  hasMore: boolean;
+  limit: number;
+  offset: number;
+  count?: number | null;
+  type: "offset";
+}, {
+  results: Array<InferResult<PermissionResourceSchema, Fields>>;
+  hasMore: boolean;
+  limit: number;
+  after: string | null;
+  before: string | null;
+  previousPage: string;
+  nextPage: string;
+  count?: number | null;
+  type: "keyset";
+}>;
+
+export type ListPermissionsConfig = {
+  tenant?: string;
+  hookCtx?: ActionHookContext;
+  fields: ListPermissionsFields;
+  filter?: PermissionFilterInput;
+  sort?: SortString<PermissionSortField> | SortString<PermissionSortField>[];
+  page?: (
+    {
+      limit?: number;
+      offset?: number;
+      count?: boolean;
+    } | {
+      limit?: number;
+      after?: string;
+      before?: string;
+    }
+  );
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+};
+
+export type ListPermissionsResult<Fields extends ListPermissionsFields, Page extends ListPermissionsConfig["page"] = undefined> = | { success: true; data: InferListPermissionsResult<Fields, Page>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Read Permission records
+ *
+ * @ashActionType :read
+ */
+export async function listPermissions<Fields extends ListPermissionsFields, Config extends ListPermissionsConfig = ListPermissionsConfig>(
+  config: Config & { fields: Fields }
+): Promise<ListPermissionsResult<Fields, Config["page"]>> {
+  const payload = {
+    action: "list_permissions",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    ...(config.fields !== undefined && { fields: config.fields }),
+    ...(config.filter && { filter: config.filter }),
+    ...(config.sort && { sort: Array.isArray(config.sort) ? config.sort.join(",") : config.sort }),
+    ...(config.page && { page: config.page })
+  };
+
+  return executeActionRpcRequest<ListPermissionsResult<Fields, Config["page"]>>(
+    payload,
+    config
+  );
+}
+
+
+export type CreateRoleInput = {
+  name: string;
+  description?: string | null;
+};
+
+export type CreateRoleFields = UnifiedFieldSelection<RoleResourceSchema>[];
+
+export type InferCreateRoleResult<
+  Fields extends CreateRoleFields | undefined,
+> = InferResult<RoleResourceSchema, Fields>;
+
+export type CreateRoleResult<Fields extends CreateRoleFields | undefined = undefined> = | { success: true; data: InferCreateRoleResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Create a new Role
+ *
+ * @ashActionType :create
+ */
+export async function createRole<Fields extends CreateRoleFields | undefined = undefined>(
+  config: {
+  tenant?: string;
+  input: CreateRoleInput;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<CreateRoleResult<Fields extends undefined ? [] : Fields>> {
+  const payload = {
+    action: "create_role",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    input: config.input,
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<CreateRoleResult<Fields extends undefined ? [] : Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type ListRolesFields = UnifiedFieldSelection<RoleResourceSchema>[];
+
+
+export type InferListRolesResult<
+  Fields extends ListRolesFields | undefined,
+  Page extends ListRolesConfig["page"] = undefined
+> = ConditionalPaginatedResultMixed<Page, Array<InferResult<RoleResourceSchema, Fields>>, {
+  results: Array<InferResult<RoleResourceSchema, Fields>>;
+  hasMore: boolean;
+  limit: number;
+  offset: number;
+  count?: number | null;
+  type: "offset";
+}, {
+  results: Array<InferResult<RoleResourceSchema, Fields>>;
+  hasMore: boolean;
+  limit: number;
+  after: string | null;
+  before: string | null;
+  previousPage: string;
+  nextPage: string;
+  count?: number | null;
+  type: "keyset";
+}>;
+
+export type ListRolesConfig = {
+  tenant?: string;
+  hookCtx?: ActionHookContext;
+  fields: ListRolesFields;
+  filter?: RoleFilterInput;
+  sort?: SortString<RoleSortField> | SortString<RoleSortField>[];
+  page?: (
+    {
+      limit?: number;
+      offset?: number;
+      count?: boolean;
+    } | {
+      limit?: number;
+      after?: string;
+      before?: string;
+    }
+  );
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+};
+
+export type ListRolesResult<Fields extends ListRolesFields, Page extends ListRolesConfig["page"] = undefined> = | { success: true; data: InferListRolesResult<Fields, Page>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Read Role records
+ *
+ * @ashActionType :read
+ */
+export async function listRoles<Fields extends ListRolesFields, Config extends ListRolesConfig = ListRolesConfig>(
+  config: Config & { fields: Fields }
+): Promise<ListRolesResult<Fields, Config["page"]>> {
+  const payload = {
+    action: "list_roles",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    ...(config.fields !== undefined && { fields: config.fields }),
+    ...(config.filter && { filter: config.filter }),
+    ...(config.sort && { sort: Array.isArray(config.sort) ? config.sort.join(",") : config.sort }),
+    ...(config.page && { page: config.page })
+  };
+
+  return executeActionRpcRequest<ListRolesResult<Fields, Config["page"]>>(
+    payload,
+    config
+  );
+}
+
+
+export type ListUsersFields = UnifiedFieldSelection<UserResourceSchema>[];
+export type InferListUsersResult<
+  Fields extends ListUsersFields,
+> = Array<InferResult<UserResourceSchema, Fields>>;
+
+export type ListUsersResult<Fields extends ListUsersFields> = | { success: true; data: InferListUsersResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Read User records
+ *
+ * @ashActionType :read
+ */
+export async function listUsers<Fields extends ListUsersFields>(
+  config: {
+  tenant?: string;
+  hookCtx?: ActionHookContext;
+  fields: Fields;
+  filter?: UserFilterInput;
+  sort?: SortString<UserSortField> | SortString<UserSortField>[];
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<ListUsersResult<Fields>> {
+  const payload = {
+    action: "list_users",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    ...(config.fields !== undefined && { fields: config.fields }),
+    ...(config.filter && { filter: config.filter }),
+    ...(config.sort && { sort: Array.isArray(config.sort) ? config.sort.join(",") : config.sort })
+  };
+
+  return executeActionRpcRequest<ListUsersResult<Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type ManagePermissionsInput = {
+  permissions?: Array<string>;
+};
+
+export type ManagePermissionsFields = UnifiedFieldSelection<UserResourceSchema>[];
+
+export type InferManagePermissionsResult<
+  Fields extends ManagePermissionsFields | undefined,
+> = InferResult<UserResourceSchema, Fields>;
+
+export type ManagePermissionsResult<Fields extends ManagePermissionsFields | undefined = undefined> = | { success: true; data: InferManagePermissionsResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Update an existing User
+ *
+ * @ashActionType :update
+ */
+export async function managePermissions<Fields extends ManagePermissionsFields | undefined = undefined>(
+  config: {
+  tenant?: string;
+  identity: UUID;
+  input?: ManagePermissionsInput;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<ManagePermissionsResult<Fields extends undefined ? [] : Fields>> {
+  const payload = {
+    action: "manage_permissions",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    identity: config.identity,
+    input: config.input,
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<ManagePermissionsResult<Fields extends undefined ? [] : Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type RegisterWithRoleInput = {
+  email: string;
+  role?: "admin" | "user";
+  password: string;
+};
+
+export type RegisterWithRoleFields = UnifiedFieldSelection<UserResourceSchema>[];
+
+export type InferRegisterWithRoleResult<
+  Fields extends RegisterWithRoleFields | undefined,
+> = InferResult<UserResourceSchema, Fields>;
+
+export type RegisterWithRoleResult<Fields extends RegisterWithRoleFields | undefined = undefined> = | { success: true; data: InferRegisterWithRoleResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Create a new User
+ *
+ * @ashActionType :create
+ */
+export async function registerWithRole<Fields extends RegisterWithRoleFields | undefined = undefined>(
+  config: {
+  tenant?: string;
+  input: RegisterWithRoleInput;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<RegisterWithRoleResult<Fields extends undefined ? [] : Fields>> {
+  const payload = {
+    action: "register_with_role",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    input: config.input,
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<RegisterWithRoleResult<Fields extends undefined ? [] : Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type UpdateRoleInput = {
+  role: "admin" | "user";
+};
+
+export type UpdateRoleFields = UnifiedFieldSelection<UserResourceSchema>[];
+
+export type InferUpdateRoleResult<
+  Fields extends UpdateRoleFields | undefined,
+> = InferResult<UserResourceSchema, Fields>;
+
+export type UpdateRoleResult<Fields extends UpdateRoleFields | undefined = undefined> = | { success: true; data: InferUpdateRoleResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Update an existing User
+ *
+ * @ashActionType :update
+ */
+export async function updateRole<Fields extends UpdateRoleFields | undefined = undefined>(
+  config: {
+  tenant?: string;
+  identity: UUID;
+  input: UpdateRoleInput;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<UpdateRoleResult<Fields extends undefined ? [] : Fields>> {
+  const payload = {
+    action: "update_role",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    identity: config.identity,
+    input: config.input,
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<UpdateRoleResult<Fields extends undefined ? [] : Fields>>(
+    payload,
+    config
+  );
+}
 
 
 export type CreateMessageInput = {
@@ -541,6 +922,247 @@ export async function listTasks<Fields extends ListTasksFields, Config extends L
   };
 
   return executeActionRpcRequest<ListTasksResult<Fields, Config["page"]>>(
+    payload,
+    config
+  );
+}
+
+
+export type CreatePostInput = {
+  title: string;
+  body?: string | null;
+};
+
+export type CreatePostFields = UnifiedFieldSelection<PostResourceSchema>[];
+
+export type InferCreatePostResult<
+  Fields extends CreatePostFields | undefined,
+> = InferResult<PostResourceSchema, Fields>;
+
+export type CreatePostResult<Fields extends CreatePostFields | undefined = undefined> = | { success: true; data: InferCreatePostResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Create a new Post
+ *
+ * @ashActionType :create
+ */
+export async function createPost<Fields extends CreatePostFields | undefined = undefined>(
+  config: {
+  tenant?: string;
+  input: CreatePostInput;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<CreatePostResult<Fields extends undefined ? [] : Fields>> {
+  const payload = {
+    action: "create_post",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    input: config.input,
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<CreatePostResult<Fields extends undefined ? [] : Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type DeletePostResult = | { success: true; data: {}; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Delete a Post
+ *
+ * @ashActionType :destroy
+ */
+export async function deletePost(
+  config: {
+  tenant?: string;
+  identity: UUID;
+  hookCtx?: ActionHookContext;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<DeletePostResult> {
+  const payload = {
+    action: "delete_post",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    identity: config.identity
+  };
+
+  return executeActionRpcRequest<DeletePostResult>(
+    payload,
+    config
+  );
+}
+
+
+export type GetPostFields = UnifiedFieldSelection<PostResourceSchema>[];
+export type InferGetPostResult<
+  Fields extends GetPostFields,
+> = InferResult<PostResourceSchema, Fields>;
+
+export type GetPostResult<Fields extends GetPostFields> = | { success: true; data: InferGetPostResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Read Post records
+ *
+ * @ashActionType :read
+ */
+export async function getPost<Fields extends GetPostFields>(
+  config: {
+  tenant?: string;
+  hookCtx?: ActionHookContext;
+  fields: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<GetPostResult<Fields>> {
+  const payload = {
+    action: "get_post",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<GetPostResult<Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type ListPostsFields = UnifiedFieldSelection<PostResourceSchema>[];
+
+
+export type InferListPostsResult<
+  Fields extends ListPostsFields | undefined,
+  Page extends ListPostsConfig["page"] = undefined
+> = ConditionalPaginatedResultMixed<Page, Array<InferResult<PostResourceSchema, Fields>>, {
+  results: Array<InferResult<PostResourceSchema, Fields>>;
+  hasMore: boolean;
+  limit: number;
+  offset: number;
+  count?: number | null;
+  type: "offset";
+}, {
+  results: Array<InferResult<PostResourceSchema, Fields>>;
+  hasMore: boolean;
+  limit: number;
+  after: string | null;
+  before: string | null;
+  previousPage: string;
+  nextPage: string;
+  count?: number | null;
+  type: "keyset";
+}>;
+
+export type ListPostsConfig = {
+  tenant?: string;
+  hookCtx?: ActionHookContext;
+  fields: ListPostsFields;
+  filter?: PostFilterInput;
+  sort?: SortString<PostSortField> | SortString<PostSortField>[];
+  page?: (
+    {
+      limit?: number;
+      offset?: number;
+      count?: boolean;
+    } | {
+      limit?: number;
+      after?: string;
+      before?: string;
+    }
+  );
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+};
+
+export type ListPostsResult<Fields extends ListPostsFields, Page extends ListPostsConfig["page"] = undefined> = | { success: true; data: InferListPostsResult<Fields, Page>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Read Post records
+ *
+ * @ashActionType :read
+ */
+export async function listPosts<Fields extends ListPostsFields, Config extends ListPostsConfig = ListPostsConfig>(
+  config: Config & { fields: Fields }
+): Promise<ListPostsResult<Fields, Config["page"]>> {
+  const payload = {
+    action: "list_posts",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    ...(config.fields !== undefined && { fields: config.fields }),
+    ...(config.filter && { filter: config.filter }),
+    ...(config.sort && { sort: Array.isArray(config.sort) ? config.sort.join(",") : config.sort }),
+    ...(config.page && { page: config.page })
+  };
+
+  return executeActionRpcRequest<ListPostsResult<Fields, Config["page"]>>(
+    payload,
+    config
+  );
+}
+
+
+export type UpdatePostInput = {
+  title?: string;
+  body?: string | null;
+};
+
+export type UpdatePostFields = UnifiedFieldSelection<PostResourceSchema>[];
+
+export type InferUpdatePostResult<
+  Fields extends UpdatePostFields | undefined,
+> = InferResult<PostResourceSchema, Fields>;
+
+export type UpdatePostResult<Fields extends UpdatePostFields | undefined = undefined> = | { success: true; data: InferUpdatePostResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Update an existing Post
+ *
+ * @ashActionType :update
+ */
+export async function updatePost<Fields extends UpdatePostFields | undefined = undefined>(
+  config: {
+  tenant?: string;
+  identity: UUID;
+  input: UpdatePostInput;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<UpdatePostResult<Fields extends undefined ? [] : Fields>> {
+  const payload = {
+    action: "update_post",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    identity: config.identity,
+    input: config.input,
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<UpdatePostResult<Fields extends undefined ? [] : Fields>>(
     payload,
     config
   );

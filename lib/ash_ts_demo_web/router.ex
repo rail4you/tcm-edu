@@ -13,6 +13,19 @@ defmodule AshTsDemoWeb.Router do
       credentials: true
   end
 
+  # Pipeline for multipart file uploads (needs to accept multipart/form-data)
+  pipeline :api_upload do
+    plug :accepts, ["json", "multipart"]
+
+    plug CORSPlug,
+      origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      credentials: true
+
+    plug :retrieve_from_bearer, :ash_ts_demo
+    plug :set_actor, :user
+  end
+
   pipeline :api_auth do
     plug :accepts, ["json"]
 
@@ -32,6 +45,16 @@ defmodule AshTsDemoWeb.Router do
     plug :protect_from_forgery
     plug :put_root_layout, html: {AshTsDemoWeb.Layouts, :root}
     plug :put_secure_browser_headers
+  end
+
+  # ── Current user endpoint (requires Bearer token) ─────────────────
+  # Must be defined BEFORE auth_routes since auth_routes uses forward
+  # which would swallow /me.
+  scope "/api/auth", AshTsDemoWeb do
+    pipe_through :api_auth
+
+    get "/me", AuthController, :me
+    get "/users/:user_id/permissions", AuthController, :user_permissions
   end
 
   # ── Auth routes (sign-in, register, sign-out via POST) ────────────
@@ -68,13 +91,33 @@ defmodule AshTsDemoWeb.Router do
     get "/chat/events", ChatEventsController, :subscribe
   end
 
-  # ── SPA fallback ───────────────────────────────────────────────────
+  # ── File upload endpoint (multipart, authenticated via Bearer) ────
+  scope "/api", AshTsDemoWeb do
+    pipe_through :api_upload
+
+    match :options, "/posts/:post_id/upload/:attachment_name", PostUploadController, :options
+    post "/posts/:post_id/upload/:attachment_name", PostUploadController, :upload
+  end
+
+  # ── Course static page ─────────────────────────────────────────────
+  scope "/", AshTsDemoWeb do
+    pipe_through :browser
+
+    get "/course", FallbackController, :course
+    get "/course/*path", FallbackController, :course
+  end
+
+  # ── SPA pages ─────────────────────────────────────────────────────
   scope "/", AshTsDemoWeb do
     pipe_through :browser
 
     live "/db", DbStatsLive, :index
 
     get "/", FallbackController, :root
+    get "/posts", FallbackController, :spa
+    get "/posts/new", FallbackController, :spa
+    get "/admin", FallbackController, :spa
+    get "/admin/*path", FallbackController, :spa
     get "/app", FallbackController, :app
     get "/app/*path", FallbackController, :app
   end

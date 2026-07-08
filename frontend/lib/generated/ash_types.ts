@@ -7,6 +7,66 @@ export type UUID = string;
 export type UtcDateTime = string;
 export type UtcDateTimeUsec = string;
 
+// Permission Schema
+export type PermissionResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "name" | "description";
+  id: UUID;
+  name: string;
+  description: string | null;
+};
+
+
+
+export type PermissionAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "name" | "description";
+  id: UUID;
+  name: string;
+  description: string | null;
+};
+
+
+// Role Schema
+export type RoleResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "name" | "description";
+  id: UUID;
+  name: string;
+  description: string | null;
+};
+
+
+
+export type RoleAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "name" | "description";
+  id: UUID;
+  name: string;
+  description: string | null;
+};
+
+
+// User Schema
+export type UserResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "email" | "role";
+  id: UUID;
+  email: string;
+  role: "admin" | "user";
+};
+
+
+
+export type UserAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "email" | "role";
+  id: UUID;
+  email: string;
+  role: "admin" | "user";
+};
+
+
 // ChatMessage Schema
 export type ChatMessageResourceSchema = {
   __type: "Resource";
@@ -101,6 +161,33 @@ export type ChatTaskAttributesOnlySchema = {
 };
 
 
+// Post Schema
+export type PostResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "title" | "body" | "insertedAt" | "updatedAt" | "coverImageUrl" | "attachmentsUrls" | "attachmentsThumbnailUrls";
+  id: UUID;
+  title: string;
+  body: string | null;
+  insertedAt: UtcDateTimeUsec;
+  updatedAt: UtcDateTimeUsec;
+  coverImageUrl: string | null;
+  attachmentsUrls: Array<string> | null;
+  attachmentsThumbnailUrls: Array<string> | null;
+};
+
+
+
+export type PostAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "title" | "body" | "insertedAt" | "updatedAt";
+  id: UUID;
+  title: string;
+  body: string | null;
+  insertedAt: UtcDateTimeUsec;
+  updatedAt: UtcDateTimeUsec;
+};
+
+
 // Todo Schema
 export type TodoResourceSchema = {
   __type: "Resource";
@@ -125,6 +212,86 @@ export type TodoAttributesOnlySchema = {
 };
 
 
+export type PermissionFilterInput = {
+  and?: Array<PermissionFilterInput>;
+  or?: Array<PermissionFilterInput>;
+  not?: Array<PermissionFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  name?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+  };
+
+  description?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+
+
+};
+export type RoleFilterInput = {
+  and?: Array<RoleFilterInput>;
+  or?: Array<RoleFilterInput>;
+  not?: Array<RoleFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  name?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+  };
+
+  description?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+
+
+};
+export type UserFilterInput = {
+  and?: Array<UserFilterInput>;
+  or?: Array<UserFilterInput>;
+  not?: Array<UserFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  email?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+  };
+
+  role?: {
+    eq?: "admin" | "user";
+    notEq?: "admin" | "user";
+    in?: Array<"admin" | "user">;
+  };
+
+
+
+};
 export type ChatMessageFilterInput = {
   and?: Array<ChatMessageFilterInput>;
   or?: Array<ChatMessageFilterInput>;
@@ -346,6 +513,74 @@ export type ChatTaskFilterInput = {
 
 
 };
+export type PostFilterInput = {
+  and?: Array<PostFilterInput>;
+  or?: Array<PostFilterInput>;
+  not?: Array<PostFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  title?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+  };
+
+  body?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  insertedAt?: {
+    eq?: UtcDateTimeUsec;
+    notEq?: UtcDateTimeUsec;
+    greaterThan?: UtcDateTimeUsec;
+    greaterThanOrEqual?: UtcDateTimeUsec;
+    lessThan?: UtcDateTimeUsec;
+    lessThanOrEqual?: UtcDateTimeUsec;
+    in?: Array<UtcDateTimeUsec>;
+  };
+
+  updatedAt?: {
+    eq?: UtcDateTimeUsec;
+    notEq?: UtcDateTimeUsec;
+    greaterThan?: UtcDateTimeUsec;
+    greaterThanOrEqual?: UtcDateTimeUsec;
+    lessThan?: UtcDateTimeUsec;
+    lessThanOrEqual?: UtcDateTimeUsec;
+    in?: Array<UtcDateTimeUsec>;
+  };
+
+  coverImageUrl?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  attachmentsUrls?: {
+    eq?: Array<string>;
+    notEq?: Array<string>;
+    in?: Array<Array<string>>;
+    isNil?: boolean;
+  };
+
+  attachmentsThumbnailUrls?: {
+    eq?: Array<string>;
+    notEq?: Array<string>;
+    in?: Array<Array<string>>;
+    isNil?: boolean;
+  };
+
+
+
+};
 export type TodoFilterInput = {
   and?: Array<TodoFilterInput>;
   or?: Array<TodoFilterInput>;
@@ -393,6 +628,15 @@ export type TodoFilterInput = {
 };
 
 
+export const permissionFilterFields = ["id", "name", "description"] as const;
+export type PermissionFilterField = (typeof permissionFilterFields)[number];
+
+export const roleFilterFields = ["id", "name", "description"] as const;
+export type RoleFilterField = (typeof roleFilterFields)[number];
+
+export const userFilterFields = ["id", "email", "role"] as const;
+export type UserFilterField = (typeof userFilterFields)[number];
+
 export const chatMessageFilterFields = ["id", "sessionId", "role", "content", "insertedAt"] as const;
 export type ChatMessageFilterField = (typeof chatMessageFilterFields)[number];
 
@@ -402,9 +646,21 @@ export type ChatSessionFilterField = (typeof chatSessionFilterFields)[number];
 export const chatTaskFilterFields = ["id", "taskId", "userId", "sessionId", "agentName", "taskName", "durationMs", "status", "jobId", "result", "errorMessage", "insertedAt", "updatedAt", "startedAt", "completedAt"] as const;
 export type ChatTaskFilterField = (typeof chatTaskFilterFields)[number];
 
+export const postFilterFields = ["id", "title", "body", "insertedAt", "updatedAt", "coverImageUrl", "attachmentsUrls", "attachmentsThumbnailUrls", "coverImage", "attachments"] as const;
+export type PostFilterField = (typeof postFilterFields)[number];
+
 export const todoFilterFields = ["id", "title", "completed", "insertedAt", "updatedAt"] as const;
 export type TodoFilterField = (typeof todoFilterFields)[number];
 
+
+export const permissionSortFields = ["id", "name", "description"] as const;
+export type PermissionSortField = (typeof permissionSortFields)[number];
+
+export const roleSortFields = ["id", "name", "description"] as const;
+export type RoleSortField = (typeof roleSortFields)[number];
+
+export const userSortFields = ["id", "email", "role"] as const;
+export type UserSortField = (typeof userSortFields)[number];
 
 export const chatMessageSortFields = ["id", "sessionId", "role", "content", "insertedAt"] as const;
 export type ChatMessageSortField = (typeof chatMessageSortFields)[number];
@@ -414,6 +670,9 @@ export type ChatSessionSortField = (typeof chatSessionSortFields)[number];
 
 export const chatTaskSortFields = ["id", "taskId", "userId", "sessionId", "agentName", "taskName", "durationMs", "status", "jobId", "result", "errorMessage", "insertedAt", "updatedAt", "startedAt", "completedAt"] as const;
 export type ChatTaskSortField = (typeof chatTaskSortFields)[number];
+
+export const postSortFields = ["id", "title", "body", "insertedAt", "updatedAt", "coverImageUrl", "attachmentsUrls", "attachmentsThumbnailUrls"] as const;
+export type PostSortField = (typeof postSortFields)[number];
 
 export const todoSortFields = ["id", "title", "completed", "insertedAt", "updatedAt"] as const;
 export type TodoSortField = (typeof todoSortFields)[number];

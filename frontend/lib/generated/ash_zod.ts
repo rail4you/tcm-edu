@@ -5,6 +5,25 @@ import { z } from "zod";
 
 
 
+export const createRoleSchema = z.object({
+  name: z.string().min(1).regex(/^[a-z_]+$/),
+  description: z.string().nullable().optional(),
+});
+
+export const managePermissionsSchema = z.object({
+  permissions: z.array(z.string()).optional(),
+});
+
+export const registerWithRoleSchema = z.object({
+  email: z.string().min(1),
+  role: z.enum(["admin", "user"]).optional(),
+  password: z.string().min(1),
+});
+
+export const updateRoleSchema = z.object({
+  role: z.enum(["admin", "user"]),
+});
+
 export const createMessageSchema = z.object({
   sessionId: z.string().min(1),
   role: z.string().min(1),
@@ -19,6 +38,16 @@ export const createSessionSchema = z.object({
 
 export const getTaskSchema = z.object({
   taskId: z.string().min(1),
+});
+
+export const createPostSchema = z.object({
+  title: z.string().min(1).max(200),
+  body: z.string().max(10000).nullable().optional(),
+});
+
+export const updatePostSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  body: z.string().max(10000).nullable().optional(),
 });
 
 export const createTodoSchema = z.object({

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./auth-context";
+import Link from "next/link";
 import {
   createTodo,
   deleteTodo,
@@ -38,14 +39,14 @@ const FIELDS: ["id", "title", "completed", "insertedAt", "updatedAt"] = [
 ];
 
 export default function Page() {
-  const { isAuthenticated, logout, login, register, loading: authLoading, error: authError } = useAuth();
+  const { isAuthenticated, logout, login, register, loading: authLoading, error: authError, isAdmin } = useAuth();
 
   // ── Auth gate: show login/register form if not authenticated ──────
   if (!isAuthenticated) {
     return <InlineAuth login={login} register={register} loading={authLoading} error={authError} />;
   }
 
-  return <TodoApp logout={logout} />;
+  return <TodoApp logout={logout} isAdmin={isAdmin} />;
 }
 
 /** Inline login/register form shown when the user is not authenticated. */
@@ -153,7 +154,7 @@ function InlineAuth({
 }
 
 /** The main Todo application, only rendered when authenticated. */
-function TodoApp({ logout }: { logout: () => Promise<void> }) {
+function TodoApp({ logout, isAdmin }: { logout: () => Promise<void>; isAdmin: boolean }) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -223,26 +224,46 @@ function TodoApp({ logout }: { logout: () => Promise<void> }) {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-8 px-6 py-12">
-      <header className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500">
-            ash-ts-demo
-          </p>
-          <h1 className="text-3xl font-semibold">Todos</h1>
-          <p className="text-sm text-zinc-500">
-            RPC via{" "}
-            <code className="rounded bg-zinc-200 px-1 py-0.5 text-xs dark:bg-zinc-800">
-              /api/rpc/run
-            </code>
-          </p>
-        </div>
+      <header className="flex flex-col gap-1">
+        <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500">
+          ash-ts-demo
+        </p>
+        <h1 className="text-3xl font-semibold">Todos</h1>
+        <p className="text-sm text-zinc-500">
+          RPC via{" "}
+          <code className="rounded bg-zinc-200 px-1 py-0.5 text-xs dark:bg-zinc-800">
+            /api/rpc/run
+          </code>
+        </p>
+      </header>
+
+      {/* Navigation tabs */}
+      <nav className="flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-800">
+        <span className="rounded-t-lg border-b-2 border-indigo-500 px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+          Todos
+        </span>
+        <Link
+          href="/posts"
+          className="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-sm font-medium text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-700 dark:hover:border-zinc-700 dark:hover:text-zinc-300"
+        >
+          Posts
+        </Link>
+        {isAdmin && (
+          <Link
+            href="/admin/users"
+            className="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-sm font-medium text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-700 dark:hover:border-zinc-700 dark:hover:text-zinc-300"
+          >
+            Users
+          </Link>
+        )}
+        <div className="ml-auto" />
         <button
           onClick={logout}
           className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
         >
           Sign Out
         </button>
-      </header>
+      </nav>
 
       <form onSubmit={handleAdd} className="flex gap-2">
         <input

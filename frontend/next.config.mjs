@@ -28,6 +28,7 @@
  * Next.js dev server is running.
  */
 const isProd = process.env.NODE_ENV === "production";
+const isDev = process.env.NODE_ENV !== "production";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -35,6 +36,9 @@ const nextConfig = {
   trailingSlash: true,
   images: { unoptimized: true },
   reactStrictMode: true,
+  turbopack: {
+    root: process.cwd(),
+  },
   // Production export is mounted under `/app/` by Phoenix.
   // Dev server stays at the root for ergonomic developer URLs.
   ...(isProd
