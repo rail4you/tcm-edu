@@ -1,4 +1,4 @@
-defmodule AshTsDemo.Repo.Migrations.AddUsersAndTokensExtensions1 do
+defmodule TcmEdu.Repo.Migrations.AddUsersAndTokensExtensions1 do
   @moduledoc """
   Installs any extensions that are mentioned in the repo's `installed_extensions/0` callback
 

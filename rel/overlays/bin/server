@@ -2,4 +2,4 @@
 set -eu
 
 cd -P -- "$(dirname -- "$0")"
-PHX_SERVER=true exec ./ash_ts_demo start
+PHX_SERVER=true exec ./tcm_edu start

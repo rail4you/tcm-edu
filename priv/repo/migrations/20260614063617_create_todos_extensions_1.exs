@@ -1,4 +1,4 @@
-defmodule AshTsDemo.Repo.Migrations.CreateTodosExtensions1 do
+defmodule TcmEdu.Repo.Migrations.CreateTodosExtensions1 do
   @moduledoc """
   Installs any extensions that are mentioned in the repo's `installed_extensions/0` callback
 

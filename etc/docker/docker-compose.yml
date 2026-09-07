@@ -1,5 +1,5 @@
 # ============================================================
-# docker-compose.yml - ash-ts-demo 生产环境
+# docker-compose.yml - tcm-edu 生产环境
 # ============================================================
 #
 # 单容器方案：Phoenix 同时承担
@@ -13,7 +13,7 @@
 # 数据库走外部 PostgreSQL，通过 .env 里的 DATABASE_URL 注入。
 #
 # 远程目录结构：
-#   ~/ash-ts-demo/
+#   ~/tcm-edu/
 #   ├── docker-compose.yml
 #   ├── .env                  从 .env.example 复制
 #   └── deploy.sh             服务管理
@@ -31,12 +31,12 @@
 services:
 
   # ─────────────────────────────────────────────────────────────
-  # ash-ts-demo 单进程 — Phoenix + 前端静态导出
+  # tcm-edu 单进程 — Phoenix + 前端静态导出
   # ─────────────────────────────────────────────────────────────
   app:
-    image: ${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/ash-ts-demo:latest}
-    container_name: ash-ts-demo
-    hostname: ash-ts-demo
+    image: ${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/tcm-edu:latest}
+    container_name: tcm-edu
+    hostname: tcm-edu
     restart: unless-stopped
     ports:
       - "${HOST_PORT:-4000}:4000"

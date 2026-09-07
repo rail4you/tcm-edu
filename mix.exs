@@ -1,9 +1,9 @@
-defmodule AshTsDemo.MixProject do
+defmodule TcmEdu.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :ash_ts_demo,
+      app: :tcm_edu,
       version: "0.1.0",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -20,7 +20,7 @@ defmodule AshTsDemo.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {AshTsDemo.Application, []},
+      mod: {TcmEdu.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -110,6 +110,8 @@ defmodule AshTsDemo.MixProject do
       {:jido_browser, "~> 2.0"},
       # Background jobs
       {:oban, "~> 2.18"},
+      # File storage and attachments (not yet published to Hex)
+      {:ash_storage, github: "ash-project/ash_storage"},
       # Dev tooling: AGENTS.md / skill management from deps
       {:usage_rules, "~> 1.1", only: [:dev]},
       {:igniter, "~> 0.6", only: [:dev]}
@@ -128,7 +130,9 @@ defmodule AshTsDemo.MixProject do
       "ash.setup": ["ash.codegen --dev", "ash.migrate"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      # NOTE: tcm_edu.migrate 确保 test 库也有 tenant_default schema + 租户表，
+      # 否则 Phase 3 的多租户测试会报 relation "tenant_default.users" does not exist。
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "tcm_edu.migrate", "test"],
       precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
     ]
   end

@@ -23,6 +23,12 @@ erl_crash.dump
 /tmp/
 
 # Ignore package tarball (built via "mix hex.build").
-ash_ts_demo-*.tar
+tcm_edu-*.tar
 
 priv/app/
+
+# Frontend monorepo (pnpm workspaces) build artifacts
+frontend-monorepo/**/node_modules/
+frontend-monorepo/apps/*/.next/
+frontend-monorepo/apps/*/out/
+*.tsbuildinfo

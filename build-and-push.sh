@@ -21,7 +21,7 @@ set -e
 
 # ─── 可覆盖的变量 ──────────────────────────────────────────────
 PLATFORM="${PLATFORM:-linux/amd64}"
-IMAGE="${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/ash-ts-demo:latest}"
+IMAGE="${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/tcm-edu:latest}"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 info()  { echo -e "${BLUE}[INFO]${NC}  $1"; }

@@ -15,7 +15,7 @@ RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /build/frontend
 
 COPY frontend/package.json frontend/pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 COPY frontend/ ./
 ENV NODE_ENV=production
@@ -72,7 +72,7 @@ RUN chown nobody /app
 
 ENV MIX_ENV="prod"
 
-COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/ash_ts_demo ./
+COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/tcm_edu ./
 
 USER nobody
 

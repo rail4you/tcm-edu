@@ -4,7 +4,7 @@
 
 IO.puts("Seeding RBAC data…")
 
-alias AshTsDemo.Accounts
+alias TcmEdu.Accounts
 import Ash.Query
 
 # ── Helper: find or create ──────────────────────────────────────────
@@ -12,14 +12,14 @@ import Ash.Query
 defmodule SeedHelper do
   def ensure_user(email, password, role_name) do
     user =
-      AshTsDemo.Accounts.User
+      TcmEdu.Accounts.User
       |> Ash.Query.filter(email == ^email)
       |> Ash.read_one!(authorize?: false)
 
     user =
       case user do
         nil ->
-          AshTsDemo.Accounts.User
+          TcmEdu.Accounts.User
           |> Ash.Changeset.for_create(:register_with_role, %{
             email: email,
             password: password,
@@ -36,17 +36,17 @@ defmodule SeedHelper do
       end
 
     # Fetch or create the role
-    role = AshTsDemo.Accounts.Role |> Ash.Query.filter(name == ^role_name) |> Ash.read_one!(authorize?: false)
+    role = TcmEdu.Accounts.Role |> Ash.Query.filter(name == ^role_name) |> Ash.read_one!(authorize?: false)
 
     if role do
       # Ensure user has this role
       existing_ur =
-        AshTsDemo.Accounts.UserRole
+        TcmEdu.Accounts.UserRole
         |> Ash.Query.filter(user_id == ^user.id and role_id == ^role.id)
         |> Ash.read_one!(authorize?: false)
 
       unless existing_ur do
-        AshTsDemo.Accounts.UserRole
+        TcmEdu.Accounts.UserRole
         |> Ash.Changeset.for_create(:create, %{user_id: user.id, role_id: role.id})
         |> Ash.create!(authorize?: false)
       end
@@ -57,13 +57,13 @@ defmodule SeedHelper do
 
   def ensure_role(name, description) do
     existing =
-      AshTsDemo.Accounts.Role
+      TcmEdu.Accounts.Role
       |> Ash.Query.filter(name == ^name)
       |> Ash.read_one!(authorize?: false)
 
     case existing do
       nil ->
-        AshTsDemo.Accounts.Role
+        TcmEdu.Accounts.Role
         |> Ash.Changeset.for_create(:create, %{name: name, description: description})
         |> Ash.create!(authorize?: false)
 
@@ -78,13 +78,13 @@ defmodule SeedHelper do
 
   def ensure_permission(name, description) do
     existing =
-      AshTsDemo.Accounts.Permission
+      TcmEdu.Accounts.Permission
       |> Ash.Query.filter(name == ^name)
       |> Ash.read_one!(authorize?: false)
 
     case existing do
       nil ->
-        AshTsDemo.Accounts.Permission
+        TcmEdu.Accounts.Permission
         |> Ash.Changeset.for_create(:create, %{name: name, description: description})
         |> Ash.create!(authorize?: false)
 
@@ -93,17 +93,17 @@ defmodule SeedHelper do
   end
 
   def ensure_role_permission(role_name, perm_name) do
-    role = AshTsDemo.Accounts.Role |> Ash.Query.filter(name == ^role_name) |> Ash.read_one!(authorize?: false)
-    perm = AshTsDemo.Accounts.Permission |> Ash.Query.filter(name == ^perm_name) |> Ash.read_one!(authorize?: false)
+    role = TcmEdu.Accounts.Role |> Ash.Query.filter(name == ^role_name) |> Ash.read_one!(authorize?: false)
+    perm = TcmEdu.Accounts.Permission |> Ash.Query.filter(name == ^perm_name) |> Ash.read_one!(authorize?: false)
 
     if role && perm do
       existing =
-        AshTsDemo.Accounts.RolePermission
+        TcmEdu.Accounts.RolePermission
         |> Ash.Query.filter(role_id == ^role.id and permission_id == ^perm.id)
         |> Ash.read_one!(authorize?: false)
 
       unless existing do
-        AshTsDemo.Accounts.RolePermission
+        TcmEdu.Accounts.RolePermission
         |> Ash.Changeset.for_create(:create, %{role_id: role.id, permission_id: perm.id})
         |> Ash.create!(authorize?: false)
       end

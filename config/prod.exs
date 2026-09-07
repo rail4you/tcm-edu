@@ -4,7 +4,7 @@ import Config
 # mix phx.server` locally serves both Next.js static assets and the RPC
 # endpoint over plain HTTP for end-to-end verification.
 # Re-enable force_ssl in real deployments.
-# config :ash_ts_demo, AshTsDemoWeb.Endpoint,
+# config :tcm_edu, TcmEduWeb.Endpoint,
 #   force_ssl: [
 #     rewrite_on: [:x_forwarded_proto],
 #     exclude: [

@@ -1,7 +1,7 @@
 import Config
 
 # Configure your database
-config :ash_ts_demo, AshTsDemo.Repo,
+config :tcm_edu, TcmEdu.Repo,
   username: System.get_env("PGUSER", "postgres"),
   password: System.get_env("PGPASSWORD", "postgres"),
   hostname: System.get_env("PGHOST", "localhost"),
@@ -17,7 +17,7 @@ config :ash_ts_demo, AshTsDemo.Repo,
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
-config :ash_ts_demo, AshTsDemoWeb.Endpoint,
+config :tcm_edu, TcmEduWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}, port: 4011],
@@ -51,7 +51,7 @@ config :ash_ts_demo, AshTsDemoWeb.Endpoint,
 # different ports.
 
 # Enable dev routes for dashboard and mailbox
-config :ash_ts_demo, dev_routes: true
+config :tcm_edu, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

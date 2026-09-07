@@ -7,22 +7,34 @@
 # General application configuration
 import Config
 
-config :ash_ts_demo,
-  ecto_repos: [AshTsDemo.Repo],
+config :tcm_edu,
+  ecto_repos: [TcmEdu.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # Ash framework — list all domains so codegen and CLI tools can find them.
-config :ash_ts_demo,
-  ash_domains: [AshTsDemo.TodoDomain, AshTsDemo.Accounts, AshTsDemo.ChatDomain],
-  token_signing_secret: "dev-secret-change-in-production-PLEASE-CHANGE-ME"
+config :tcm_edu,
+  ash_domains: [
+    TcmEdu.System,
+    TcmEdu.TodoDomain,
+    TcmEdu.Accounts,
+    TcmEdu.Courses,
+    TcmEdu.ChatDomain,
+    TcmEdu.PostDomain,
+    TcmEdu.Storage
+  ],
+  # Storage: local Disk service for file uploads
+  storage_root: "priv/storage",
+  token_signing_secret: "dev-secret-change-in-production-PLEASE-CHANGE-ME",
+  # Tenant migrations path (used by TcmEdu.TenantProvisioning)
+  tenant_migrations_path: "priv/repo/tenant_migrations"
 
-# AshTypescript codegen config. Output is written into the Next.js project
-# under frontend/lib/generated/ so the frontend can directly import the
-# generated client.
+# AshTypescript codegen config. Output is written into the shared workspace
+# package `frontend-monorepo/packages/rpc-client/src/` so the student, admin
+# and teacher apps all import the same generated client via `@tcm-edu/rpc-client`.
 config :ash_typescript,
-  output_file: "frontend/lib/generated/ash_rpc.ts",
-  types_output_file: "frontend/lib/generated/ash_types.ts",
-  zod_output_file: "frontend/lib/generated/ash_zod.ts",
+  output_file: "frontend-monorepo/packages/rpc-client/src/ash_rpc.ts",
+  types_output_file: "frontend-monorepo/packages/rpc-client/src/ash_types.ts",
+  zod_output_file: "frontend-monorepo/packages/rpc-client/src/ash_zod.ts",
   generate_zod_schemas: true,
   zod_import_path: "zod",
   zod_schema_suffix: "Schema",
@@ -37,19 +49,19 @@ config :ash_typescript,
   import_into_generated: [
     %{
       import_name: "RpcHooks",
-      file: "frontend/lib/rpcHooks.ts"
+      file: "frontend-monorepo/packages/rpc-client/src/rpcHooks.ts"
     }
   ]
 
 # Configure the endpoint
-config :ash_ts_demo, AshTsDemoWeb.Endpoint,
+config :tcm_edu, TcmEduWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [json: AshTsDemoWeb.ErrorJSON],
+    formats: [json: TcmEduWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: AshTsDemo.PubSub,
+  pubsub_server: TcmEdu.PubSub,
   live_view: [signing_salt: "tbUPJBUE"]
 
 # Configure Elixir's Logger
@@ -61,14 +73,14 @@ config :logger, :default_formatter,
 config :phoenix, :json_library, Jason
 
 # Jido agent runtime configuration
-config :ash_ts_demo, AshTsDemo.Jido,
+config :tcm_edu, TcmEdu.Jido,
   max_tasks: 1000,
   agent_pools: []
 
 # Jido AI — model aliases map short names to provider:model-id
 config :jido_ai,
   react_token_secret:
-    System.get_env("REACT_TOKEN_SECRET", "ash-ts-demo-local-react-token-secret-32b"),
+    System.get_env("REACT_TOKEN_SECRET", "tcm-edu-local-react-token-secret-32b"),
   model_aliases: %{
     fast: "deepseek:deepseek-chat",
     minimax: "minimax:abab6.5s-chat"
@@ -92,8 +104,8 @@ config :ash_authentication,
 # Oban — background job processing. Uses the same PostgreSQL database as the
 # Ash Repo. The default queue is `:default` and jobs are inserted with
 # Oban.insert/1 in the chat controller.
-config :ash_ts_demo, Oban,
-  repo: AshTsDemo.Repo,
+config :tcm_edu, Oban,
+  repo: TcmEdu.Repo,
   engine: Oban.Engines.Basic,
   queues: [default: 5],
   plugins: []

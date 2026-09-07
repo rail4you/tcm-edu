@@ -12,15 +12,15 @@ import Config
 # If you use `mix release`, you need to explicitly enable the server
 # by passing the PHX_SERVER=true when you start it:
 #
-#     PHX_SERVER=true bin/ash_ts_demo start
+#     PHX_SERVER=true bin/tcm_edu start
 #
 # Alternatively, you can use `mix phx.gen.release` to generate a `bin/server`
 # script that automatically sets the env var above.
 if System.get_env("PHX_SERVER") do
-  config :ash_ts_demo, AshTsDemoWeb.Endpoint, server: true
+  config :tcm_edu, TcmEduWeb.Endpoint, server: true
 end
 
-config :ash_ts_demo, AshTsDemoWeb.Endpoint,
+config :tcm_edu, TcmEduWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4011"))]
 
 if config_env() == :prod do
@@ -31,12 +31,12 @@ if config_env() == :prod do
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
   if database_url do
-    config :ash_ts_demo, AshTsDemo.Repo,
+    config :tcm_edu, TcmEdu.Repo,
       url: database_url,
       pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
       socket_options: maybe_ipv6
   else
-    config :ash_ts_demo, AshTsDemo.Repo,
+    config :tcm_edu, TcmEdu.Repo,
       username: System.get_env("PGUSER", "postgres"),
       password: System.get_env("PGPASSWORD", "postgres"),
       hostname: System.get_env("PGHOST", "localhost"),
@@ -53,13 +53,13 @@ if config_env() == :prod do
   # variable instead.
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||
-      "ash_ts_demo_default_secret_key_base_replace_in_real_prod_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      "tcm_edu_default_secret_key_base_replace_in_real_prod_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
   host = System.get_env("PHX_HOST") || "localhost"
 
-  config :ash_ts_demo, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
+  config :tcm_edu, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
-  config :ash_ts_demo, AshTsDemoWeb.Endpoint,
+  config :tcm_edu, TcmEduWeb.Endpoint,
     url: [host: host, port: String.to_integer(System.get_env("PORT", "4011"))],
     http: [
       ip: {0, 0, 0, 0},
@@ -67,7 +67,7 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base
 
-  config :ash_ts_demo,
+  config :tcm_edu,
     token_signing_secret:
       System.get_env("TOKEN_SIGNING_SECRET") ||
         "prod-secret-change-me-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"

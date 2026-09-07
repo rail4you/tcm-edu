@@ -1,4 +1,4 @@
-defmodule AshTsDemo.Repo.Migrations.AddChatTables do
+defmodule TcmEdu.Repo.Migrations.AddChatTables do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 

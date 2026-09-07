@@ -1,4 +1,4 @@
-defmodule AshTsDemo.Repo.Migrations.MigrateResources4 do
+defmodule TcmEdu.Repo.Migrations.MigrateResources4 do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# herdr-services.sh — start / stop / restart / status / logs for ash-ts-demo
+# herdr-services.sh — start / stop / restart / status / logs for tcm-edu
 #
 # Manages Phoenix (4011) and Next.js (3000) dev servers via herdr panes.
 # Layout (created on first `start` if missing):
@@ -26,7 +26,7 @@
 set -euo pipefail
 
 # ─── Config ────────────────────────────────────────────────────────────────
-WORKSPACE_ROOT="/Users/bai/projects/ash-ts-demo"
+WORKSPACE_ROOT="/Users/bai/projects/tcm-edu"
 FRONTEND_DIR="$WORKSPACE_ROOT/frontend"
 PORT_PHOENIX=4011
 PORT_NEXTJS=3000

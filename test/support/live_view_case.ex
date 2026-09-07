@@ -1,4 +1,4 @@
-defmodule AshTsDemoWeb.LiveViewCase do
+defmodule TcmEduWeb.LiveViewCase do
   @moduledoc """
   Test case for LiveView pages. Wraps each test in a SQL sandbox and
   provides the standard `Phoenix.LiveViewTest` helpers.
@@ -7,21 +7,21 @@ defmodule AshTsDemoWeb.LiveViewCase do
 
   using do
     quote do
-      @endpoint AshTsDemoWeb.Endpoint
+      @endpoint TcmEduWeb.Endpoint
 
-      use AshTsDemoWeb, :verified_routes
+      use TcmEduWeb, :verified_routes
 
       import Plug.Conn
       import Phoenix.ConnTest
       import Phoenix.LiveViewTest
-      import AshTsDemoWeb.LiveViewCase
+      import TcmEduWeb.LiveViewCase
 
       @moduletag :live_view
     end
   end
 
   setup tags do
-    AshTsDemo.DataCase.setup_sandbox(tags)
+    TcmEdu.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

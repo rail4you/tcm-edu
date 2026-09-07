@@ -18,18 +18,18 @@
 #
 # 可覆盖变量:
 #   PLATFORM=linux/amd64
-#   IMAGE=registry.cn-zhangjiakou.aliyuncs.com/myelixir/ash-ts-demo:latest
+#   IMAGE=registry.cn-zhangjiakou.aliyuncs.com/myelixir/tcm-edu:latest
 #   REMOTE_HOST=ubuntu@119.45.170.4
-#   REMOTE_DIR=~/ash-ts-demo
+#   REMOTE_DIR=~/tcm-edu
 # ============================================================
 
 set -e
 
 # ─── 配置 ──────────────────────────────────────────────────────
 PLATFORM="${PLATFORM:-linux/amd64}"
-IMAGE="${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/ash-ts-demo:latest}"
+IMAGE="${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/tcm-edu:latest}"
 REMOTE_HOST="${REMOTE_HOST:-ubuntu@119.45.170.4}"
-REMOTE_DIR="${REMOTE_DIR:-~/ash-ts-demo}"
+REMOTE_DIR="${REMOTE_DIR:-~/tcm-edu}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DEPLOY_FILES_DIR="$SCRIPT_DIR/etc/docker"
@@ -112,7 +112,7 @@ cmd_remote() {
 
     ssh "$REMOTE_HOST" <<'REMOTE_SCRIPT'
 set -e
-cd ~/ash-ts-demo
+cd ~/tcm-edu
 
 # 确保 .env 存在
 if [ ! -f .env ]; then
@@ -125,17 +125,17 @@ set -a; source .env; set +a
 
 # 拉取最新镜像
 echo '>>> 拉取最新镜像...'
-docker pull ${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/ash-ts-demo:latest}
+docker pull ${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/tcm-edu:latest}
 
 # 停止旧容器
 echo '>>> 停止旧容器...'
-docker rm -f ash-ts-demo 2>/dev/null || true
+docker rm -f tcm-edu 2>/dev/null || true
 
 # 启动新容器
 echo '>>> 启动新容器...'
 docker run -d \
-  --name ash-ts-demo \
-  --hostname ash-ts-demo \
+  --name tcm-edu \
+  --hostname tcm-edu \
   --network knowledgehub_abp-network \
   --restart unless-stopped \
   -p ${HOST_PORT:-4000}:4000 \
@@ -148,14 +148,14 @@ docker run -d \
   -e TOKEN_SIGNING_SECRET="${TOKEN_SIGNING_SECRET}" \
   -e TZ=${TZ:-Asia/Shanghai} \
   -e LANG=C.UTF-8 \
-  ${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/ash-ts-demo:latest}
+  ${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/tcm-edu:latest}
 
 echo '>>> 清理旧镜像...'
 docker image prune -f 2>/dev/null || true
 
 echo ''
 echo '>>> 容器状态:'
-docker ps --filter name=ash-ts-demo --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+docker ps --filter name=tcm-edu --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 REMOTE_SCRIPT
 
     ok "远程部署完成"
@@ -165,17 +165,17 @@ REMOTE_SCRIPT
 cmd_status() {
     ssh "$REMOTE_HOST" "
 echo '=== 容器状态 ==='
-docker ps --filter name=ash-ts-demo --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+docker ps --filter name=tcm-edu --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 echo ''
 echo '=== 镜像信息 ==='
 docker images --format 'table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}' \
-    | grep -E 'REPOSITORY|ash-ts-demo|myelixir' || true
+    | grep -E 'REPOSITORY|tcm-edu|myelixir' || true
 "
 }
 
 # ─── 远程日志 ──────────────────────────────────────────────────
 cmd_logs() {
-    ssh "$REMOTE_HOST" "docker logs -f --tail=${1:-100} ash-ts-demo"
+    ssh "$REMOTE_HOST" "docker logs -f --tail=${1:-100} tcm-edu"
 }
 
 # ─── 远程 DB 迁移 ──────────────────────────────────────────────
@@ -184,7 +184,7 @@ cmd_migrate() {
 
     ssh "$REMOTE_HOST" <<'REMOTE_MIGRATE'
 set -e
-cd ~/ash-ts-demo
+cd ~/tcm-edu
 set -a; source .env; set +a
 
 docker run --rm \
@@ -194,7 +194,7 @@ docker run --rm \
   -e SECRET_KEY_BASE="${SECRET_KEY_BASE}" \
   -e TOKEN_SIGNING_SECRET="${TOKEN_SIGNING_SECRET}" \
   -e TZ=${TZ:-Asia/Shanghai} \
-  ${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/ash-ts-demo:latest} \
+  ${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/tcm-edu:latest} \
   /app/bin/migrate
 REMOTE_MIGRATE
 

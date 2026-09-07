@@ -1,1 +1,1 @@
-call "%~dp0\ash_ts_demo" eval AshTsDemo.Release.migrate
+call "%~dp0\tcm_edu" eval TcmEdu.Release.migrate

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-gray-50 text-gray-900">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <.live_title default="TCM Education" suffix=" · Phoenix LiveView">
+      {assigns[:page_title]}
+    </.live_title>
+    <%!--
+      This project does not run a frontend assets pipeline. The static
+      export in priv/app is produced by the sibling Next.js project
+      and has no Phoenix client. To get LiveView working anyway, we
+      serve the minified clients that ship with the `phoenix` and
+      `phoenix_live_view` deps and copy them into priv/static at build
+      time. The Phoenix client (`window.Phoenix.Socket`) must be
+      present *before* the LiveView client loads — the LiveView client
+      looks it up on connect. Without these scripts the browser never
+      opens the WebSocket and the connected mount never runs.
+    ---%>
+    <script defer phx-track-static type="text/javascript" src={~p"/phoenix.min.js"}>
+    </script>
+    <script defer phx-track-static type="text/javascript" src={~p"/phoenix_live_view.min.js"}>
+    </script>
+    <script defer phx-track-static type="text/javascript" src={~p"/app.js"}>
+    </script>
+  </head>
+  <body class="font-sans antialiased">
+    {@inner_content}
+  </body>
+</html>

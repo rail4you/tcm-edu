@@ -194,7 +194,7 @@
     "global": null,
     "strategy": null
   },
-  "repo": "Elixir.AshTsDemo.Repo",
+  "repo": "Elixir.TcmEdu.Repo",
   "schema": null,
   "table": "chat_tasks"
 }

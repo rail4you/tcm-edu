@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# deploy.sh - ash-ts-demo 远程服务器管理
+# deploy.sh - tcm-edu 远程服务器管理
 # ============================================================
 # 在远程服务器上运行：
 #   ./deploy.sh up           启动所有服务
@@ -67,7 +67,7 @@ cmd_status() {
     echo
     info "镜像信息:"
     docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}" \
-        | grep -E "REPOSITORY|ash-ts-demo" || true
+        | grep -E "REPOSITORY|tcm-edu" || true
 }
 
 cmd_migrate() {

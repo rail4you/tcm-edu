@@ -1,9 +1,9 @@
-alias AshTsDemo.Workers.LongTaskWorker
-alias AshTsDemo.Chat.ChatTask
+alias TcmEdu.Workers.LongTaskWorker
+alias TcmEdu.Chat.ChatTask
 
 # Pick an existing user_id straight from the DB (User has a strict read policy).
 user_id =
-  case AshTsDemo.Repo.query!("SELECT id::text FROM users LIMIT 1", [], log: false).rows do
+  case TcmEdu.Repo.query!("SELECT id::text FROM users LIMIT 1", [], log: false).rows do
     [[id]] -> id
     [] -> raise "no users exist; register one via /api/auth first"
   end
@@ -31,7 +31,7 @@ IO.puts "Sleeping 4s to let worker run (2s mock + admin)..."
 Process.sleep(4_000)
 
 # Inspect ChatTask row
-case AshTsDemo.Repo.query!(
+case TcmEdu.Repo.query!(
        "SELECT task_id, status, started_at, completed_at, result::text FROM chat_tasks WHERE task_id = $1",
        [task_id],
        log: false
@@ -54,7 +54,7 @@ IO.inspect(job2.completed_at, label: "completed_at")
 require Ash.Query
 
 msgs =
-  AshTsDemo.Chat.ChatMessage
+  TcmEdu.Chat.ChatMessage
   |> Ash.Query.filter(session_id == ^session_id)
   |> Ash.Query.sort(inserted_at: :asc)
   |> Ash.read!()

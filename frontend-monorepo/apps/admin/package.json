@@ -1,0 +1,32 @@
+{
+  "name": "@tcm-edu/admin",
+  "version": "0.1.0",
+  "description": "TCM-Edu 管理端：超管租户管理 + 租户管理员用户管理（Next.js + Antd）。",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3002 -H 127.0.0.1",
+    "build": "next build",
+    "start": "next start -p 3002 -H 127.0.0.1",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5",
+    "@ant-design/v5-patch-for-react-19": "^1",
+    "@ant-design/nextjs-registry": "^1",
+    "@ant-design/pro-components": "^2",
+    "@tcm-edu/rpc-client": "workspace:*",
+    "antd": "^5",
+    "next": "16.2.9",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "typescript": "^5"
+  }
+}

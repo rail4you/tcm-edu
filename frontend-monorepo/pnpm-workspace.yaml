@@ -1,0 +1,12 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# sharp 仅用于 next/image 优化（项目 images.unoptimized=true，用不到）；
+# unrs-resolver 的构建在 dev/typecheck 不需要。显式跳过以保证 install 非交互通过。
+neverBuiltDependencies:
+  - sharp
+  - unrs-resolver
+allowBuilds:
+  sharp: set this to true or false
+  unrs-resolver: set this to true or false

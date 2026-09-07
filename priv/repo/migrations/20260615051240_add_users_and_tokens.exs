@@ -1,4 +1,4 @@
-defmodule AshTsDemo.Repo.Migrations.AddUsersAndTokens do
+defmodule TcmEdu.Repo.Migrations.AddUsersAndTokens do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 
