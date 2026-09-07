@@ -82,15 +82,21 @@ defmodule TcmEdu.Courses.Course do
   relationships do
     belongs_to :teacher, TcmEdu.Accounts.User do
       allow_nil? false
+      # public?: true → teacher_id 可读可选（教师端按自己筛选、列表展示作者）
+      public? true
     end
 
     belongs_to :category, TcmEdu.Courses.CourseCategory do
       allow_nil? true
+      # public?: true → category_id 可读（编辑页回显分类）
+      public? true
     end
 
     has_many :chapters, TcmEdu.Courses.Chapter do
       destination_attribute :course_id
       sort sort_order: :asc
+      # public?: true → 教师端编辑页可嵌套加载章节/课时结构
+      public? true
     end
   end
 

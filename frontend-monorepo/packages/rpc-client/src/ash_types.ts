@@ -141,27 +141,31 @@ export type ChatTaskAttributesOnlySchema = {
 // Chapter Schema
 export type ChapterResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "title" | "sortOrder";
+  __primitiveFields: "id" | "title" | "sortOrder" | "courseId";
   id: UUID;
   title: string;
   sortOrder: number | null;
+  courseId: UUID;
+  course: { __type: "Relationship"; __resource: CourseResourceSchema; };
+  lessons: { __type: "Relationship"; __array: true; __resource: LessonResourceSchema; };
 };
 
 
 
 export type ChapterAttributesOnlySchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "title" | "sortOrder";
+  __primitiveFields: "id" | "title" | "sortOrder" | "courseId";
   id: UUID;
   title: string;
   sortOrder: number | null;
+  courseId: UUID;
 };
 
 
 // Course Schema
 export type CourseResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "title" | "subtitle" | "description" | "coverImageUrl" | "tags" | "level" | "status" | "priceCents" | "publishedAt" | "lessonCount" | "durationSeconds";
+  __primitiveFields: "id" | "title" | "subtitle" | "description" | "coverImageUrl" | "tags" | "level" | "status" | "priceCents" | "publishedAt" | "teacherId" | "categoryId" | "lessonCount" | "durationSeconds";
   id: UUID;
   title: string;
   subtitle: string | null;
@@ -172,15 +176,20 @@ export type CourseResourceSchema = {
   status: "archived" | "draft" | "published" | null;
   priceCents: number | null;
   publishedAt: UtcDateTime | null;
+  teacherId: UUID;
+  categoryId: UUID | null;
   lessonCount: number | null;
   durationSeconds: Decimal | null;
+  teacher: { __type: "Relationship"; __resource: UserResourceSchema; };
+  category: { __type: "Relationship"; __resource: CourseCategoryResourceSchema | null; };
+  chapters: { __type: "Relationship"; __array: true; __resource: ChapterResourceSchema; };
 };
 
 
 
 export type CourseAttributesOnlySchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "title" | "subtitle" | "description" | "coverImageUrl" | "tags" | "level" | "status" | "priceCents" | "publishedAt";
+  __primitiveFields: "id" | "title" | "subtitle" | "description" | "coverImageUrl" | "tags" | "level" | "status" | "priceCents" | "publishedAt" | "teacherId" | "categoryId";
   id: UUID;
   title: string;
   subtitle: string | null;
@@ -191,6 +200,8 @@ export type CourseAttributesOnlySchema = {
   status: "archived" | "draft" | "published" | null;
   priceCents: number | null;
   publishedAt: UtcDateTime | null;
+  teacherId: UUID;
+  categoryId: UUID | null;
 };
 
 
@@ -221,7 +232,7 @@ export type CourseCategoryAttributesOnlySchema = {
 // Lesson Schema
 export type LessonResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "title" | "contentType" | "contentUrl" | "contentText" | "durationSeconds" | "sortOrder" | "isFreePreview";
+  __primitiveFields: "id" | "title" | "contentType" | "contentUrl" | "contentText" | "durationSeconds" | "sortOrder" | "isFreePreview" | "chapterId";
   id: UUID;
   title: string;
   contentType: "article" | "pdf" | "video" | null;
@@ -230,13 +241,15 @@ export type LessonResourceSchema = {
   durationSeconds: number | null;
   sortOrder: number | null;
   isFreePreview: boolean | null;
+  chapterId: UUID;
+  chapter: { __type: "Relationship"; __resource: ChapterResourceSchema; };
 };
 
 
 
 export type LessonAttributesOnlySchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "title" | "contentType" | "contentUrl" | "contentText" | "durationSeconds" | "sortOrder" | "isFreePreview";
+  __primitiveFields: "id" | "title" | "contentType" | "contentUrl" | "contentText" | "durationSeconds" | "sortOrder" | "isFreePreview" | "chapterId";
   id: UUID;
   title: string;
   contentType: "article" | "pdf" | "video" | null;
@@ -245,6 +258,7 @@ export type LessonAttributesOnlySchema = {
   durationSeconds: number | null;
   sortOrder: number | null;
   isFreePreview: boolean | null;
+  chapterId: UUID;
 };
 
 
@@ -687,7 +701,16 @@ export type ChapterFilterInput = {
     isNil?: boolean;
   };
 
+  courseId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
 
+
+  course?: CourseFilterInput;
+
+  lessons?: LessonFilterInput;
 
 };
 export type CourseFilterInput = {
@@ -771,6 +794,19 @@ export type CourseFilterInput = {
     isNil?: boolean;
   };
 
+  teacherId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  categoryId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+    isNil?: boolean;
+  };
+
   lessonCount?: {
     eq?: number;
     notEq?: number;
@@ -794,6 +830,11 @@ export type CourseFilterInput = {
   };
 
 
+  teacher?: UserFilterInput;
+
+  category?: CourseCategoryFilterInput;
+
+  chapters?: ChapterFilterInput;
 
 };
 export type CourseCategoryFilterInput = {
@@ -906,7 +947,14 @@ export type LessonFilterInput = {
     isNil?: boolean;
   };
 
+  chapterId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
 
+
+  chapter?: ChapterFilterInput;
 
 };
 export type PostFilterInput = {
@@ -1160,16 +1208,16 @@ export type ChatSessionFilterField = (typeof chatSessionFilterFields)[number];
 export const chatTaskFilterFields = ["id", "taskId", "userId", "sessionId", "agentName", "taskName", "durationMs", "status", "jobId", "result", "errorMessage", "insertedAt", "updatedAt", "startedAt", "completedAt"] as const;
 export type ChatTaskFilterField = (typeof chatTaskFilterFields)[number];
 
-export const chapterFilterFields = ["id", "title", "sortOrder"] as const;
+export const chapterFilterFields = ["id", "title", "sortOrder", "courseId", "course", "lessons"] as const;
 export type ChapterFilterField = (typeof chapterFilterFields)[number];
 
-export const courseFilterFields = ["id", "title", "subtitle", "description", "coverImageUrl", "tags", "level", "status", "priceCents", "publishedAt", "lessonCount", "durationSeconds"] as const;
+export const courseFilterFields = ["id", "title", "subtitle", "description", "coverImageUrl", "tags", "level", "status", "priceCents", "publishedAt", "teacherId", "categoryId", "lessonCount", "durationSeconds", "teacher", "category", "chapters"] as const;
 export type CourseFilterField = (typeof courseFilterFields)[number];
 
 export const courseCategoryFilterFields = ["id", "name", "slug", "icon", "sortOrder"] as const;
 export type CourseCategoryFilterField = (typeof courseCategoryFilterFields)[number];
 
-export const lessonFilterFields = ["id", "title", "contentType", "contentUrl", "contentText", "durationSeconds", "sortOrder", "isFreePreview"] as const;
+export const lessonFilterFields = ["id", "title", "contentType", "contentUrl", "contentText", "durationSeconds", "sortOrder", "isFreePreview", "chapterId", "chapter"] as const;
 export type LessonFilterField = (typeof lessonFilterFields)[number];
 
 export const postFilterFields = ["id", "title", "body", "insertedAt", "updatedAt", "coverImageUrl", "attachmentsUrls", "attachmentsThumbnailUrls", "coverImage", "attachments"] as const;
@@ -1197,16 +1245,16 @@ export type ChatSessionSortField = (typeof chatSessionSortFields)[number];
 export const chatTaskSortFields = ["id", "taskId", "userId", "sessionId", "agentName", "taskName", "durationMs", "status", "jobId", "result", "errorMessage", "insertedAt", "updatedAt", "startedAt", "completedAt"] as const;
 export type ChatTaskSortField = (typeof chatTaskSortFields)[number];
 
-export const chapterSortFields = ["id", "title", "sortOrder"] as const;
+export const chapterSortFields = ["id", "title", "sortOrder", "courseId"] as const;
 export type ChapterSortField = (typeof chapterSortFields)[number];
 
-export const courseSortFields = ["id", "title", "subtitle", "description", "coverImageUrl", "tags", "level", "status", "priceCents", "publishedAt", "lessonCount", "durationSeconds"] as const;
+export const courseSortFields = ["id", "title", "subtitle", "description", "coverImageUrl", "tags", "level", "status", "priceCents", "publishedAt", "teacherId", "categoryId", "lessonCount", "durationSeconds"] as const;
 export type CourseSortField = (typeof courseSortFields)[number];
 
 export const courseCategorySortFields = ["id", "name", "slug", "icon", "sortOrder"] as const;
 export type CourseCategorySortField = (typeof courseCategorySortFields)[number];
 
-export const lessonSortFields = ["id", "title", "contentType", "contentUrl", "contentText", "durationSeconds", "sortOrder", "isFreePreview"] as const;
+export const lessonSortFields = ["id", "title", "contentType", "contentUrl", "contentText", "durationSeconds", "sortOrder", "isFreePreview", "chapterId"] as const;
 export type LessonSortField = (typeof lessonSortFields)[number];
 
 export const postSortFields = ["id", "title", "body", "insertedAt", "updatedAt", "coverImageUrl", "attachmentsUrls", "attachmentsThumbnailUrls"] as const;

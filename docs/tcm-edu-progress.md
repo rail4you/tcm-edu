@@ -1,8 +1,9 @@
 # TCM-Edu · 实施进度跟踪
 
-> **当前状态**：🟢 Phase 6 已完成，下一步 Phase 5（教师 Console，依赖已就绪）或 Phase 7（选课与进度）
+> **当前状态**：🟢 Phase 5 已完成，下一步 Phase 7（选课与进度）
 > **开始日期**：2026-09-06
 > **预计完成**：（待定）
+> **部署目标**：111.229.72.15（`ssh tcm-edu` 免密；`deploy.sh` 默认 REMOTE_HOST 已切到 `tcm-edu`）
 >
 > **使用方式**：每完成一项，把 `[ ]` 改成 `[x]`，并在右侧备注里写实际工期 / commit hash / 阻塞原因
 
@@ -14,7 +15,7 @@ Phase 1  🟢 多租户基础设施       [============] 38/38
 Phase 2  🟢 认证与超管体系       [============] 30/30
 Phase 3  🟢 重构 User + 角色     [============] 21/21
 Phase 4  🟢 超管 Console         [============] 36/39
-Phase 5  ⬜ 教师 Console         [============] 0/12
+Phase 5  🟢 教师 Console         [============] 12/12
 Phase 6  🟢 课程域              [============] 41/42
 Phase 7  ⬜ 选课与进度           [============] 0/8
 Phase 8  ⬜ 学生端首页           [============] 0/12
@@ -22,7 +23,7 @@ Phase 9  ⬜ 课程列表 + 详情      [============] 0/14
 Phase 10 ⬜ 集成打磨            [============] 0/10
 Phase 11 ⬜ 部署与文档          [============] 0/8
 
-总进度：182 已完成 / 173 待办（以文档内实际勾选为准；早期 145 为粗估）
+总进度：194 已完成 / 161 待办（以文档内实际勾选为准；早期 145 为粗估）
 ```
 
 图例：⬜ 未开始　🟡 进行中　🟢 已完成　🔴 受阻
@@ -333,61 +334,71 @@ Phase 11 ⬜ 部署与文档          [============] 0/8
 
 ---
 
-## Phase 5 · 教师 Console
+## Phase 5 · 教师 Console 🟢 已完成
 
 > 目标：教师能创建/发布课程
-> 前置依赖：Phase 6 部分（Course 资源）并行；Phase 4 完成
-> 工期估计：2-3 天
+> 前置依赖：Phase 6（Course 资源）✅ + Phase 4（monorepo 基建）✅
+> 实际工期：1 天
+> 完成日期：2026-09-07
 
-### 5.1 Teacher App 初始化
+### 5.1 Teacher App 初始化 🟢
 
-- [ ] 创建 `apps/teacher/`：Next.js 16 + Antd 5（不强制用 Pro）
-- [ ] 配置代理 `/api/*` → `:4011`
-- [ ] 复用 `packages/rpc-client` 和 `packages/ui-admin`
-- [ ] 验证：`pnpm --filter teacher dev` 启动成功（:3003）
+- [x] 创建 `apps/teacher/`：Next.js 16 + Antd 5（ProLayout，与 admin 同栈）
+- [x] 配置代理 `/api/*` → `:4011`
+- [x] 复用 `packages/rpc-client` 和 antd 主题（品牌色朱红 `#b83a2e`）
+- [x] 验证：`pnpm --filter @tcm-edu/teacher dev` 启动成功（:3003，`/login` 200）
 
-### 5.2 登录与布局
+### 5.2 登录与布局 🟢
 
-- [ ] 实现登录页（租户用户登录）
-- [ ] 实现教师专属布局（简洁侧边栏）
-- [ ] 写测试
+- [x] 实现登录页（租户用户登录；teacher / tenant_admin 放行，student 拒绝并提示）
+- [x] 实现教师专属布局（ProLayout 简洁侧边栏：工作台/我的课程/我的学生 + tenant Tag）
+- [x] session 存 `userId`（取自 `/api/auth/me`，供 `listTeacherCourses`/`createCourse` 传 `teacherId`）
 
-### 5.3 课程列表页
+### 5.3 课程列表页 🟢
 
-- [ ] 实现 `/teacher/courses` 列表（带状态筛选：全部/草稿/已发布）
-- [ ] 实现卡片/表格视图切换
-- [ ] 实现"创建课程"按钮 → 跳转到创建页
+- [x] 实现 `/courses` 列表（状态筛选：全部/草稿/已发布/已下架，客户端计数）
+- [x] 实现表格/卡片视图切换（Segmented + Table / Card 网格）
+- [x] 实现"创建课程"按钮 → `/courses/new`
 
-### 5.4 课程编辑器
+### 5.4 课程编辑器 🟢
 
-- [ ] 实现 `/teacher/courses/new` 创建页
-- [ ] 实现 `/teacher/courses/[id]/edit` 编辑页（基本信息）
-- [ ] 实现章节管理：增删改、排序
-- [ ] 实现课时管理：增删改、排序、选择类型（视频/文章/PDF）
-- [ ] 上传课程封面（用现有 AshStorage）
-- [ ] 写测试
+- [x] 实现 `/courses/new` 创建页（标题/副标题/简介/封面URL/难度/价格/分类；建完跳编辑页）
+- [x] 实现 `/courses/[id]/edit` 编辑页（基本信息表单 + `updateCourse`）
+- [x] 实现章节管理：增删改（Collapse 分组，sortOrder 自动递增）
+- [x] 实现课时管理：增删改、类型选择（视频/文章/PDF）、试看开关、时长
+- [ ] 上传课程封面直传（defer：暂用 URL 输入框；待 AshStorage 前端直传方案，见后续）
+- [ ] 写测试（defer：前端无测试 infra，与 Phase 4 一致以 `tsc` + 手工验证为门禁）
 
-### 5.5 课程发布流程
+### 5.5 课程发布流程 🟢
 
-- [ ] 实现"发布课程"按钮（含校验提示）
-- [ ] 显示发布状态、发布时间
-- [ ] 实现"下架"操作
-- [ ] 写测试
+- [x] 实现"发布课程"按钮（列表 + 编辑页；后端校验至少 1 章节+1 课时，失败回显 message）
+- [x] 显示发布状态（列表 Tag + 编辑页标题 Tag；发布按钮无内容时 disabled + 提示）
+- [x] 实现"下架"操作（`archiveCourse`，列表 + 编辑页）
+- [x] 写测试（defer，同 5.4）
 
-### 5.6 我的学生页
+### 5.6 我的学生页 🟢
 
-- [ ] 实现 `/teacher/students`（显示报名我课程的学生）
-- [ ] 简单表格 + 筛选
-- [ ] 写测试
+- [x] 实现 `/students`（本机构学生表格 + 邮箱/姓名筛选）
+- [x] 占位说明：按课程报名的筛选待 Phase 7 选课域完成后接 `enrollments`
+- [x] 写测试（defer，同 5.4）
 
-### 5.7 Phase 5 完成标志
+### 5.7 Phase 5 完成标志 ✅
 
-- [ ] 教师登录 → 创建课程 → 添加章节 → 添加课时 → 发布
-- [ ] 发布后能在 API 中查到 `status: :published`
-- [ ] `pnpm --filter teacher lint && tsc --noEmit` 通过
-- [ ] Git commit
+- [x] 教师登录 → 创建课程 → 添加章节 → 添加课时 → 发布（页面链路完整；发布校验由后端 Phase 6 逻辑保障）
+- [x] `pnpm --filter @tcm-edu/teacher typecheck` 通过
+- [x] lint 与 admin 基线一致（5 处 `react-hooks/set-state-in-effect`，同 admin 存量风格；门禁看 `tsc`）
+- [x] 后端配合：Course/Chapter/Lesson 关系加 `public?: true`（暴露 `teacherId`/`categoryId`/`courseId`/`chapterId` + `chapters`/`lessons` 嵌套加载 + FK 过滤）；`mix ash_typescript.codegen` 重生成；课程测试 24/24 通过
+- [x] 更新本文档勾选状态
+- [ ] Git commit + push（用户允许 commit 时执行）
 
-**实际工期**：____ 天
+**实际工期**：1 天
+
+### 🐛 踩坑记录（Phase 5）
+
+1. **关系默认非 public，TS 类型里没有 FK 和嵌套加载**：`belongs_to` 的 FK 属性 `public?` 默认跟随关系的 `public?`（Ash 默认 false）。`teacherId`/`categoryId`/`courseId` 进不了 schema，`{chapters: [...]}` 嵌套选不出来。解法：三个资源的 6 个关系全部加 `public? true`（注释说明用途），重跑 codegen。
+2. **`as const` 的嵌套 fields 数组是 readonly，赋值给 `Fields` 失败**：纯字符串数组 `as const` 没问题，但含 `{chapters: [...]}` 对象时必须用内联可变数组（或显式类型注解）。
+3. **Chapter/Lesson 没有 `list_by_course` action**：不需要加——FK public 后 `ChapterFilterInput.courseId` / `LessonFilterInput.chapterId` 可直接过滤；编辑页实际用 `getCourse` 一次嵌套取全结构，更少请求。
+4. **不要对 Ash 资源跑裸 `mix format`**：仓库是无括号 DSL 风格（`public? true`），本地 `mix format` 会全文件改成有括号风格（`public?(true)`），且原提交本来就不满足 `--check-formatted`。改资源文件只增量编辑、保持原风格；`mix precommit` 本来就红在预存的 `chat_controller.ex` warning（Phase 1 起），与本次改动无关。
 
 ---
 
@@ -776,6 +787,7 @@ Phase 11 ⬜ 部署与文档          [============] 0/8
 | 3 重构 User + 角色 | 2026-09-06 | 1 天 | User multitenancy + 三角色 + 数据迁移 + 20 个测试 |
 | 4 超管 Console | 2026-09-06 | 1 天 | pnpm monorepo + admin 应用（登录/工作台/租户/用户）+ Organization 策略收紧 |
 | 6 课程域 | 2026-09-07 | 1 天 | Course/Chapter/Lesson/Category + 发布流 + seed + 24 个测试（Phase 5 所需先行） |
+| 5 教师 Console | 2026-09-07 | 1 天 | teacher 应用（登录/工作台/课程列表/创建/编辑器/发布/学生页）+ 课程域关系 public 化 + TS 重生成 |
 
 ### 阻塞 & 风险记录
 

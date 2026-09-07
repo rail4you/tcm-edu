@@ -19,7 +19,7 @@
 # 可覆盖变量:
 #   PLATFORM=linux/amd64
 #   IMAGE=registry.cn-zhangjiakou.aliyuncs.com/myelixir/tcm-edu:latest
-#   REMOTE_HOST=ubuntu@119.45.170.4
+#   REMOTE_HOST=tcm-edu
 #   REMOTE_DIR=~/tcm-edu
 # ============================================================
 
@@ -28,7 +28,7 @@ set -e
 # ─── 配置 ──────────────────────────────────────────────────────
 PLATFORM="${PLATFORM:-linux/amd64}"
 IMAGE="${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/tcm-edu:latest}"
-REMOTE_HOST="${REMOTE_HOST:-ubuntu@119.45.170.4}"
+REMOTE_HOST="${REMOTE_HOST:-tcm-edu}"
 REMOTE_DIR="${REMOTE_DIR:-~/tcm-edu}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -216,7 +216,9 @@ cmd_all() {
 
     OVERALL_ELAPSED=$(($(date +%s) - OVERALL_START))
     echo ""
-    ok "全部完成 (${OVERALL_ELAPSED}s) → http://${REMOTE_HOST#*@}:4000/"
+    DISPLAY_HOST="${REMOTE_HOST#*@}"
+    [ "$DISPLAY_HOST" = "tcm-edu" ] && DISPLAY_HOST="111.229.72.15"
+    ok "全部完成 (${OVERALL_ELAPSED}s) → http://${DISPLAY_HOST}:4000/"
 }
 
 # ─── 帮助 ──────────────────────────────────────────────────────

@@ -42,11 +42,15 @@ defmodule TcmEdu.Courses.Chapter do
   relationships do
     belongs_to :course, TcmEdu.Courses.Course do
       allow_nil? false
+      # public?: true → course_id 可读可过滤（编辑页按课程加载章节）
+      public? true
     end
 
     has_many :lessons, TcmEdu.Courses.Lesson do
       destination_attribute :chapter_id
       sort sort_order: :asc
+      # public?: true → 教师端编辑页可嵌套加载课时
+      public? true
     end
   end
 

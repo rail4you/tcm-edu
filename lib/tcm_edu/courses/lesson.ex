@@ -73,6 +73,8 @@ defmodule TcmEdu.Courses.Lesson do
   relationships do
     belongs_to :chapter, TcmEdu.Courses.Chapter do
       allow_nil? false
+      # public?: true → chapter_id 可读可过滤（编辑页按章节加载课时）
+      public? true
     end
   end
 
