@@ -7,14 +7,14 @@ import { useAuth } from "@/app/auth-context";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { isAuthenticated, login, register, loading, error } = useAuth();
+  const { isAuthenticated, ready, login, register, loading, error } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    if (isAuthenticated) router.replace("/");
-  }, [isAuthenticated, router]);
+    if (ready && isAuthenticated) router.replace("/");
+  }, [isAuthenticated, ready, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

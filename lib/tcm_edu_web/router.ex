@@ -127,6 +127,12 @@ defmodule TcmEduWeb.Router do
     get "/posts/new", FallbackController, :spa
     get "/admin", FallbackController, :spa
     get "/admin/*path", FallbackController, :spa
+    # 学生端 Phase 9 新增的静态路由（生产静态导出 + dev 直连都可达）
+    get "/courses", FallbackController, :spa
+    get "/course", FallbackController, :spa
+    get "/learn", FallbackController, :spa
+    get "/my-learning", FallbackController, :spa
+    get "/login", FallbackController, :spa
     get "/app", FallbackController, :app
     get "/app/*path", FallbackController, :app
   end

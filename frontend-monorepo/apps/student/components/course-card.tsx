@@ -28,7 +28,7 @@ export default function CourseCard({ course }: { course: CourseItem }) {
 
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border border-rice-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-      <Link href={isAuthenticated ? `/courses/${course.id}` : "/login"} className="block">
+      <Link href={isAuthenticated ? `/course?id=${course.id}` : "/login"} className="block">
         <div className="relative aspect-[16/9] overflow-hidden bg-rice-100">
           {course.coverImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -60,7 +60,7 @@ export default function CourseCard({ course }: { course: CourseItem }) {
       </Link>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <Link href={isAuthenticated ? `/courses/${course.id}` : "/login"}>
+        <Link href={isAuthenticated ? `/course?id=${course.id}` : "/login"}>
           <h3 className="font-song font-semibold leading-6 text-ink-900 transition group-hover:text-cinnabar-600">
             {course.title}
           </h3>

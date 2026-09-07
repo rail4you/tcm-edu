@@ -7,7 +7,7 @@ import { useAuth } from "@/app/auth-context";
 
 const LINKS = [
   { href: "/", label: "首页" },
-  { href: "/#courses", label: "课程" },
+  { href: "/courses", label: "课程" },
   { href: "/#teachers", label: "名师" },
   { href: "/#about", label: "关于" },
 ];
@@ -53,10 +53,7 @@ export default function Navbar() {
         {/* 桌面导航 */}
         <nav className="hidden items-center gap-1 md:flex">
           {LINKS.map((l) => {
-            const active =
-              l.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(l.href.replace("/#", "/"));
+            const active = l.href === "/" ? pathname === "/" : l.href.startsWith("/#") ? false : pathname.startsWith(l.href);
             return (
               <Link
                 key={l.href}

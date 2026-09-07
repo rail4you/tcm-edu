@@ -37,6 +37,8 @@ export function can(profile: UserProfile | null, permission: Permission): boolea
 interface AuthState {
   /** Whether we have a stored token (doesn't guarantee validity) */
   isAuthenticated: boolean;
+  /** True after mount hydration (localStorage read). Guard redirects with this to avoid flash-redirect races. */
+  ready: boolean;
   /** The current bearer token, if any */
   token: string | null;
   /** The current user's profile (null while loading or if not authed) */
@@ -97,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
 
   // Hydrate from localStorage on mount
   useEffect(() => {
@@ -107,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (profile) setUser(profile);
       });
     }
+    setReady(true);
   }, []);
 
   // Listen for forced logout events (from the RPC afterRequest hook)
@@ -215,6 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         isAuthenticated: token !== null,
+        ready,
         token,
         user,
         login,
