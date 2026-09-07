@@ -1,26 +1,76 @@
 @import "tailwindcss";
 
+/* TCM-Edu 学生端品牌主题（Tailwind v4 @theme 写法） */
+
+@theme {
+  /* 品牌三色：朱红 / 米黄 / 竹青 */
+  --color-cinnabar-50: #fdf3f1;
+  --color-cinnabar-100: #fbe4e0;
+  --color-cinnabar-500: #b83a2e;
+  --color-cinnabar-600: #9e2f25;
+  --color-cinnabar-700: #82261e;
+
+  --color-rice-50: #faf7f0;
+  --color-rice-100: #f4e9d8;
+  --color-rice-200: #e9d8bd;
+
+  --color-bamboo-100: #e7efe9;
+  --color-bamboo-500: #5a7d65;
+  --color-bamboo-600: #48664f;
+  --color-bamboo-700: #3a5340;
+
+  --color-ink-900: #2b2620;
+  --color-ink-600: #6b6259;
+  --color-ink-400: #a39a8d;
+
+  --font-song: var(--font-song), "Noto Serif SC", "Songti SC", serif;
+  --font-sans: var(--font-sans-sc), "Noto Sans SC", "PingFang SC",
+    "Microsoft YaHei", system-ui, sans-serif;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf7f0;
+  --foreground: #2b2620;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* 首页 hero 轮播淡入 */
+@keyframes hero-fade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-enter {
+  animation: hero-fade 0.6s ease both;
+}
+
+/* 骨架屏 shimmer */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #ece5d5 25%, #f7f2e7 50%, #ece5d5 75%);
+  background-size: 800px 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
 }

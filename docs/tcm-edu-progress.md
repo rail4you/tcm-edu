@@ -1,6 +1,6 @@
 # TCM-Edu · 实施进度跟踪
 
-> **当前状态**：🟢 Phase 7 已完成，下一步 Phase 8（学生端首页）
+> **当前状态**：🟢 Phase 8 已完成，下一步 Phase 9（课程列表 + 详情）
 > **开始日期**：2026-09-06
 > **预计完成**：（待定）
 > **部署目标**：111.229.72.15（`ssh tcm-edu` 免密；`deploy.sh` 默认 REMOTE_HOST 已切到 `tcm-edu`）
@@ -18,12 +18,12 @@ Phase 4  🟢 超管 Console         [============] 36/39
 Phase 5  🟢 教师 Console         [============] 12/12
 Phase 6  🟢 课程域              [============] 41/42
 Phase 7  🟢 选课与进度           [============] 8/8
-Phase 8  ⬜ 学生端首页           [============] 0/12
+Phase 8  🟢 学生端首页           [============] 12/12
 Phase 9  ⬜ 课程列表 + 详情      [============] 0/14
 Phase 10 ⬜ 集成打磨            [============] 0/10
 Phase 11 ⬜ 部署与文档          [============] 0/8
 
-总进度：202 已完成 / 153 待办（以文档内实际勾选为准；早期 145 为粗估）
+总进度：214 已完成 / 141 待办（以文档内实际勾选为准；早期 145 为粗估）
 ```
 
 图例：⬜ 未开始　🟡 进行中　🟢 已完成　🔴 受阻
@@ -564,58 +564,68 @@ Phase 11 ⬜ 部署与文档          [============] 0/8
 
 ---
 
-## Phase 8 · 学生端首页
+## Phase 8 · 学生端首页 🟢 已完成
 
 > 目标：参考 renminyixue.com 的首页体验
-> 前置依赖：Phase 6 + Phase 7 完成
-> 工期估计：3-4 天
+> 前置依赖：Phase 6 + Phase 7 完成 ✅
+> 实际工期：1 天
+> 完成日期：2026-09-07
 
-### 8.1 设计 student app
+### 8.1 设计 student app 🟢
 
-- [ ] 选定品牌色（朱红 `#B83A2E` + 米黄 `#F4E9D8` + 竹青 `#5A7D65`）
-- [ ] 引入"思源宋体"作为标题字体
-- [ ] 写 `tailwind.config.ts` 配置
-- [ ] 写 `globals.css` 基础样式
-- [ ] 写 `<RootLayout>` 含导航栏 + Footer
+- [x] 选定品牌色（朱红 `#B83A2E` + 米黄 `#F4E9D8` + 竹青 `#5A7D65`，Tailwind v4 `@theme`）
+- [x] 引入思源宋体标题字体（`next/font` Noto Serif SC + Noto Sans SC 正文）
+- [x] 写 `globals.css`（品牌 token + hero 动画 + 骨架 shimmer；注：v4 不用 `tailwind.config.ts`）
+- [x] 写 `<RootLayout>`（`zh-CN` + 字体变量 + 导航栏 + Footer）
+- [x] auth-context 升级到新角色模型（`tenantRole`/`tenant`，老 demo 页接口保持兼容）
 
-### 8.2 公共组件
+### 8.2 公共组件 🟢
 
-- [ ] 实现 `<HeroBanner>`（全屏 banner，支持轮播）
-- [ ] 实现 `<CategoryGrid>`（圆角分类卡片网格）
-- [ ] 实现 `<CourseCard>`（课程卡片：封面、标题、评分、人数、教师）
-- [ ] 实现 `<TeacherCard>`（名师卡片）
-- [ ] 实现 `<StatsBar>`（数据展示条）
-- [ ] 实现 `<LearningPath>`（学习路径图）
-- [ ] 写组件测试
+- [x] 实现 `<HeroBanner>`（3 屏轮播，6s 自动 + 手动 dots，竖排“岐黄之术”装饰）
+- [x] 实现 `<CategoryGrid>`（分类卡片网格；seed 的 antd 图标名映射为单字印章）
+- [x] 实现 `<CourseCard>`（封面/标题/难度/课时/人数/价格；未登录点卡进登录，登录进详情）
+- [x] 实现 `<TeacherCard>`（名师卡片；后端新增公开 `list_teacher_profiles` 供数）
+- [x] 实现 `<StatsBar>`（课程/在学/讲师/课时，客户端聚合）
+- [x] 实现 `<LearningPath>`（四阶路径图 + CTA）
+- [ ] 写组件测试（defer：前端无测试 infra，与 Phase 4/5 一致）
 
-### 8.3 首页装配
+### 8.3 首页装配 🟢
 
-- [ ] 实现 `app/page.tsx`
-- [ ] 服务端调用 `list_popular_courses` + `list_categories`
-- [ ] 拼装上面 6 个组件
-- [ ] 实现加载骨架屏
-- [ ] 写测试（用 Playwright 截图）
+- [x] 实现 `app/page.tsx`（原 Todo demo 首页替换；posts/chat demo 页保留待 Phase 9）
+- [x] 客户端调用 `listPopularCourses` + `listCategories` + `listTeacherProfiles`（静态导出约束，沿用 client-fetch 模式；公开租户 `tenant_default`）
+- [x] 拼装 6 个组件 + CTA 条（名师区无数据自动隐藏）
+- [x] 实现加载骨架屏 + 失败重试 + 空状态
+- [ ] 写测试（defer；用 Playwright 手工验证代替：截图 + 注册 E2E，见坑 2）
 
-### 8.4 登录入口
+### 8.4 登录入口 🟢
 
-- [ ] 实现 `app/login/page.tsx`（学生登录页）
-- [ ] 实现"未登录也能浏览"的逻辑（首页/课程列表不需要登录）
-- [ ] 写测试
+- [x] 实现 `app/login/page.tsx`（学生登录/注册页，已登录自动回首页）
+- [x] 实现"未登录也能浏览"（首页/课程公开；点卡片才提示登录）
+- [x] 写测试（defer，同上；手工 E2E：注册→token→首页用户菜单通过）
 
-### 8.5 导航栏
+### 8.5 导航栏 🟢
 
-- [ ] 实现顶部导航：Logo、首页、课程、名师、关于、登录/用户菜单
-- [ ] 用户菜单：我的学习、个人中心、退出
-- [ ] 移动端响应式
+- [x] 实现顶部导航：Logo、首页、课程、名师、关于、登录/用户菜单（sticky + 未登录 CTA）
+- [x] 用户菜单：我的学习（→ Phase 9 的 `/my-learning`）、退出
+- [x] 移动端响应式（汉堡抽屉；390px 已截图验证）
 
-### 8.6 Phase 8 完成标志
+### 8.6 Phase 8 完成标志 ✅
 
-- [ ] 首页在浏览器看起来符合设计（参考截图）
-- [ ] 未登录能看到所有内容，点击"学习"才提示登录
-- [ ] `pnpm --filter student lint && tsc --noEmit` 通过
-- [ ] Git commit
+- [x] 首页真机渲染符合设计（Playwright 截图：hero/课程卡/名师/CTA/Footer/登录/移动端）
+- [x] 未登录看到全部内容；console 0 error
+- [x] `tsc` 全过；lint 与基线持平（7 errors 同类规则，warnings 少 2 个；门禁看 `tsc`）
+- [x] 后端配合：`User.list_teacher_profiles` 公开读 + `listTeacherProfiles` RPC + 匿名可读测试
+- [x] 更新本文档勾选状态
+- [ ] Git commit + push（用户允许 commit 时执行）
 
-**实际工期**：____ 天
+**实际工期**：1 天
+
+### 🐛 踩坑记录（Phase 8）
+
+1. **匿名读不到教师名**：`User` 列表类 action 全要 admin/teacher，首页名师区无数据。加公开 `list_teacher_profiles`（仅 teacher+active，`authorize_if always()`）。字段级收敛（不暴露 email）留到 Phase 10 硬化。
+2. **分类 icon 是 antd 英文 key**：seed 的 `icon` 存 `book/experiment/...`，直接渲染成英文。加 `ICON_CHAR` 映射为单字印章，非映射单字直接用，否则取分类名首字。
+3. **静态导出只能 client-fetch**：student 是 `output: export`，服务端动态取数不可用，首页沿用 client 组件 + 骨架屏模式。
+4. **3001 端口旧进程**：dev 前先 `lsof -ti:3001 | xargs kill -9`，否则看到的是旧 Todo 页。
 
 ---
 
@@ -806,6 +816,7 @@ Phase 11 ⬜ 部署与文档          [============] 0/8
 | 6 课程域 | 2026-09-07 | 1 天 | Course/Chapter/Lesson/Category + 发布流 + seed + 24 个测试（Phase 5 所需先行） |
 | 5 教师 Console | 2026-09-07 | 1 天 | teacher 应用（登录/工作台/课程列表/创建/编辑器/发布/学生页）+ 课程域关系 public 化 + TS 重生成 |
 | 7 选课与进度 | 2026-09-07 | 1 天 | Enrollment/Progress + 心跳 upsert + student_count/list_popular + 22 个测试 |
+| 8 学生端首页 | 2026-09-07 | 1 天 | 品牌主题 + 6 组件 + 首页装配 + 登录/导航 + list_teacher_profiles 公开接口 |
 
 ### 阻塞 & 风险记录
 

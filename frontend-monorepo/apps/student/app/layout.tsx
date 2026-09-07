@@ -1,11 +1,27 @@
 import type { Metadata } from "next";
+import { Noto_Sans_SC, Noto_Serif_SC } from "next/font/google";
 import { AuthProvider } from "./auth-context";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import "./globals.css";
 
+const song = Noto_Serif_SC({
+  subsets: ["latin"],
+  weight: ["600", "700", "900"],
+  variable: "--font-song",
+  display: "swap",
+});
+
+const sans = Noto_Sans_SC({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-sans-sc",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "TCM Education",
-  description:
-    "Traditional Chinese Medicine Education — Phoenix + Ash + AshTypescript backend with a Next.js static-export frontend.",
+  title: "中医教学 · 传承岐黄之术",
+  description: "中医在线教学平台：系统化课程、名师讲授、学练结合。",
 };
 
 export default function RootLayout({
@@ -14,9 +30,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-        <AuthProvider>{children}</AuthProvider>
+    <html lang="zh-CN" className={`${song.variable} ${sans.variable}`}>
+      <body className="min-h-screen bg-rice-50 font-sans text-ink-900 antialiased">
+        <AuthProvider>
+          <Navbar />
+          {children}
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

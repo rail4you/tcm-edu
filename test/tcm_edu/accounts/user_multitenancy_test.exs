@@ -124,6 +124,14 @@ defmodule TcmEdu.Accounts.UserMultitenancyTest do
       assert {:ok, admins} = Ash.read(User, action: :list_admins, actor: admin, tenant: @tenant)
       assert Enum.all?(admins, &(&1.role == :tenant_admin))
     end
+
+    test "anonymous can read teacher profiles", %{teacher: teacher} do
+      assert {:ok, profiles} =
+               Ash.read(User, action: :list_teacher_profiles, actor: nil, tenant: @tenant)
+
+      assert Enum.any?(profiles, &(&1.id == teacher.id))
+      assert Enum.all?(profiles, &(&1.role == :teacher and &1.status == :active))
+    end
   end
 
   describe "write policies" do

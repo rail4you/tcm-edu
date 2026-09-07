@@ -11,11 +11,18 @@ import {
 
 const AUTH_TOKEN_KEY = "auth_token";
 
+/** 新租户角色（/api/auth/me 返回）。老 demo 页用的 "admin" | "user" 保留兼容。 */
+export type TenantRole = "tenant_admin" | "teacher" | "student";
+
 export interface UserProfile {
   id: string;
   email: string;
   role: "admin" | "user";
   permissions: string[];
+  /** 新模型：租户内角色（登录后由 /me 回填） */
+  tenantRole?: TenantRole;
+  /** 如 tenant_default */
+  tenant?: string;
 }
 
 export type Permission = "post:create" | "post:update" | "post:delete";
@@ -55,6 +62,13 @@ interface LoginResult {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+interface MeResponse {
+  id: string;
+  email: string;
+  tenant: string;
+  role?: TenantRole | string;
+}
+
 async function fetchProfile(token: string): Promise<UserProfile | null> {
   try {
     const res = await fetch("/api/auth/me", {
@@ -62,7 +76,17 @@ async function fetchProfile(token: string): Promise<UserProfile | null> {
     });
     if (!res.ok) return null;
     const data = await res.json();
-    return data.data as UserProfile;
+    const me = data.data as MeResponse;
+    const tenantRole = me.role as TenantRole | undefined;
+    return {
+      id: me.id,
+      email: me.email,
+      // 老 demo 页兼容：租户管理员视为 admin
+      role: tenantRole === "tenant_admin" ? "admin" : "user",
+      permissions: [],
+      tenantRole,
+      tenant: me.tenant,
+    };
   } catch {
     return null;
   }
@@ -118,11 +142,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const reason =
-          data.authentication?.reason || data.error || "Sign in failed";
+          data.authentication?.reason || data.error || "邮箱或密码错误";
         setError(reason);
         return { success: false, error: reason };
-      } catch (e) {
-        const msg = "Network error";
+      } catch {
+        const msg = "网络错误，请稍后重试";
         setError(msg);
         return { success: false, error: msg };
       } finally {
@@ -155,11 +179,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const reason =
-          data.authentication?.reason || data.error || "Registration failed";
+          data.authentication?.reason || data.error || "注册失败";
         setError(reason);
         return { success: false, error: reason };
-      } catch (e) {
-        const msg = "Network error";
+      } catch {
+        const msg = "网络错误，请稍后重试";
         setError(msg);
         return { success: false, error: msg };
       } finally {

@@ -309,6 +309,48 @@ export async function listStudents<Fields extends ListStudentsFields>(
 }
 
 
+export type ListTeacherProfilesFields = UnifiedFieldSelection<UserResourceSchema>[];
+export type InferListTeacherProfilesResult<
+  Fields extends ListTeacherProfilesFields,
+> = Array<InferResult<UserResourceSchema, Fields>>;
+
+export type ListTeacherProfilesResult<Fields extends ListTeacherProfilesFields> = | { success: true; data: InferListTeacherProfilesResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Read User records
+ *
+ * @ashActionType :read
+ */
+export async function listTeacherProfiles<Fields extends ListTeacherProfilesFields>(
+  config: {
+  tenant?: string;
+  hookCtx?: ActionHookContext;
+  fields: Fields;
+  filter?: UserFilterInput;
+  sort?: SortString<UserSortField> | SortString<UserSortField>[];
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<ListTeacherProfilesResult<Fields>> {
+  const payload = {
+    action: "list_teacher_profiles",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    ...(config.fields !== undefined && { fields: config.fields }),
+    ...(config.filter && { filter: config.filter }),
+    ...(config.sort && { sort: Array.isArray(config.sort) ? config.sort.join(",") : config.sort })
+  };
+
+  return executeActionRpcRequest<ListTeacherProfilesResult<Fields>>(
+    payload,
+    config
+  );
+}
+
+
 export type ListTeachersFields = UnifiedFieldSelection<UserResourceSchema>[];
 export type InferListTeachersResult<
   Fields extends ListTeachersFields,

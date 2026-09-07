@@ -154,6 +154,11 @@ defmodule TcmEdu.Accounts.User do
       filter expr(role == :tenant_admin)
     end
 
+    read :list_teacher_profiles do
+      description("公开名师录：本租户教师公开资料（学生端首页，匿名可读）")
+      filter(expr(role == :teacher and status == :active))
+    end
+
     create :register_with_role do
       description """
       Admin 创建租户内用户。
@@ -272,6 +277,11 @@ defmodule TcmEdu.Accounts.User do
 
     policy action(:list_admins) do
       authorize_if actor_attribute_equals(:role, :tenant_admin)
+    end
+
+    # 公开名师录：任何人可读（含匿名；仅返回公开资料字段，由前端按需选字段）
+    policy action(:list_teacher_profiles) do
+      authorize_if always()
     end
 
     # 单条读取：admin / teacher 可读任意；student 只能读自己（filter 收敛到单条）
