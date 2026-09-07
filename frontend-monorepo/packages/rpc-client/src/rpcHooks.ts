@@ -6,7 +6,7 @@
  * - `afterRequest`: Detects 401 responses and clears stale tokens.
  */
 
-const AUTH_TOKEN_KEY = "auth_token";
+import { clearAuthToken, readAuthToken } from "./sharedAuth";
 
 export interface ActionHookContext {
   /** Optional correlation ID for request tracing */
@@ -16,13 +16,13 @@ export interface ActionHookContext {
 /**
  * Called before every RPC HTTP request.
  * Injects the stored Bearer token into the Authorization header.
+ * Falls back to the shared cross-app cookie (see sharedAuth.ts).
  */
 export function beforeRequest(
   _actionName: string,
   config: Record<string, any>
 ): Record<string, any> {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+  const token = readAuthToken();
 
   if (token) {
     return {
@@ -49,7 +49,7 @@ export function afterRequest(
   _config: Record<string, any>
 ): void {
   if (response.status === 401 && typeof window !== "undefined") {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
+    clearAuthToken();
     // Dispatch a custom event so the auth context can react
     window.dispatchEvent(new Event("auth:logout"));
   }

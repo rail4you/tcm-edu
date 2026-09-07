@@ -125,6 +125,7 @@ export default function DashboardPage() {
       <Card title="最近创建的租户" loading={loading}>
         <Table<OrgRow>
           rowKey="id"
+          scroll={{ x: 720 }}
           dataSource={orgs.slice(0, 5)}
           pagination={false}
           columns={[

@@ -3,6 +3,7 @@ import { Noto_Sans_SC, Noto_Serif_SC } from "next/font/google";
 import { AuthProvider } from "./auth-context";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import { ToastProvider } from "@/components/toast";
 import "./globals.css";
 
 const song = Noto_Serif_SC({
@@ -33,9 +34,11 @@ export default function RootLayout({
     <html lang="zh-CN" className={`${song.variable} ${sans.variable}`}>
       <body className="min-h-screen bg-rice-50 font-sans text-ink-900 antialiased">
         <AuthProvider>
-          <Navbar />
-          {children}
-          <Footer />
+          <ToastProvider>
+            <Navbar />
+            {children}
+            <Footer />
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

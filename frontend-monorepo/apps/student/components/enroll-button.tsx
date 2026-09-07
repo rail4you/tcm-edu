@@ -5,15 +5,12 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/app/auth-context";
 import { PUBLIC_TENANT } from "@/app/courses/page";
+import { useToast } from "@/components/toast";
+import { friendlyError } from "@/lib/errors";
 import {
   enrollInCourse,
   myEnrollments,
-  type AshRpcError,
 } from "@tcm-edu/rpc-client";
-
-function errMsg(errors: AshRpcError[]): string {
-  return errors?.[0]?.message ?? "操作失败，请稍后重试";
-}
 
 /**
  * 选课 CTA：未登录→登录提示；已选课→继续学习；未选课→确认后 enroll。
@@ -30,11 +27,11 @@ export default function EnrollButton({
 }) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const toast = useToast();
   const [checking, setChecking] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const check = useCallback(async () => {
     if (!isAuthenticated) {
@@ -62,7 +59,6 @@ export default function EnrollButton({
 
   async function handleEnroll() {
     setSubmitting(true);
-    setError(null);
     try {
       const res = await enrollInCourse({
         fields: ["id", "status"],
@@ -72,14 +68,15 @@ export default function EnrollButton({
       if (res.success) {
         setEnrolled(true);
         setConfirming(false);
+        toast("选课成功，开始学习吧", "success");
         if (firstLessonId) {
           router.push(`/learn?course=${courseId}&lesson=${firstLessonId}`);
         }
       } else {
-        setError(errMsg(res.errors));
+        toast(friendlyError(res.errors));
       }
     } catch {
-      setError("网络错误，请稍后重试");
+      toast("网络错误，请稍后重试");
     } finally {
       setSubmitting(false);
     }
@@ -140,10 +137,7 @@ export default function EnrollButton({
               {submitting ? "选课中…" : "确认选课"}
             </button>
             <button
-              onClick={() => {
-                setConfirming(false);
-                setError(null);
-              }}
+              onClick={() => setConfirming(false)}
               className="flex-1 rounded-lg border border-rice-200 bg-white px-4 py-2 text-sm text-ink-600 transition hover:border-cinnabar-500"
             >
               再想想
@@ -151,7 +145,6 @@ export default function EnrollButton({
           </div>
         </div>
       )}
-      {error && <p className="mt-2 text-sm text-cinnabar-700">{error}</p>}
     </div>
   );
 }

@@ -55,7 +55,11 @@ const ROLE_TAG: Record<string, React.ReactNode> = {
 };
 
 function errMsg(errors: AshRpcError[]): string {
-  return errors?.[0]?.message ?? "操作失败";
+  const first = errors?.[0];
+  if (!first) return "操作失败";
+  if (first.type === "forbidden") return "您没有权限执行此操作";
+  if (first.type === "network_error") return "网络错误，请稍后重试";
+  return first.message ?? "操作失败";
 }
 
 export default function UsersPage() {
@@ -201,7 +205,7 @@ export default function UsersPage() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
         <Typography.Title level={4} style={{ margin: 0 }}>
           用户管理
         </Typography.Title>
@@ -228,6 +232,7 @@ export default function UsersPage() {
       <Card>
         <Table<UserRow>
           rowKey="id"
+          scroll={{ x: 720 }}
           loading={loading}
           dataSource={rows}
           pagination={{ pageSize: 10, showSizeChanger: false }}

@@ -9,7 +9,11 @@ import { useAuth, useRequireAuth } from "@/lib/auth";
 const COURSE_FIELDS = ["id", "status"] as const;
 
 function errMsg(errors: AshRpcError[]): string {
-  return errors?.[0]?.message ?? "加载失败";
+  const first = errors?.[0];
+  if (!first) return "加载失败";
+  if (first.type === "forbidden") return "您没有权限执行此操作";
+  if (first.type === "network_error") return "网络错误，请稍后重试";
+  return first.message ?? "加载失败";
 }
 
 export default function TeacherHomePage() {

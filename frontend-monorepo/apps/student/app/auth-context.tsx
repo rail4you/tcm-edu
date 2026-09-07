@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
-const AUTH_TOKEN_KEY = "auth_token";
+import { clearAuthToken, readAuthToken, writeAuthToken } from "@tcm-edu/rpc-client";
 
 /** 新租户角色（/api/auth/me 返回）。老 demo 页用的 "admin" | "user" 保留兼容。 */
 export type TenantRole = "tenant_admin" | "teacher" | "student";
@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Hydrate from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem(AUTH_TOKEN_KEY);
+    const stored = readAuthToken();
     if (stored) {
       setToken(stored);
       fetchProfile(stored).then((profile) => {
@@ -137,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (data.authentication?.status === "success" && data.authentication?.bearer) {
           const newToken = data.authentication.bearer as string;
-          localStorage.setItem(AUTH_TOKEN_KEY, newToken);
+          writeAuthToken(newToken);
           setToken(newToken);
           // Fetch profile immediately
           const profile = await fetchProfile(newToken);
@@ -174,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (data.authentication?.status === "success" && data.authentication?.bearer) {
           const newToken = data.authentication.bearer as string;
-          localStorage.setItem(AUTH_TOKEN_KEY, newToken);
+          writeAuthToken(newToken);
           setToken(newToken);
           // Fetch profile immediately
           const profile = await fetchProfile(newToken);
@@ -209,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // Ignore network errors during logout
     }
-    localStorage.removeItem(AUTH_TOKEN_KEY);
+    clearAuthToken();
     setToken(null);
     setUser(null);
     setError(null);

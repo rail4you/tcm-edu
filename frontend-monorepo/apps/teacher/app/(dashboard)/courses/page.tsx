@@ -58,7 +58,11 @@ const LEVEL_LABEL: Record<string, string> = {
 type StatusFilter = "all" | "draft" | "published" | "archived";
 
 function errMsg(errors: AshRpcError[]): string {
-  return errors?.[0]?.message ?? "操作失败";
+  const first = errors?.[0];
+  if (!first) return "操作失败";
+  if (first.type === "forbidden") return "您没有权限执行此操作";
+  if (first.type === "network_error") return "网络错误，请稍后重试";
+  return first.message ?? "操作失败";
 }
 
 export default function TeacherCoursesPage() {
@@ -144,7 +148,7 @@ export default function TeacherCoursesPage() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
         <Typography.Title level={4} style={{ margin: 0 }}>
           我的课程
         </Typography.Title>
@@ -178,6 +182,7 @@ export default function TeacherCoursesPage() {
         <Card>
           <Table<CourseRow>
             rowKey="id"
+          scroll={{ x: 720 }}
             loading={loading}
             dataSource={filtered}
             pagination={{ pageSize: 10, showSizeChanger: false }}
@@ -241,6 +246,14 @@ export default function TeacherCoursesPage() {
               },
             ]}
           />
+        </Card>
+      ) : loading ? (
+        <Card loading />
+      ) : filtered.length === 0 ? (
+        <Card>
+          <div style={{ textAlign: "center", padding: "32px 0", color: "#999" }}>
+            暂无课程，点击右上「创建课程」开始备课。
+          </div>
         </Card>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>

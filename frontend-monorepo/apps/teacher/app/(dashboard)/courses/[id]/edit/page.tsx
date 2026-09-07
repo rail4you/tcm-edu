@@ -77,7 +77,11 @@ const CONTENT_TYPE_OPTIONS = [
 ];
 
 function errMsg(errors: AshRpcError[]): string {
-  return errors?.[0]?.message ?? "操作失败";
+  const first = errors?.[0];
+  if (!first) return "操作失败";
+  if (first.type === "forbidden") return "您没有权限执行此操作";
+  if (first.type === "network_error") return "网络错误，请稍后重试";
+  return first.message ?? "操作失败";
 }
 
 function sorted<T extends { sortOrder?: number | null }>(items: T[] | undefined): T[] {

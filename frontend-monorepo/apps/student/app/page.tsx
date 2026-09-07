@@ -14,6 +14,7 @@ import {
   TeacherSkeleton,
 } from "@/components/skeletons";
 import { useAuth } from "@/app/auth-context";
+import { cachedQuery } from "@/lib/public-cache";
 import {
   listCategories,
   listPopularCourses,
@@ -77,10 +78,17 @@ export default function HomePage() {
     setLoading(true);
     setError(null);
     try {
+      // 公开查询 60s 缓存：路由切回首页不重复打后端
       const [popularRes, catRes, teacherRes] = await Promise.all([
-        listPopularCourses({ fields: [...COURSE_FIELDS], tenant: PUBLIC_TENANT }),
-        listCategories({ fields: [...CATEGORY_FIELDS], tenant: PUBLIC_TENANT }),
-        listTeacherProfiles({ fields: [...TEACHER_FIELDS], tenant: PUBLIC_TENANT }),
+        cachedQuery("home:popular", 60_000, () =>
+          listPopularCourses({ fields: [...COURSE_FIELDS], tenant: PUBLIC_TENANT })
+        ),
+        cachedQuery("home:categories", 60_000, () =>
+          listCategories({ fields: [...CATEGORY_FIELDS], tenant: PUBLIC_TENANT })
+        ),
+        cachedQuery("home:teachers", 60_000, () =>
+          listTeacherProfiles({ fields: [...TEACHER_FIELDS], tenant: PUBLIC_TENANT })
+        ),
       ]);
       if (!popularRes.success) {
         setError(errMsg(popularRes.errors));

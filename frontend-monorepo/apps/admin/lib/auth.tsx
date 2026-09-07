@@ -10,6 +10,11 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import {
+  clearAuthToken,
+  readAuthToken,
+  writeAuthToken,
+} from "@tcm-edu/rpc-client";
 
 export type AdminRole = "super_admin" | "tenant_admin";
 
@@ -33,8 +38,6 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const LS_KEY = "tcm_admin_session";
-// rpcHooks.beforeRequest 读的是 auth_token，保持同步写入。
-const TOKEN_KEY = "auth_token";
 
 function readStored(): AdminSession | null {
   if (typeof window === "undefined") return null;
@@ -50,22 +53,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AdminSession | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setSession(readStored());
-    setLoading(false);
-  }, []);
-
   const persist = useCallback((s: AdminSession | null) => {
     setSession(s);
     if (typeof window === "undefined") return;
     if (s) {
       localStorage.setItem(LS_KEY, JSON.stringify(s));
-      localStorage.setItem(TOKEN_KEY, s.token);
+      writeAuthToken(s.token);
     } else {
       localStorage.removeItem(LS_KEY);
-      localStorage.removeItem(TOKEN_KEY);
+      // 显式退出 = 三端一起退（dev 联调可预期；401 由 rpcHooks 统一清）。
+      clearAuthToken();
     }
   }, []);
+
+  useEffect(() => {
+    const stored = readStored();
+    if (stored) {
+      setSession(stored);
+      setLoading(false);
+      return;
+    }
+    // 跨端联调：本端无 session 时，用共享 cookie 的 token 经 /me 认领
+    //（仅 super_admin / tenant_admin；学生 token 会被拒绝）。
+    const token = readAuthToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((me) => {
+        const role = me?.data?.role as AdminRole | undefined;
+        if (role === "super_admin" || role === "tenant_admin") {
+          persist({
+            token,
+            role,
+            tenant: me.data.tenant ?? "public",
+            name: me.data.email ?? "",
+            email: me.data.email ?? "",
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [persist]);
 
   const loginSuperAdmin = useCallback(
     async (email: string, password: string) => {
@@ -132,6 +163,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     persist(null);
+  }, [persist]);
+
+  // RPC 401（token 失效）时 rpcHooks 会清 localStorage 并广播 auth:logout，
+  // 这里跟进清 session，路由守卫会自动跳 /login。
+  useEffect(() => {
+    const handler = () => persist(null);
+    window.addEventListener("auth:logout", handler);
+    return () => window.removeEventListener("auth:logout", handler);
   }, [persist]);
 
   const value = useMemo(

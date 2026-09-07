@@ -7,3 +7,4 @@
  */
 export * from "./ash_rpc";
 export * as RpcHooks from "./rpcHooks";
+export * from "./sharedAuth";

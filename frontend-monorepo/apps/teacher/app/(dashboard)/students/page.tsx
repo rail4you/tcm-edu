@@ -15,7 +15,11 @@ interface StudentRow {
 const STUDENT_FIELDS = ["id", "email", "name", "status"] as const;
 
 function errMsg(errors: AshRpcError[]): string {
-  return errors?.[0]?.message ?? "加载失败";
+  const first = errors?.[0];
+  if (!first) return "加载失败";
+  if (first.type === "forbidden") return "您没有权限执行此操作";
+  if (first.type === "network_error") return "网络错误，请稍后重试";
+  return first.message ?? "加载失败";
 }
 
 export default function TeacherStudentsPage() {
@@ -56,7 +60,7 @@ export default function TeacherStudentsPage() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
         <Typography.Title level={4} style={{ margin: 0 }}>
           我的学生
         </Typography.Title>
@@ -76,6 +80,7 @@ export default function TeacherStudentsPage() {
         </Typography.Paragraph>
         <Table<StudentRow>
           rowKey="id"
+          scroll={{ x: 720 }}
           loading={loading}
           dataSource={filtered}
           pagination={{ pageSize: 10, showSizeChanger: false }}
