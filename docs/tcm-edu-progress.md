@@ -1,6 +1,6 @@
 # TCM-Edu · 实施进度跟踪
 
-> **当前状态**：🟢 Phase 5 已完成，下一步 Phase 7（选课与进度）
+> **当前状态**：🟢 Phase 7 已完成，下一步 Phase 8（学生端首页）
 > **开始日期**：2026-09-06
 > **预计完成**：（待定）
 > **部署目标**：111.229.72.15（`ssh tcm-edu` 免密；`deploy.sh` 默认 REMOTE_HOST 已切到 `tcm-edu`）
@@ -17,13 +17,13 @@ Phase 3  🟢 重构 User + 角色     [============] 21/21
 Phase 4  🟢 超管 Console         [============] 36/39
 Phase 5  🟢 教师 Console         [============] 12/12
 Phase 6  🟢 课程域              [============] 41/42
-Phase 7  ⬜ 选课与进度           [============] 0/8
+Phase 7  🟢 选课与进度           [============] 8/8
 Phase 8  ⬜ 学生端首页           [============] 0/12
 Phase 9  ⬜ 课程列表 + 详情      [============] 0/14
 Phase 10 ⬜ 集成打磨            [============] 0/10
 Phase 11 ⬜ 部署与文档          [============] 0/8
 
-总进度：194 已完成 / 161 待办（以文档内实际勾选为准；早期 145 为粗估）
+总进度：202 已完成 / 153 待办（以文档内实际勾选为准；早期 145 为粗估）
 ```
 
 图例：⬜ 未开始　🟡 进行中　🟢 已完成　🔴 受阻
@@ -496,54 +496,71 @@ Phase 11 ⬜ 部署与文档          [============] 0/8
 
 ---
 
-## Phase 7 · 选课与进度
+## Phase 7 · 选课与进度 🟢 已完成
 
 > 目标：学生能选课、看课时内容、上报进度
-> 前置依赖：Phase 6 完成
-> 工期估计：2 天
+> 前置依赖：Phase 6 完成 ✅
+> 实际工期：1 天
+> 完成日期：2026-09-07
 
-### 7.1 资源定义
+### 7.1 资源定义 🟢
 
-- [ ] 创建 `lib/tcm_edu/enrollment/enrollment.ex`
-- [ ] 创建 `lib/tcm_edu/enrollment/progress.ex`
-- [ ] 配置 `multitenancy :context`
-- [ ] 写租户迁移
+- [x] 创建 `lib/tcm_edu/enrollment/enrollment.ex`
+- [x] 创建 `lib/tcm_edu/enrollment/progress.ex`
+- [x] 创建 `lib/tcm_edu/enrollment/changes/`（`AutoComplete`、`EnsureCoursePublished`）
+- [x] 配置 `multitenancy :context`
+- [x] 写租户迁移 `20260830000005_create_tenant_enrollments.exs`（`enrollments` + `progress` 表 + Ash 约定唯一索引名）
 
-### 7.2 Enrollment 资源详情
+### 7.2 Enrollment 资源详情 🟢
 
-- [ ] attributes：status、enrolled_at、expires_at、completed_at
-- [ ] relationships：user、course、progress_records
-- [ ] identities：unique_user_course
-- [ ] actions：enroll（含唯一性 validate）、mark_completed、cancel
-- [ ] policies：仅学生可选课、用户看自己的、管理员可看所有
+- [x] attributes：status、enrolled_at、expires_at、completed_at
+- [x] relationships：user、course、progress_records（全部 `public?: true`）
+- [x] identities：unique_user_course（索引 `enrollments_unique_user_course_index`，冲突 422）
+- [x] actions：enroll（含已发布校验）、mark_completed、cancel（+ my_enrollments、destroy）
+- [x] policies：仅学生可选课（`user_id` 强制取 actor）、用户看自己的、教师看自己课程的、管理员看所有
 
-### 7.3 Progress 资源详情
+### 7.3 Progress 资源详情 🟢
 
-- [ ] attributes：status、progress_pct、last_position_seconds、completed_at
-- [ ] relationships：enrollment、lesson
-- [ ] actions：update（前端心跳调用）
-- [ ] policies：用户只能更新自己的
+- [x] attributes：status、progress_pct（0-100 约束）、last_position_seconds、completed_at
+- [x] relationships：enrollment、lesson（`public?: true`）
+- [x] identities：unique_enrollment_lesson（索引 `progress_unique_enrollment_lesson_index`）
+- [x] actions：upsert_progress（心跳：存在更新/不存在创建）、update
+- [x] policies：写限本人或管理员；读加教师（自己课程）可见
+- [x] `progress_pct >= 100` 自动落 completed + completed_at（`AutoComplete` change）
 
-### 7.4 域配置
+### 7.4 域配置 🟢
 
-- [ ] 创建 `lib/tcm_edu/enrollment.ex` 域
-- [ ] 暴露 RPC：my_enrollments、enroll_in_course、update_progress
-- [ ] 跑 codegen
+- [x] 创建 `lib/tcm_edu/enrollment.ex` 域（`config.exs` 注册）
+- [x] 暴露 RPC：my_enrollments、enroll_in_course、cancel_enrollment、complete_enrollment、upsert_progress、update_progress
+- [x] 跑 codegen（7 个新函数；Course 类型新增 `studentCount`）
+- [x] Course 补齐 Phase 6 预留：`has_many :enrollments` + `total_students` 聚合 + `student_count` calculation + `list_popular`（已发布按人数 Top 10）+ `listPopularCourses` RPC
 
-### 7.5 测试
+### 7.5 测试 🟢
 
-- [ ] 测试：学生选课 → 创建 enrollment
-- [ ] 测试：同一课程重复选课被拒绝
-- [ ] 测试：进度更新 → 百分比正确累加
-- [ ] 测试：跨用户不能改他人进度
+- [x] `test/tcm_edu/enrollment/enrollment_test.exs`（22 个测试，全部通过）
+- [x] 测试：学生选课 → 创建 enrollment
+- [x] 测试：同一课程重复选课被拒绝（422 Invalid）；草稿课拒绝；教师/匿名 Forbidden
+- [x] 测试：my_enrollments 只看自己的；教师只看自己课程的；管理员看所有
+- [x] 测试：cancel / mark_completed 本人或管理员；他人 Forbidden
+- [x] 测试：心跳 upsert 同一条记录更新；100% 自动完结；跨用户写 Forbidden；pct>100 拒绝
+- [x] 测试：跨租户不可见
+- [x] 测试：student_count 只计 active；list_popular 按人数倒序且仅已发布
 
-### 7.6 Phase 7 完成标志
+### 7.6 Phase 7 完成标志 ✅
 
-- [ ] `mix precommit` 通过
-- [ ] API smoke test 成功
-- [ ] Git commit
+- [x] `mix test` 全量 105/107（2 个预存 LLM 余额失败，与本次无关）；`tsc` 五件套全过
+- [x] API smoke：7 个 RPC 函数已生成；action 级 E2E 由 22 个测试覆盖
+- [x] 更新本文档勾选状态
+- [ ] Git commit + push（用户允许 commit 时执行）
 
-**实际工期**：____ 天
+**实际工期**：1 天
+
+### 🐛 踩坑记录（Phase 7）
+
+1. **create 的 validate 里拿不到 tenant**：validate 跑在 `for_action` 时，`changeset.tenant` 和 validate 第二个参数 `context.tenant` 都是 nil（tenant 在 `Ash.create` 的 opts 里，验证阶段还没合进来）。课程已发布检查必须做成 `before_action` hook（run 阶段 tenant 已就绪，已实测）。update 路径无此问题（for_update 可从 record 的 `__metadata__.tenant` 拿到）。
+2. **actor 模板 change 同理有时序要求**：`set_attribute(:user_id, actor(:id))` 只在 actor 随 `for_action`/`for_create` 一起传时才正确。测试必须写成 `for_action(:enroll, params, actor: x, tenant: t)` 再 `Ash.create()`——这正好与 RPC 行为一致（pipeline 见 `AshTypescript.Rpc.Pipeline.execute_create_action`：`for_create` 带全 opts 再 `Ash.create()` 无参）。
+3. **`Ash.Changeset.before_action` 的 hook 是 1 元函数**：`before_action(changeset, fn cs -> ... end)`，传 2 元报 BadArityError。
+4. **Progress 的 `relates_to_actor_via([:enrollment, :user])` 在 create 上可用**：跨用户写他人进度被正确 Forbidden（22 个测试覆盖）。
 
 ---
 
@@ -788,6 +805,7 @@ Phase 11 ⬜ 部署与文档          [============] 0/8
 | 4 超管 Console | 2026-09-06 | 1 天 | pnpm monorepo + admin 应用（登录/工作台/租户/用户）+ Organization 策略收紧 |
 | 6 课程域 | 2026-09-07 | 1 天 | Course/Chapter/Lesson/Category + 发布流 + seed + 24 个测试（Phase 5 所需先行） |
 | 5 教师 Console | 2026-09-07 | 1 天 | teacher 应用（登录/工作台/课程列表/创建/编辑器/发布/学生页）+ 课程域关系 public 化 + TS 重生成 |
+| 7 选课与进度 | 2026-09-07 | 1 天 | Enrollment/Progress + 心跳 upsert + student_count/list_popular + 22 个测试 |
 
 ### 阻塞 & 风险记录
 

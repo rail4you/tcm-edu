@@ -98,6 +98,10 @@ defmodule TcmEdu.Courses.Course do
       # public?: true → 教师端编辑页可嵌套加载章节/课时结构
       public? true
     end
+
+    has_many :enrollments, TcmEdu.Enrollment.Enrollment do
+      destination_attribute :course_id
+    end
   end
 
   aggregates do
@@ -109,6 +113,12 @@ defmodule TcmEdu.Courses.Course do
     end
 
     sum :total_duration, [:chapters, :lessons], :duration_seconds do
+      authorize? false
+    end
+
+    # 选课人数同样是公开卡片信息（Phase 7 补齐，依赖 Enrollment）
+    count :total_students, :enrollments do
+      filter expr(status == :active)
       authorize? false
     end
   end
@@ -124,6 +134,10 @@ defmodule TcmEdu.Courses.Course do
     calculate :duration_seconds, :decimal, expr(total_duration) do
       public? true
     end
+
+    calculate :student_count, :integer, expr(total_students) do
+      public? true
+    end
   end
 
   code_interface do
@@ -137,6 +151,7 @@ defmodule TcmEdu.Courses.Course do
     define :publish_course, action: :publish
     define :archive_course, action: :archive
     define :delete_course, action: :destroy
+    define :list_popular_courses, action: :list_popular
   end
 
   actions do
@@ -173,6 +188,12 @@ defmodule TcmEdu.Courses.Course do
       description "某分类下的已发布课程（学生端筛选）"
       argument :category_id, :uuid, allow_nil?: false
       filter expr(category_id == ^arg(:category_id) and status == :published)
+    end
+
+    read :list_popular do
+      description "热门课程：已发布按选课人数倒序 Top 10（学生端首页）"
+      filter expr(status == :published)
+      prepare build(sort: [total_students: :desc], limit: 10)
     end
 
     create :create_course do

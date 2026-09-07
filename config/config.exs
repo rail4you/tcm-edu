@@ -18,6 +18,7 @@ config :tcm_edu,
     TcmEdu.TodoDomain,
     TcmEdu.Accounts,
     TcmEdu.Courses,
+    TcmEdu.Enrollment,
     TcmEdu.ChatDomain,
     TcmEdu.PostDomain,
     TcmEdu.Storage

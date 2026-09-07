@@ -126,6 +126,24 @@ export const updateLessonSchema = z.object({
   isFreePreview: z.boolean().nullable().optional(),
 });
 
+export const enrollInCourseSchema = z.object({
+  courseId: z.uuid(),
+});
+
+export const updateProgressSchema = z.object({
+  status: z.enum(["completed", "in_progress", "not_started"]).nullable().optional(),
+  progressPct: z.number().int().min(0).max(100).nullable().optional(),
+  lastPositionSeconds: z.number().int().nullable().optional(),
+});
+
+export const upsertProgressSchema = z.object({
+  enrollmentId: z.uuid(),
+  lessonId: z.uuid(),
+  status: z.enum(["completed", "in_progress", "not_started"]).nullable().optional(),
+  progressPct: z.number().int().min(0).max(100).nullable().optional(),
+  lastPositionSeconds: z.number().int().nullable().optional(),
+});
+
 export const createPostSchema = z.object({
   title: z.string().min(1).max(200),
   body: z.string().max(10000).nullable().optional(),

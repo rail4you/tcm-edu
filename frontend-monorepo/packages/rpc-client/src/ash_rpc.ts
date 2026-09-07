@@ -3,7 +3,7 @@
 
 import * as RpcHooks from "./rpcHooks";
 
-import type { AshRpcError, ChapterFilterInput, ChapterResourceSchema, ChapterSortField, ChatMessageFilterInput, ChatMessageResourceSchema, ChatMessageSortField, ChatSessionFilterInput, ChatSessionResourceSchema, ChatSessionSortField, ChatTaskFilterInput, ChatTaskResourceSchema, ChatTaskSortField, ConditionalPaginatedResultMixed, CourseCategoryFilterInput, CourseCategoryResourceSchema, CourseCategorySortField, CourseFilterInput, CourseResourceSchema, CourseSortField, InferResult, LessonFilterInput, LessonResourceSchema, LessonSortField, OrganizationFilterInput, OrganizationResourceSchema, OrganizationSortField, PostFilterInput, PostResourceSchema, PostSortField, SortString, SuperAdminFilterInput, SuperAdminResourceSchema, SuperAdminSortField, TodoFilterInput, TodoResourceSchema, TodoSortField, UUID, UnifiedFieldSelection, UserFilterInput, UserResourceSchema, UserSortField, UtcDateTime } from "./ash_types";
+import type { AshRpcError, ChapterFilterInput, ChapterResourceSchema, ChapterSortField, ChatMessageFilterInput, ChatMessageResourceSchema, ChatMessageSortField, ChatSessionFilterInput, ChatSessionResourceSchema, ChatSessionSortField, ChatTaskFilterInput, ChatTaskResourceSchema, ChatTaskSortField, ConditionalPaginatedResultMixed, CourseCategoryFilterInput, CourseCategoryResourceSchema, CourseCategorySortField, CourseFilterInput, CourseResourceSchema, CourseSortField, EnrollmentFilterInput, EnrollmentResourceSchema, EnrollmentSortField, InferResult, LessonFilterInput, LessonResourceSchema, LessonSortField, OrganizationFilterInput, OrganizationResourceSchema, OrganizationSortField, PostFilterInput, PostResourceSchema, PostSortField, ProgressResourceSchema, SortString, SuperAdminFilterInput, SuperAdminResourceSchema, SuperAdminSortField, TodoFilterInput, TodoResourceSchema, TodoSortField, UUID, UnifiedFieldSelection, UserFilterInput, UserResourceSchema, UserSortField, UtcDateTime } from "./ash_types";
 export type * from "./ash_types";
 
 // RPC Action Hook Context Type
@@ -1492,6 +1492,48 @@ export async function listCourses<Fields extends ListCoursesFields, Config exten
 }
 
 
+export type ListPopularCoursesFields = UnifiedFieldSelection<CourseResourceSchema>[];
+export type InferListPopularCoursesResult<
+  Fields extends ListPopularCoursesFields,
+> = Array<InferResult<CourseResourceSchema, Fields>>;
+
+export type ListPopularCoursesResult<Fields extends ListPopularCoursesFields> = | { success: true; data: InferListPopularCoursesResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Read Course records
+ *
+ * @ashActionType :read
+ */
+export async function listPopularCourses<Fields extends ListPopularCoursesFields>(
+  config: {
+  tenant?: string;
+  hookCtx?: ActionHookContext;
+  fields: Fields;
+  filter?: CourseFilterInput;
+  sort?: SortString<CourseSortField> | SortString<CourseSortField>[];
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<ListPopularCoursesResult<Fields>> {
+  const payload = {
+    action: "list_popular_courses",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    ...(config.fields !== undefined && { fields: config.fields }),
+    ...(config.filter && { filter: config.filter }),
+    ...(config.sort && { sort: Array.isArray(config.sort) ? config.sort.join(",") : config.sort })
+  };
+
+  return executeActionRpcRequest<ListPopularCoursesResult<Fields>>(
+    payload,
+    config
+  );
+}
+
+
 export type ListPublishedCoursesFields = UnifiedFieldSelection<CourseResourceSchema>[];
 export type InferListPublishedCoursesResult<
   Fields extends ListPublishedCoursesFields,
@@ -2084,6 +2126,273 @@ export async function updateLesson<Fields extends UpdateLessonFields | undefined
   };
 
   return executeActionRpcRequest<UpdateLessonResult<Fields extends undefined ? [] : Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type CancelEnrollmentFields = UnifiedFieldSelection<EnrollmentResourceSchema>[];
+
+export type InferCancelEnrollmentResult<
+  Fields extends CancelEnrollmentFields | undefined,
+> = InferResult<EnrollmentResourceSchema, Fields>;
+
+export type CancelEnrollmentResult<Fields extends CancelEnrollmentFields | undefined = undefined> = | { success: true; data: InferCancelEnrollmentResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Update an existing Enrollment
+ *
+ * @ashActionType :update
+ */
+export async function cancelEnrollment<Fields extends CancelEnrollmentFields | undefined = undefined>(
+  config: {
+  tenant?: string;
+  identity: UUID;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<CancelEnrollmentResult<Fields extends undefined ? [] : Fields>> {
+  const payload = {
+    action: "cancel_enrollment",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    identity: config.identity,
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<CancelEnrollmentResult<Fields extends undefined ? [] : Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type CompleteEnrollmentFields = UnifiedFieldSelection<EnrollmentResourceSchema>[];
+
+export type InferCompleteEnrollmentResult<
+  Fields extends CompleteEnrollmentFields | undefined,
+> = InferResult<EnrollmentResourceSchema, Fields>;
+
+export type CompleteEnrollmentResult<Fields extends CompleteEnrollmentFields | undefined = undefined> = | { success: true; data: InferCompleteEnrollmentResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Update an existing Enrollment
+ *
+ * @ashActionType :update
+ */
+export async function completeEnrollment<Fields extends CompleteEnrollmentFields | undefined = undefined>(
+  config: {
+  tenant?: string;
+  identity: UUID;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<CompleteEnrollmentResult<Fields extends undefined ? [] : Fields>> {
+  const payload = {
+    action: "complete_enrollment",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    identity: config.identity,
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<CompleteEnrollmentResult<Fields extends undefined ? [] : Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type EnrollInCourseInput = {
+  courseId: UUID;
+};
+
+export type EnrollInCourseFields = UnifiedFieldSelection<EnrollmentResourceSchema>[];
+
+export type InferEnrollInCourseResult<
+  Fields extends EnrollInCourseFields | undefined,
+> = InferResult<EnrollmentResourceSchema, Fields>;
+
+export type EnrollInCourseResult<Fields extends EnrollInCourseFields | undefined = undefined> = | { success: true; data: InferEnrollInCourseResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Create a new Enrollment
+ *
+ * @ashActionType :create
+ */
+export async function enrollInCourse<Fields extends EnrollInCourseFields | undefined = undefined>(
+  config: {
+  tenant?: string;
+  input: EnrollInCourseInput;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<EnrollInCourseResult<Fields extends undefined ? [] : Fields>> {
+  const payload = {
+    action: "enroll_in_course",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    input: config.input,
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<EnrollInCourseResult<Fields extends undefined ? [] : Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type MyEnrollmentsFields = UnifiedFieldSelection<EnrollmentResourceSchema>[];
+export type InferMyEnrollmentsResult<
+  Fields extends MyEnrollmentsFields,
+> = Array<InferResult<EnrollmentResourceSchema, Fields>>;
+
+export type MyEnrollmentsResult<Fields extends MyEnrollmentsFields> = | { success: true; data: InferMyEnrollmentsResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Read Enrollment records
+ *
+ * @ashActionType :read
+ */
+export async function myEnrollments<Fields extends MyEnrollmentsFields>(
+  config: {
+  tenant?: string;
+  hookCtx?: ActionHookContext;
+  fields: Fields;
+  filter?: EnrollmentFilterInput;
+  sort?: SortString<EnrollmentSortField> | SortString<EnrollmentSortField>[];
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<MyEnrollmentsResult<Fields>> {
+  const payload = {
+    action: "my_enrollments",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    ...(config.fields !== undefined && { fields: config.fields }),
+    ...(config.filter && { filter: config.filter }),
+    ...(config.sort && { sort: Array.isArray(config.sort) ? config.sort.join(",") : config.sort })
+  };
+
+  return executeActionRpcRequest<MyEnrollmentsResult<Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type UpdateProgressInput = {
+  status?: "completed" | "in_progress" | "not_started" | null;
+  progressPct?: number | null;
+  lastPositionSeconds?: number | null;
+};
+
+export type UpdateProgressFields = UnifiedFieldSelection<ProgressResourceSchema>[];
+
+export type InferUpdateProgressResult<
+  Fields extends UpdateProgressFields | undefined,
+> = InferResult<ProgressResourceSchema, Fields>;
+
+export type UpdateProgressResult<Fields extends UpdateProgressFields | undefined = undefined> = | { success: true; data: InferUpdateProgressResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Update an existing Progress
+ *
+ * @ashActionType :update
+ */
+export async function updateProgress<Fields extends UpdateProgressFields | undefined = undefined>(
+  config: {
+  tenant?: string;
+  identity: UUID;
+  input?: UpdateProgressInput;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<UpdateProgressResult<Fields extends undefined ? [] : Fields>> {
+  const payload = {
+    action: "update_progress",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    identity: config.identity,
+    input: config.input,
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<UpdateProgressResult<Fields extends undefined ? [] : Fields>>(
+    payload,
+    config
+  );
+}
+
+
+export type UpsertProgressInput = {
+  enrollmentId: UUID;
+  lessonId: UUID;
+  status?: "completed" | "in_progress" | "not_started" | null;
+  progressPct?: number | null;
+  lastPositionSeconds?: number | null;
+};
+
+export type UpsertProgressFields = UnifiedFieldSelection<ProgressResourceSchema>[];
+
+export type InferUpsertProgressResult<
+  Fields extends UpsertProgressFields | undefined,
+> = InferResult<ProgressResourceSchema, Fields>;
+
+export type UpsertProgressResult<Fields extends UpsertProgressFields | undefined = undefined> = | { success: true; data: InferUpsertProgressResult<Fields>; }
+| { success: false; errors: AshRpcError[]; }
+
+;
+
+/**
+ * Create a new Progress
+ *
+ * @ashActionType :create
+ */
+export async function upsertProgress<Fields extends UpsertProgressFields | undefined = undefined>(
+  config: {
+  tenant?: string;
+  input: UpsertProgressInput;
+  hookCtx?: ActionHookContext;
+  fields?: Fields;
+  headers?: Record<string, string>;
+  fetchOptions?: RequestInit;
+  customFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+): Promise<UpsertProgressResult<Fields extends undefined ? [] : Fields>> {
+  const payload = {
+    action: "upsert_progress",
+    ...(config.tenant !== undefined && { tenant: config.tenant }),
+    input: config.input,
+    ...(config.fields !== undefined && { fields: config.fields })
+  };
+
+  return executeActionRpcRequest<UpsertProgressResult<Fields extends undefined ? [] : Fields>>(
     payload,
     config
   );

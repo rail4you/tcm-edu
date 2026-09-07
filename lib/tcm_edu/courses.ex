@@ -24,6 +24,7 @@ defmodule TcmEdu.Courses do
       rpc_action :list_teacher_courses, :list_by_teacher
       rpc_action :list_category_courses, :list_by_category
       rpc_action :get_course, :read, get_by: [:id]
+      rpc_action :list_popular_courses, :list_popular
       rpc_action :create_course, :create_course
       rpc_action :update_course, :update
       rpc_action :publish_course, :publish

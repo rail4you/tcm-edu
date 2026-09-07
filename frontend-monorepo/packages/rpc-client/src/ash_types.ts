@@ -165,7 +165,7 @@ export type ChapterAttributesOnlySchema = {
 // Course Schema
 export type CourseResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "title" | "subtitle" | "description" | "coverImageUrl" | "tags" | "level" | "status" | "priceCents" | "publishedAt" | "teacherId" | "categoryId" | "lessonCount" | "durationSeconds";
+  __primitiveFields: "id" | "title" | "subtitle" | "description" | "coverImageUrl" | "tags" | "level" | "status" | "priceCents" | "publishedAt" | "teacherId" | "categoryId" | "lessonCount" | "durationSeconds" | "studentCount";
   id: UUID;
   title: string;
   subtitle: string | null;
@@ -180,6 +180,7 @@ export type CourseResourceSchema = {
   categoryId: UUID | null;
   lessonCount: number | null;
   durationSeconds: Decimal | null;
+  studentCount: number | null;
   teacher: { __type: "Relationship"; __resource: UserResourceSchema; };
   category: { __type: "Relationship"; __resource: CourseCategoryResourceSchema | null; };
   chapters: { __type: "Relationship"; __array: true; __resource: ChapterResourceSchema; };
@@ -259,6 +260,67 @@ export type LessonAttributesOnlySchema = {
   sortOrder: number | null;
   isFreePreview: boolean | null;
   chapterId: UUID;
+};
+
+
+// Enrollment Schema
+export type EnrollmentResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "status" | "enrolledAt" | "expiresAt" | "completedAt" | "userId" | "courseId";
+  id: UUID;
+  status: "active" | "cancelled" | "completed" | null;
+  enrolledAt: UtcDateTime | null;
+  expiresAt: UtcDateTime | null;
+  completedAt: UtcDateTime | null;
+  userId: UUID;
+  courseId: UUID;
+  user: { __type: "Relationship"; __resource: UserResourceSchema; };
+  course: { __type: "Relationship"; __resource: CourseResourceSchema; };
+  progressRecords: { __type: "Relationship"; __array: true; __resource: ProgressResourceSchema; };
+};
+
+
+
+export type EnrollmentAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "status" | "enrolledAt" | "expiresAt" | "completedAt" | "userId" | "courseId";
+  id: UUID;
+  status: "active" | "cancelled" | "completed" | null;
+  enrolledAt: UtcDateTime | null;
+  expiresAt: UtcDateTime | null;
+  completedAt: UtcDateTime | null;
+  userId: UUID;
+  courseId: UUID;
+};
+
+
+// Progress Schema
+export type ProgressResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "status" | "progressPct" | "lastPositionSeconds" | "completedAt" | "enrollmentId" | "lessonId";
+  id: UUID;
+  status: "completed" | "in_progress" | "not_started" | null;
+  progressPct: number | null;
+  lastPositionSeconds: number | null;
+  completedAt: UtcDateTime | null;
+  enrollmentId: UUID;
+  lessonId: UUID;
+  enrollment: { __type: "Relationship"; __resource: EnrollmentResourceSchema; };
+  lesson: { __type: "Relationship"; __resource: LessonResourceSchema; };
+};
+
+
+
+export type ProgressAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "status" | "progressPct" | "lastPositionSeconds" | "completedAt" | "enrollmentId" | "lessonId";
+  id: UUID;
+  status: "completed" | "in_progress" | "not_started" | null;
+  progressPct: number | null;
+  lastPositionSeconds: number | null;
+  completedAt: UtcDateTime | null;
+  enrollmentId: UUID;
+  lessonId: UUID;
 };
 
 
@@ -829,6 +891,17 @@ export type CourseFilterInput = {
     isNil?: boolean;
   };
 
+  studentCount?: {
+    eq?: number;
+    notEq?: number;
+    greaterThan?: number;
+    greaterThanOrEqual?: number;
+    lessThan?: number;
+    lessThanOrEqual?: number;
+    in?: Array<number>;
+    isNil?: boolean;
+  };
+
 
   teacher?: UserFilterInput;
 
@@ -955,6 +1028,146 @@ export type LessonFilterInput = {
 
 
   chapter?: ChapterFilterInput;
+
+};
+export type EnrollmentFilterInput = {
+  and?: Array<EnrollmentFilterInput>;
+  or?: Array<EnrollmentFilterInput>;
+  not?: Array<EnrollmentFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  status?: {
+    eq?: "active" | "cancelled" | "completed";
+    notEq?: "active" | "cancelled" | "completed";
+    in?: Array<"active" | "cancelled" | "completed">;
+    isNil?: boolean;
+  };
+
+  enrolledAt?: {
+    eq?: UtcDateTime;
+    notEq?: UtcDateTime;
+    greaterThan?: UtcDateTime;
+    greaterThanOrEqual?: UtcDateTime;
+    lessThan?: UtcDateTime;
+    lessThanOrEqual?: UtcDateTime;
+    in?: Array<UtcDateTime>;
+    isNil?: boolean;
+  };
+
+  expiresAt?: {
+    eq?: UtcDateTime;
+    notEq?: UtcDateTime;
+    greaterThan?: UtcDateTime;
+    greaterThanOrEqual?: UtcDateTime;
+    lessThan?: UtcDateTime;
+    lessThanOrEqual?: UtcDateTime;
+    in?: Array<UtcDateTime>;
+    isNil?: boolean;
+  };
+
+  completedAt?: {
+    eq?: UtcDateTime;
+    notEq?: UtcDateTime;
+    greaterThan?: UtcDateTime;
+    greaterThanOrEqual?: UtcDateTime;
+    lessThan?: UtcDateTime;
+    lessThanOrEqual?: UtcDateTime;
+    in?: Array<UtcDateTime>;
+    isNil?: boolean;
+  };
+
+  userId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  courseId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+
+  user?: UserFilterInput;
+
+  course?: CourseFilterInput;
+
+  progressRecords?: ProgressFilterInput;
+
+};
+export type ProgressFilterInput = {
+  and?: Array<ProgressFilterInput>;
+  or?: Array<ProgressFilterInput>;
+  not?: Array<ProgressFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  status?: {
+    eq?: "completed" | "in_progress" | "not_started";
+    notEq?: "completed" | "in_progress" | "not_started";
+    in?: Array<"completed" | "in_progress" | "not_started">;
+    isNil?: boolean;
+  };
+
+  progressPct?: {
+    eq?: number;
+    notEq?: number;
+    greaterThan?: number;
+    greaterThanOrEqual?: number;
+    lessThan?: number;
+    lessThanOrEqual?: number;
+    in?: Array<number>;
+    isNil?: boolean;
+  };
+
+  lastPositionSeconds?: {
+    eq?: number;
+    notEq?: number;
+    greaterThan?: number;
+    greaterThanOrEqual?: number;
+    lessThan?: number;
+    lessThanOrEqual?: number;
+    in?: Array<number>;
+    isNil?: boolean;
+  };
+
+  completedAt?: {
+    eq?: UtcDateTime;
+    notEq?: UtcDateTime;
+    greaterThan?: UtcDateTime;
+    greaterThanOrEqual?: UtcDateTime;
+    lessThan?: UtcDateTime;
+    lessThanOrEqual?: UtcDateTime;
+    in?: Array<UtcDateTime>;
+    isNil?: boolean;
+  };
+
+  enrollmentId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  lessonId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+
+  enrollment?: EnrollmentFilterInput;
+
+  lesson?: LessonFilterInput;
 
 };
 export type PostFilterInput = {
@@ -1211,7 +1424,7 @@ export type ChatTaskFilterField = (typeof chatTaskFilterFields)[number];
 export const chapterFilterFields = ["id", "title", "sortOrder", "courseId", "course", "lessons"] as const;
 export type ChapterFilterField = (typeof chapterFilterFields)[number];
 
-export const courseFilterFields = ["id", "title", "subtitle", "description", "coverImageUrl", "tags", "level", "status", "priceCents", "publishedAt", "teacherId", "categoryId", "lessonCount", "durationSeconds", "teacher", "category", "chapters"] as const;
+export const courseFilterFields = ["id", "title", "subtitle", "description", "coverImageUrl", "tags", "level", "status", "priceCents", "publishedAt", "teacherId", "categoryId", "lessonCount", "durationSeconds", "studentCount", "teacher", "category", "chapters"] as const;
 export type CourseFilterField = (typeof courseFilterFields)[number];
 
 export const courseCategoryFilterFields = ["id", "name", "slug", "icon", "sortOrder"] as const;
@@ -1219,6 +1432,12 @@ export type CourseCategoryFilterField = (typeof courseCategoryFilterFields)[numb
 
 export const lessonFilterFields = ["id", "title", "contentType", "contentUrl", "contentText", "durationSeconds", "sortOrder", "isFreePreview", "chapterId", "chapter"] as const;
 export type LessonFilterField = (typeof lessonFilterFields)[number];
+
+export const enrollmentFilterFields = ["id", "status", "enrolledAt", "expiresAt", "completedAt", "userId", "courseId", "user", "course", "progressRecords"] as const;
+export type EnrollmentFilterField = (typeof enrollmentFilterFields)[number];
+
+export const progressFilterFields = ["id", "status", "progressPct", "lastPositionSeconds", "completedAt", "enrollmentId", "lessonId", "enrollment", "lesson"] as const;
+export type ProgressFilterField = (typeof progressFilterFields)[number];
 
 export const postFilterFields = ["id", "title", "body", "insertedAt", "updatedAt", "coverImageUrl", "attachmentsUrls", "attachmentsThumbnailUrls", "coverImage", "attachments"] as const;
 export type PostFilterField = (typeof postFilterFields)[number];
@@ -1248,7 +1467,7 @@ export type ChatTaskSortField = (typeof chatTaskSortFields)[number];
 export const chapterSortFields = ["id", "title", "sortOrder", "courseId"] as const;
 export type ChapterSortField = (typeof chapterSortFields)[number];
 
-export const courseSortFields = ["id", "title", "subtitle", "description", "coverImageUrl", "tags", "level", "status", "priceCents", "publishedAt", "teacherId", "categoryId", "lessonCount", "durationSeconds"] as const;
+export const courseSortFields = ["id", "title", "subtitle", "description", "coverImageUrl", "tags", "level", "status", "priceCents", "publishedAt", "teacherId", "categoryId", "lessonCount", "durationSeconds", "studentCount"] as const;
 export type CourseSortField = (typeof courseSortFields)[number];
 
 export const courseCategorySortFields = ["id", "name", "slug", "icon", "sortOrder"] as const;
@@ -1256,6 +1475,12 @@ export type CourseCategorySortField = (typeof courseCategorySortFields)[number];
 
 export const lessonSortFields = ["id", "title", "contentType", "contentUrl", "contentText", "durationSeconds", "sortOrder", "isFreePreview", "chapterId"] as const;
 export type LessonSortField = (typeof lessonSortFields)[number];
+
+export const enrollmentSortFields = ["id", "status", "enrolledAt", "expiresAt", "completedAt", "userId", "courseId"] as const;
+export type EnrollmentSortField = (typeof enrollmentSortFields)[number];
+
+export const progressSortFields = ["id", "status", "progressPct", "lastPositionSeconds", "completedAt", "enrollmentId", "lessonId"] as const;
+export type ProgressSortField = (typeof progressSortFields)[number];
 
 export const postSortFields = ["id", "title", "body", "insertedAt", "updatedAt", "coverImageUrl", "attachmentsUrls", "attachmentsThumbnailUrls"] as const;
 export type PostSortField = (typeof postSortFields)[number];
