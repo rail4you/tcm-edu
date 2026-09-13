@@ -35,7 +35,7 @@ defmodule TcmEdu.System.SuperAdminTest do
       assert String.starts_with?(admin.hashed_password, "$2")  # bcrypt prefix
     end
 
-    test "rejects password shorter than 8 chars" do
+    test "rejects password shorter than 6 chars" do
       assert {:error, %Ash.Error.Invalid{errors: errors}} =
                SuperAdmin
                |> Ash.Changeset.for_action(:register, Map.put(@valid_attrs, :password, "short"))

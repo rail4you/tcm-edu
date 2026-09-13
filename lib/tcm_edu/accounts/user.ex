@@ -172,16 +172,16 @@ defmodule TcmEdu.Accounts.User do
       argument :password, :string do
         allow_nil?(false)
         sensitive?(true)
-        constraints(min_length: 8)
+        constraints(min_length: 6)
       end
 
       validate fn changeset, _context ->
         password = Ash.Changeset.get_argument(changeset, :password)
 
-        if is_binary(password) and byte_size(password) >= 8 do
+        if is_binary(password) and byte_size(password) >= 6 do
           :ok
         else
-          {:error, field: :password, message: "must be at least 8 characters"}
+          {:error, field: :password, message: "must be at least 6 characters"}
         end
       end
 
@@ -225,7 +225,7 @@ defmodule TcmEdu.Accounts.User do
       argument :password, :string,
         sensitive?: true,
         allow_nil?: false,
-        constraints: [min_length: 8]
+        constraints: [min_length: 6]
       argument :password_confirmation, :string, sensitive?: true, allow_nil?: false
 
       validate confirm(:password, :password_confirmation)

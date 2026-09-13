@@ -296,8 +296,8 @@ export default function UsersPage() {
           <Form.Item label="姓名" name="name">
             <Input placeholder="可选" />
           </Form.Item>
-          <Form.Item label="初始密码" name="password" rules={[{ required: true, message: "请输入初始密码" }, { min: 8, message: "至少 8 位" }]}>
-            <Input.Password placeholder="至少 8 位" />
+          <Form.Item label="初始密码" name="password" rules={[{ required: true, message: "请输入初始密码" }, { min: 6, message: "至少 6 位" }]}>
+            <Input.Password placeholder="至少 6 位" />
           </Form.Item>
           <Form.Item label="角色" name="role" initialValue="student">
             <Select options={ROLE_OPTIONS} />

@@ -50,7 +50,7 @@ defmodule TcmEdu.Accounts.UserMultitenancyTest do
       end
     end
 
-    test "rejects password shorter than 8 chars" do
+    test "rejects password shorter than 6 chars" do
       assert {:error, %Ash.Error.Invalid{errors: errors}} =
                User
                |> Ash.Changeset.for_action(:register_with_role, %{

@@ -23,7 +23,7 @@ export default function LoginPage() {
     if (result.success) router.replace("/");
   }
 
-  const valid = email.trim() !== "" && password.length >= 8;
+  const valid = email.trim() !== "" && password.length >= 6;
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col items-center px-4 py-16 sm:px-6">
@@ -41,7 +41,7 @@ export default function LoginPage() {
       <p className="mt-2 text-sm text-ink-600">
         {mode === "login"
           ? "登录后选课学习，进度云端同步"
-          : "注册即学，密码至少 8 位"}
+          : "注册即学，密码至少 6 位"}
       </p>
 
       <form
@@ -66,8 +66,8 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={8}
-            placeholder="至少 8 位"
+            minLength={6}
+            placeholder="至少 6 位"
             className="rounded-lg border border-rice-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-cinnabar-500 focus:ring-2 focus:ring-cinnabar-100"
           />
         </label>
