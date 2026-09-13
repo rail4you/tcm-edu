@@ -1,0 +1,45 @@
+{
+  "name": "@tcm-edu/web",
+  "version": "0.1.0",
+  "description": "TCM-Edu 统一前端：单 Next.js 应用承载学生/教师/管理端，通过 URL 路径分流。",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001 -H 127.0.0.1",
+    "build": "next build",
+    "start": "next start -p 3001 -H 127.0.0.1",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/react": "^3.0.207",
+    "@ant-design/icons": "^5",
+    "@ant-design/v5-patch-for-react-19": "^1",
+    "@ant-design/nextjs-registry": "^1",
+    "@ant-design/pro-components": "^2",
+    "@assistant-ui/react": "^0.14.20",
+    "@tcm-edu/rpc-client": "workspace:*",
+    "ai": "^6.0.205",
+    "antd": "^5",
+    "katex": "^0.17.0",
+    "next": "16.2.9",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.1",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

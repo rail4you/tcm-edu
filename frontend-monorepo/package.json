@@ -1,14 +1,13 @@
 {
   "name": "@tcm-edu/monorepo",
   "version": "0.1.0",
-  "description": "TCM-Edu frontend monorepo: student + admin + teacher apps sharing one RPC client.",
+  "description": "TCM-Edu frontend monorepo: 单一 Next.js 应用承载学生/教师/管理端，通过 URL 路径分流。",
   "private": true,
   "packageManager": "pnpm@11.3.0",
   "scripts": {
-    "dev:student": "pnpm --filter @tcm-edu/student dev",
-    "dev:admin": "pnpm --filter @tcm-edu/admin dev",
-    "dev:teacher": "pnpm --filter @tcm-edu/teacher dev",
-    "build": "pnpm -r build",
+    "dev": "pnpm --filter @tcm-edu/web dev",
+    "build": "pnpm --filter @tcm-edu/web build",
+    "start": "pnpm --filter @tcm-edu/web start",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
   },

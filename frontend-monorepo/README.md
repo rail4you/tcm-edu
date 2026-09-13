@@ -1,58 +1,74 @@
 # frontend-monorepo
 
-TCM-Edu 前端 monorepo（pnpm workspaces）。三个应用共享同一个 RPC 客户端。
+TCM-Edu 前端 monorepo（pnpm workspaces）。**单一 Next.js 应用**承载学生 / 教师 / 管理三个端，通过 URL 路径分流，参考 [kg-edu](https://github.com/...) 的单端口模式。
 
 ## 目录
 
 ```
 frontend-monorepo/
 ├── apps/
-│   ├── student/   # 学生端（Next.js + Tailwind + 自定义组件） :3001
-│   ├── admin/     # 管理端（Next.js + Antd：超管 / 租户管理员） :3002
-│   └── teacher/   # 教师端（Phase 5）
-├── packages/
-│   ├── rpc-client/  # `mix ash_typescript.codegen` 输出 + 共享 auth hooks
-│   ├── ui-admin/    # 管理/教师端共享组件（Phase 5 教师端落地时再沉淀）
-│   └── config/      # 共享 tsconfig.base.json
-└── pnpm-workspace.yaml
+│   └── web/                 # 统一 Next.js 应用（dev :3000，prod 静态导出 → priv/app/）
+└── packages/
+    ├── rpc-client/          # `mix ash_typescript.codegen` 输出 + 共享 auth hooks
+    └── config/              # 共享 tsconfig.base.json
 ```
 
-## 端口
+## 单端口路由
 
-| 应用 | 端口 | 说明 |
-|------|------|------|
-| student | 3001 | `:3000` 被 OrbStack/Gotenberg 占用，故用 3001 |
-| admin | 3002 | 管理端 |
-| teacher | 3003 | Phase 5 |
+| URL                  | 端   | 说明                         |
+| -------------------- | ---- | ---------------------------- |
+| `/`                  | 学生 | 公开站首页（hero/courses/...）|
+| `/courses` `/course` `/learn` `/my-learning` `/posts` `/chat` | 学生 | 学生端路由 |
+| `/login`             | 登录 | 三 Tab：学员 / 教师 / 管理   |
+| `/admin` `/admin/*`  | 管理 | 超管 + 租户管理员（Antd）    |
+| `/teacher` `/teacher/*` | 教师 | 教师 + 机构管理员（Antd）    |
 
-后端 Phoenix 固定 `:4011`；各应用的 `/api/*` 通过 `rewrites()` 代理到 `:4011`。
+dev 模式下三端共享 `http://localhost:3000`，仅 URL 路径不同。后端 Phoenix 固定 `:4011`，`/api/*` 通过 `rewrites()` 代理。
 
-## 常用命令（在 `frontend-monorepo/` 下执行）
+## 启动
 
 ```bash
 pnpm install                          # 安装全部 workspace 依赖
-pnpm --filter @tcm-edu/student dev    # 学生端 :3001
-pnpm --filter @tcm-edu/admin dev      # 管理端 :3002
-pnpm --filter @tcm-edu/teacher dev    # 教师端（Phase 5）
-pnpm -r typecheck                      # 全部类型检查
-pnpm -r lint                           # 全部 lint（注：存量红灯，见根 AGENTS 说明）
+pnpm dev                              # 启动统一前端 :3000
 ```
 
-> 无 pnpm 时：`corepack enable` 即可（`packageManager: pnpm@11.3.0`）。
-> `pnpm install` 需加 `--ignore-scripts`（`neverBuiltDependencies` 已声明 sharp/unrs-resolver 跳过，原因见 `pnpm-workspace.yaml` 注释）。
+后端单独启动（项目根目录）：
 
-## RPC 客户端更新流程
+```bash
+mix phx.server                        # → :4011
+```
+
+## 登录入口
+
+`/login` 页三个 Tab：
+
+- **学员** — 学生邮箱 + 密码（首次可注册）；登录后跳 `/`
+- **教师** — 教师/机构管理员邮箱 + 密码；登录后跳 `/teacher`
+- **管理** — 超管专用入口（`POST /api/auth/super_admin_sign_in`）；登录后跳 `/admin`
+
+登录后 token 写 `localStorage.auth_token`，session 写 `localStorage.tcm_session`，统一由 `lib/auth/context.tsx` 管理。三端共用同一 session，跨端调试零摩擦。
+
+## RPC 客户端更新
 
 后端改了 resource / action 后：
 
 ```bash
-# 在项目根执行（不是 frontend-monorepo）
 mix ash_typescript.codegen   # 输出到 packages/rpc-client/src/
 ```
 
-各 app 通过 `@tcm-edu/rpc-client` 导入，**不要**各自复制 generated 文件。
+`apps/web` 通过 `@tcm-edu/rpc-client` 导入，**不要**自己复制 generated 文件。
 
-## 登录入口
+## 生产构建
 
-- 管理端 `/login`：两个 Tab —— 超管（`POST /api/auth/super_admin_sign_in`）/ 租户管理员（`POST /api/auth/user/password/sign_in`，body 形如 `{"user": {"email", "password"}}`）。
-- Token 存 `localStorage.auth_token`（与 `rpc-client` 的 `beforeRequest` hook 共用 key），session 存 `localStorage.tcm_admin_session`。
+```bash
+pnpm build                            # 输出到 apps/web/out/
+```
+
+Next.js 配置 `basePath: "/app"`（仅 production），所以 `out/` 下的所有路径都带 `/app/` 前缀。Dockerfile 把 `apps/web/out/*` 拷到 `priv/app/`，由 Phoenix `FallbackController.app/2` 在 `:4011/app/*` 提供。
+
+## 旧 app 目录
+
+迁移前 `apps/{student,admin,teacher}` 三套独立 Next.js 应用（端口 3001/3002/3003）已合并到 `apps/web/`。如需清理，删除旧目录即可，不影响新应用。
+
+> 无 pnpm 时：`corepack enable`（`packageManager: pnpm@11.3.0`）。
+> `pnpm install` 需加 `--ignore-scripts`（`neverBuiltDependencies` 已声明 sharp/unrs-resolver 跳过）。
