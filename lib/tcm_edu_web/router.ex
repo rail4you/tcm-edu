@@ -108,23 +108,19 @@ defmodule TcmEduWeb.Router do
     post "/posts/:post_id/upload/:attachment_name", PostUploadController, :upload
   end
 
-  # ── Admin panel (LiveView + daisyUI, session auth) ────────────────
-  # Login POST target for the trigger-action form on AdminLoginLive.
-  scope "/admin", TcmEduWeb do
+  # ── Unified login (single entrance for all portals) ─────────────
+  # The trigger-action form on LoginLive POSTs here; legacy per-portal
+  # login URLs redirect here as well.
+  scope "/", TcmEduWeb do
     pipe_through :browser
 
-    post "/session", AdminSessionController, :create
-    post "/logout", AdminSessionController, :delete
+    post "/session", SessionController, :create
+    post "/logout", SessionController, :delete
+    get "/admin/login", SessionController, :legacy_login
+    get "/teacher/login", SessionController, :legacy_login
   end
 
-  live_session :admin_public do
-    scope "/admin", TcmEduWeb do
-      pipe_through :browser
-
-      live "/login", AdminLoginLive, :index
-    end
-  end
-
+  # ── Admin panel (LiveView + daisyUI, session auth) ────────────────
   live_session :admin,
     on_mount: [{TcmEduWeb.AdminAuth, :ensure_admin}] do
     scope "/admin", TcmEduWeb do
@@ -145,21 +141,6 @@ defmodule TcmEduWeb.Router do
   end
 
   # ── Teacher portal (LiveView + daisyUI, session auth) ─────────────
-  scope "/teacher", TcmEduWeb do
-    pipe_through :browser
-
-    post "/session", TeacherSessionController, :create
-    post "/logout", TeacherSessionController, :delete
-  end
-
-  live_session :teacher_public do
-    scope "/teacher", TcmEduWeb do
-      pipe_through :browser
-
-      live "/login", TeacherLoginLive, :index
-    end
-  end
-
   live_session :teacher,
     on_mount: [{TcmEduWeb.TeacherAuth, :ensure_teacher}] do
     scope "/teacher", TcmEduWeb do
@@ -175,19 +156,12 @@ defmodule TcmEduWeb.Router do
 
   # ── Student portal (LiveView storefront) ────────────────────────
   # Public pages work anonymously; learning pages require a student.
-  scope "/", TcmEduWeb do
-    pipe_through :browser
-
-    post "/student/session", StudentSessionController, :create
-    post "/student/logout", StudentSessionController, :delete
-  end
-
   live_session :student_public, on_mount: [{TcmEduWeb.StudentAuth, :fetch_student}] do
     scope "/", TcmEduWeb do
       pipe_through :browser
 
       live "/", StudentHomeLive, :index
-      live "/login", StudentLoginLive, :index
+      live "/login", LoginLive, :index
       live "/courses", StudentCoursesLive, :index
       live "/courses/:id", StudentCourseDetailLive, :index
     end

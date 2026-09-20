@@ -1,9 +1,9 @@
 defmodule TcmEduWeb.AdminPanelTest do
   @moduledoc """
-  Covers the LiveView admin panel auth flow:
+  Covers the LiveView admin panel auth flow (via the unified `/login`):
 
-    * login page renders for anonymous visitors
-    * protected pages redirect to `/admin/login` without a session
+    * legacy `/admin/login` redirects to the single entrance
+    * protected pages redirect to `/login` without a session
     * session creation destroys work end-to-end for super admins
   """
   use TcmEduWeb.LiveViewCase
@@ -38,51 +38,26 @@ defmodule TcmEduWeb.AdminPanelTest do
     })
   end
 
-  describe "anonymous visitors" do
-    test "login page renders both login modes", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/admin/login")
+  defp login_params(email, password) do
+    %{"login" => %{"tab" => "admin", "sub" => "super", "email" => email, "password" => password}}
+  end
 
-      assert html =~ "欢迎回来"
-      assert html =~ "超级管理员"
-      assert html =~ "租户管理员"
-      assert html =~ "admin-login-form"
+  describe "anonymous visitors" do
+    test "legacy admin login redirects to the unified entrance", %{conn: conn} do
+      conn = get(conn, ~p"/admin/login")
+      assert redirected_to(conn) == ~p"/login"
     end
 
     test "dashboard redirects to login", %{conn: conn} do
-      assert {:error, {:redirect, %{to: "/admin/login"}}} = live(conn, ~p"/admin")
+      assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/admin")
     end
 
     test "tenants page redirects to login", %{conn: conn} do
-      assert {:error, {:redirect, %{to: "/admin/login"}}} = live(conn, ~p"/admin/tenants")
+      assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/admin/tenants")
     end
 
     test "users page redirects to login", %{conn: conn} do
-      assert {:error, {:redirect, %{to: "/admin/login"}}} = live(conn, ~p"/admin/users")
-    end
-  end
-
-  describe "login form validation" do
-    test "invalid email shows an error and does not trigger submit", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/admin/login")
-
-      html =
-        render_change(view, "validate", %{
-          "_target" => ["admin", "email"],
-          "admin" => %{"email" => "not-an-email", "password" => "x", "mode" => "super"}
-        })
-
-      assert html =~ "邮箱格式不正确"
-    end
-
-    test "submitting an invalid form surfaces all errors", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/admin/login")
-
-      html =
-        render_submit(view, "submit", %{
-          "admin" => %{"email" => "not-an-email", "password" => "", "mode" => "super"}
-        })
-
-      assert html =~ "邮箱格式不正确"
+      assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/admin/users")
     end
   end
 
@@ -113,32 +88,26 @@ defmodule TcmEduWeb.AdminPanelTest do
       assert html =~ "new-user-btn"
     end
 
-    test "session controller rejects bad credentials", %{conn: conn} do
-      conn =
-        post(conn, ~p"/admin/session", %{
-          "admin" => %{"email" => @super_email, "password" => "wrong", "mode" => "super"}
-        })
+    test "unified session rejects bad credentials", %{conn: conn} do
+      conn = post(conn, ~p"/session", login_params(@super_email, "wrong"))
 
-      assert redirected_to(conn) == ~p"/admin/login"
+      assert redirected_to(conn) == ~p"/login"
     end
 
-    test "session controller accepts valid credentials and logout clears it", %{
+    test "unified session accepts valid credentials and logout clears it", %{
       conn: conn
     } do
-      conn =
-        post(conn, ~p"/admin/session", %{
-          "admin" => %{"email" => @super_email, "password" => @super_password, "mode" => "super"}
-        })
+      conn = post(conn, ~p"/session", login_params(@super_email, @super_password))
 
       assert redirected_to(conn) == ~p"/admin"
       assert get_session(conn, "admin_role") == "super_admin"
 
-      conn = post(recycle(conn), ~p"/admin/logout")
-      assert redirected_to(conn) == ~p"/admin/login"
+      conn = post(recycle(conn), ~p"/logout")
+      assert redirected_to(conn) == ~p"/login"
 
       # The session is really gone: the dashboard bounces back to login.
       conn = get(recycle(conn), ~p"/admin")
-      assert redirected_to(conn) == ~p"/admin/login"
+      assert redirected_to(conn) == ~p"/login"
     end
   end
 end

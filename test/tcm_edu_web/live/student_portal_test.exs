@@ -1,7 +1,10 @@
 defmodule TcmEduWeb.StudentPortalTest do
   @moduledoc """
-  Covers the student portal public pages (home, login, catalog, detail)
-  and the session login/registration flow.
+  Covers the unified login page, the student portal public pages
+  (home, catalog, detail) and the student session flow.
+
+  There is no self-registration: the API register endpoint is closed
+  (covered below) and accounts are provisioned by admins.
   """
   use TcmEduWeb.LiveViewCase
 
@@ -33,6 +36,25 @@ defmodule TcmEduWeb.StudentPortalTest do
       |> Ash.create!()
 
     %{teacher: teacher}
+  end
+
+  defp create_student(_) do
+    user =
+      User
+      |> Ash.Changeset.for_create(
+        :register_with_role,
+        %{
+          email: @student_email,
+          name: "Portal Student",
+          password: @student_password,
+          role: :student
+        },
+        tenant: @tenant,
+        authorize?: false
+      )
+      |> Ash.create!()
+
+    %{student: %{id: user.id, email: to_string(user.email), actor: user}}
   end
 
   defp create_published_course(teacher, title \\ " published course") do
@@ -80,6 +102,58 @@ defmodule TcmEduWeb.StudentPortalTest do
     })
   end
 
+  describe "unified login" do
+    test "single entrance lists all three roles, no registration", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/login")
+
+      assert html =~ "统一登录"
+      assert html =~ "学员"
+      assert html =~ "教师"
+      assert html =~ "管理"
+      assert html =~ "login-form"
+      refute html =~ "免费注册"
+      refute html =~ "password_confirmation"
+    end
+
+    test "tab deep-link selects the teacher form", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/login?tab=teacher")
+
+      assert html =~ "进入教师端"
+    end
+
+    test "tab deep-link selects the admin form", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/login?tab=admin")
+
+      assert html =~ "进入管理端"
+      assert html =~ "超级管理员"
+      assert html =~ "租户管理员"
+    end
+
+    test "invalid input shows errors", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/login")
+
+      html =
+        render_submit(view, "submit", %{
+          "login" => %{"tab" => "student", "email" => "bad", "password" => ""}
+        })
+
+      assert html =~ "邮箱格式不正确"
+    end
+
+    test "public API registration stays closed", %{conn: conn} do
+      conn =
+        post(conn, ~p"/api/auth/user/password/register", %{
+          "user" => %{
+            "email" => "selfreg-#{System.unique_integer([:positive])}@example.com",
+            "password" => "password123",
+            "password_confirmation" => "password123"
+          }
+        })
+
+      refute conn.status == 200
+    end
+  end
+
   describe "public pages" do
     test "home renders hero and catalog sections", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/")
@@ -89,28 +163,11 @@ defmodule TcmEduWeb.StudentPortalTest do
       assert html =~ "名师风采" or html =~ "课程分类"
     end
 
-    test "login page renders both tabs", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/login")
+    test "home top-right has a single login button", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/")
 
-      assert html =~ "student-login-form"
-      assert html =~ "免费注册"
-    end
-
-    test "register tab renders via query param", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/login?mode=register")
-
-      assert html =~ "student-register-form"
-    end
-
-    test "invalid login input shows errors", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/login")
-
-      html =
-        render_submit(view, "submit-login", %{
-          "student" => %{"email" => "bad", "password" => ""}
-        })
-
-      assert html =~ "邮箱格式不正确"
+      assert html =~ "登录"
+      refute html =~ "免费注册"
     end
 
     test "courses catalog renders", %{conn: conn} do
@@ -141,30 +198,13 @@ defmodule TcmEduWeb.StudentPortalTest do
   end
 
   describe "student session" do
-    test "registration creates the account and logs in", %{conn: conn} do
+    setup [:create_student]
+
+    test "login accepts valid credentials", %{conn: conn, student: student} do
       conn =
-        post(conn, ~p"/student/session", %{
-          "student" => %{
-            "mode" => "register",
-            "email" => @student_email,
-            "name" => "Portal Student",
-            "password" => @student_password,
-            "password_confirmation" => @student_password
-          }
-        })
-
-      assert redirected_to(conn) == ~p"/my-learning"
-      assert get_session(conn, "student_role") == "student"
-    end
-
-    test "login accepts valid credentials", %{conn: conn} do
-      {:ok, student} =
-        TcmEduWeb.StudentAuth.register(@student_email, "Portal Student", @student_password)
-
-      conn =
-        post(conn, ~p"/student/session", %{
-          "student" => %{
-            "mode" => "login",
+        post(conn, ~p"/session", %{
+          "login" => %{
+            "tab" => "student",
             "email" => @student_email,
             "password" => @student_password
           }
@@ -181,28 +221,21 @@ defmodule TcmEduWeb.StudentPortalTest do
 
     test "login rejects bad credentials", %{conn: conn} do
       conn =
-        post(conn, ~p"/student/session", %{
-          "student" => %{
-            "mode" => "login",
-            "email" => "nobody@example.com",
-            "password" => "wrong"
-          }
+        post(conn, ~p"/session", %{
+          "login" => %{"tab" => "student", "email" => "nobody@example.com", "password" => "wrong"}
         })
 
       assert redirected_to(conn) == ~p"/login"
     end
 
-    test "logout returns home as visitor", %{conn: conn} do
-      {:ok, student} =
-        TcmEduWeb.StudentAuth.register(@student_email, "Portal Student", @student_password)
-
+    test "logout returns home as visitor", %{conn: conn, student: student} do
       authed = student_session(conn, student)
 
-      conn = post(authed, ~p"/student/logout")
-      assert redirected_to(conn) == ~p"/"
+      conn = post(authed, ~p"/logout")
+      assert redirected_to(conn) == ~p"/login"
 
       {:ok, _view, html} = live(recycle(conn), ~p"/")
-      assert html =~ "免费注册"
+      assert html =~ "登录"
     end
   end
 end

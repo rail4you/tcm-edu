@@ -55,23 +55,21 @@ defmodule TcmEduWeb.TeacherPortalTest do
   end
 
   describe "anonymous visitors" do
-    test "login page renders", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/teacher/login")
-
-      assert html =~ "欢迎回来"
-      assert html =~ "teacher-login-form"
+    test "legacy teacher login redirects to the unified entrance", %{conn: conn} do
+      conn = get(conn, ~p"/teacher/login")
+      assert redirected_to(conn) == ~p"/login"
     end
 
     test "dashboard redirects to login", %{conn: conn} do
-      assert {:error, {:redirect, %{to: "/teacher/login"}}} = live(conn, ~p"/teacher")
+      assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/teacher")
     end
 
     test "courses page redirects to login", %{conn: conn} do
-      assert {:error, {:redirect, %{to: "/teacher/login"}}} = live(conn, ~p"/teacher/courses")
+      assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/teacher/courses")
     end
 
     test "students page redirects to login", %{conn: conn} do
-      assert {:error, {:redirect, %{to: "/teacher/login"}}} = live(conn, ~p"/teacher/students")
+      assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/teacher/students")
     end
   end
 
@@ -132,31 +130,35 @@ defmodule TcmEduWeb.TeacherPortalTest do
       assert html =~ "我的学生"
     end
 
-    test "session controller accepts valid credentials and logout clears it", %{
+    test "unified session accepts valid credentials and logout clears it", %{
       conn: conn
     } do
       conn =
-        post(conn, ~p"/teacher/session", %{
-          "teacher" => %{"email" => @teacher_email, "password" => @teacher_password}
+        post(conn, ~p"/session", %{
+          "login" => %{
+            "tab" => "teacher",
+            "email" => @teacher_email,
+            "password" => @teacher_password
+          }
         })
 
       assert redirected_to(conn) == ~p"/teacher"
       assert get_session(conn, "teacher_role") == "teacher"
 
-      conn = post(recycle(conn), ~p"/teacher/logout")
-      assert redirected_to(conn) == ~p"/teacher/login"
+      conn = post(recycle(conn), ~p"/logout")
+      assert redirected_to(conn) == ~p"/login"
 
       conn = get(recycle(conn), ~p"/teacher")
-      assert redirected_to(conn) == ~p"/teacher/login"
+      assert redirected_to(conn) == ~p"/login"
     end
 
-    test "session controller rejects bad credentials", %{conn: conn} do
+    test "unified session rejects bad credentials", %{conn: conn} do
       conn =
-        post(conn, ~p"/teacher/session", %{
-          "teacher" => %{"email" => @teacher_email, "password" => "wrong"}
+        post(conn, ~p"/session", %{
+          "login" => %{"tab" => "teacher", "email" => @teacher_email, "password" => "wrong"}
         })
 
-      assert redirected_to(conn) == ~p"/teacher/login"
+      assert redirected_to(conn) == ~p"/login"
     end
   end
 end

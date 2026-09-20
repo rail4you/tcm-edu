@@ -241,9 +241,12 @@ defmodule TcmEdu.Accounts.User do
   end
 
   policies do
-    # AshAuthentication 内部流程（sign_in / register / token 验证）不走业务鉴权
+    # AshAuthentication 内部流程（sign_in / token 验证）不走业务鉴权。
+    # 注意：公开自助注册已关闭（见下面的 register_with_password policy），
+    # 账户只能由超管/管理员在管理端分配，因此 bypass 白名单不含注册动作。
     bypass AshAuthentication.Checks.AshAuthenticationInteraction do
-      authorize_if always()
+      authorize_if {Ash.Policy.Check.Action,
+                    action: [:sign_in_with_password, :sign_in_with_token]}
     end
 
     # SuperAdmin 跨租户管理：actor 是 SuperAdmin struct 时全放行。
@@ -255,6 +258,12 @@ defmodule TcmEdu.Accounts.User do
     # get_by_subject 被 AshAuthentication 用来从 JWT subject 反查用户，需公开
     policy action(:get_by_subject) do
       authorize_if always()
+    end
+
+    # 公开自助注册已关闭：学生/教师/管理员均无注册入口，账户由
+    # 超管（分配管理员）与管理员（分配教师/学生）在管理端创建。
+    policy action(:register_with_password) do
+      forbid_if always()
     end
 
     # 列表类：仅 tenant_admin / teacher 可列；student 调 list 会被拒绝。

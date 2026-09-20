@@ -3,9 +3,10 @@ defmodule TcmEduWeb.StudentAuth do
   Session-based authentication for the LiveView student portal.
 
   Students log in with their tenant account (looked up across tenant
-  schemas, Bcrypt-verified) or register a fresh account in the default
-  tenant. Session keys: `"student_id"` / `"student_role"` / `"student_tenant"`
-  / `"student_email"` / `"student_name"`.
+  schemas, Bcrypt-verified). There is no self-registration: accounts are
+  provisioned by admins in the admin panel. Session keys: `"student_id"` /
+  `"student_role"` / `"student_tenant"` / `"student_email"` /
+  `"student_name"`.
   """
 
   import Phoenix.LiveView, only: [put_flash: 3, redirect: 2]
@@ -86,26 +87,6 @@ defmodule TcmEduWeb.StudentAuth do
 
   def authenticate(_email, _password), do: {:error, :invalid_credentials}
 
-  @doc "Registers a new student in the default tenant and returns its map."
-  def register(email, name, password) do
-    attrs = %{
-      email: String.trim(email),
-      name: empty_to_nil(name),
-      password: password,
-      role: :student
-    }
-
-    case User
-         |> Ash.Changeset.for_create(:register_with_role, attrs,
-           tenant: @default_tenant,
-           authorize?: false
-         )
-         |> Ash.create() do
-      {:ok, user} -> {:ok, student_map(user, @default_tenant)}
-      {:error, error} -> {:error, ash_message(error)}
-    end
-  end
-
   @doc "Login form (live validation)."
   def login_form(params \\ %{}) do
     params |> login_changeset() |> Map.put(:action, :validate) |> to_form(as: "student")
@@ -121,24 +102,6 @@ defmodule TcmEduWeb.StudentAuth do
       message: "邮箱格式不正确"
     )
     |> Ecto.Changeset.validate_length(:password, min: 1, message: "请输入密码")
-  end
-
-  @doc "Registration form (live validation, incl. password confirmation)."
-  def register_form(params \\ %{}) do
-    params |> register_changeset() |> Map.put(:action, :validate) |> to_form(as: "student")
-  end
-
-  def register_changeset(params \\ %{}) do
-    types = %{email: :string, name: :string, password: :string, password_confirmation: :string}
-
-    {%{}, types}
-    |> Ecto.Changeset.cast(params, Map.keys(types))
-    |> Ecto.Changeset.validate_required([:email, :password, :password_confirmation])
-    |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/,
-      message: "邮箱格式不正确"
-    )
-    |> Ecto.Changeset.validate_length(:password, min: 6, message: "至少 6 位")
-    |> Ecto.Changeset.validate_confirmation(:password, message: "两次输入的密码不一致")
   end
 
   # ── private ───────────────────────────────────────────────────────
@@ -159,15 +122,5 @@ defmodule TcmEduWeb.StudentAuth do
       name: user.name || to_string(user.email),
       actor: user
     }
-  end
-
-  defp empty_to_nil(nil), do: nil
-  defp empty_to_nil(""), do: nil
-  defp empty_to_nil(value) when is_binary(value), do: String.trim(value)
-
-  defp ash_message(error) do
-    Exception.message(error)
-  rescue
-    _ -> "注册失败，请稍后重试"
   end
 end

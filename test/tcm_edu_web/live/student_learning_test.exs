@@ -19,8 +19,24 @@ defmodule TcmEduWeb.StudentLearningTest do
   @student_password "password123"
 
   defp create_student(_) do
-    {:ok, student} =
-      TcmEduWeb.StudentAuth.register(@student_email, "Learner", @student_password)
+    user =
+      User
+      |> Ash.Changeset.for_create(
+        :register_with_role,
+        %{email: @student_email, name: "Learner", password: @student_password, role: :student},
+        tenant: @tenant,
+        authorize?: false
+      )
+      |> Ash.create!()
+
+    student = %{
+      id: user.id,
+      role: "student",
+      tenant: @tenant,
+      email: to_string(user.email),
+      name: "Learner",
+      actor: user
+    }
 
     %{student: student}
   end

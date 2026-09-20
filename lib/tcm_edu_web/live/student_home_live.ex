@@ -78,7 +78,7 @@ defmodule TcmEduWeb.StudentHomeLive do
                   navigate={if @current_student, do: "/my-learning", else: "/login"}
                   class="btn btn-soft"
                 >
-                  {if @current_student, do: "继续学习", else: "免费注册"}
+                  {if @current_student, do: "继续学习", else: "登录"}
                 </.link>
               </div>
             </div>
@@ -139,7 +139,7 @@ defmodule TcmEduWeb.StudentHomeLive do
               navigate={if @current_student, do: "/my-learning", else: "/login"}
               class="btn border-0 bg-base-100"
             >
-              {if @current_student, do: "继续学习", else: "免费注册"}
+              {if @current_student, do: "继续学习", else: "登录"}
             </.link>
           </div>
         </section>

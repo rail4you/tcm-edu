@@ -78,7 +78,7 @@ defmodule TcmEduWeb.StudentComponents do
                   </.link>
                 </li>
                 <li>
-                  <form action="/student/logout" method="post" id="student-logout-form" class="contents">
+                  <form action="/logout" method="post" id="student-logout-form" class="contents">
                     <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
                     <button type="submit" class="w-full text-error hover:bg-error/10">
                       <.icon name="hero-arrow-right-start-on-rectangle" class="size-4" />
@@ -90,8 +90,7 @@ defmodule TcmEduWeb.StudentComponents do
             </div>
           </div>
           <div :if={!@current_student} class="flex items-center gap-2">
-            <.link navigate="/login" class="btn btn-ghost btn-sm">登录</.link>
-            <.link navigate="/login?mode=register" class="btn btn-primary btn-sm">免费注册</.link>
+            <.link navigate="/login" class="btn btn-primary btn-sm">登录</.link>
           </div>
         </div>
       </header>

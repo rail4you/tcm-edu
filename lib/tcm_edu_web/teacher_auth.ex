@@ -30,7 +30,7 @@ defmodule TcmEduWeb.TeacherAuth do
         {:halt,
          socket
          |> put_flash(:error, "请先登录教师端")
-         |> redirect(to: "/teacher/login")}
+         |> redirect(to: "/login")}
     end
   end
 

@@ -44,7 +44,7 @@ defmodule TcmEduWeb.AdminAuth do
         {:halt,
          socket
          |> put_flash(:error, "请先登录管理端")
-         |> redirect(to: "/admin/login")}
+         |> redirect(to: "/login")}
     end
   end
 
@@ -63,7 +63,7 @@ defmodule TcmEduWeb.AdminAuth do
         {:halt,
          socket
          |> put_flash(:error, "请先登录管理端")
-         |> redirect(to: "/admin/login")}
+         |> redirect(to: "/login")}
     end
   end
 
