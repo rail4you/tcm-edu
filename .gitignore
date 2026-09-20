@@ -40,3 +40,7 @@ frontend-monorepo/apps/*/out/
 # npm deps and compiled output are rebuilt via `mix assets.setup/build`.
 /assets/node_modules/
 /priv/static/assets/
+
+# Local secrets (LLM keys, admin passwords). Never commit.
+.env
+.env.*
