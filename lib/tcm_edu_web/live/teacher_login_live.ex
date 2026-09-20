@@ -118,9 +118,7 @@ defmodule TcmEduWeb.TeacherLoginLive do
                   autocomplete="current-password"
                   required
                 />
-                <.button type="submit" class="btn-primary mt-2 w-full">
-                  登录
-                </.button>
+                <.button type="submit" phx-disable-with="登录中..." class="btn-primary mt-2 w-full">登录</.button>
               </.form>
             </div>
           </div>

@@ -405,7 +405,7 @@ defmodule TcmEduWeb.TeacherCourseEditLive do
                   prompt="选择分类（可选）"
                   options={Enum.map(@categories, &{&1.name, &1.id})}
                 />
-                <.button type="submit" class="btn-primary mt-2 w-fit">保存基本信息</.button>
+                <.button type="submit" phx-disable-with="保存中..." class="btn-primary mt-2 w-fit">保存基本信息</.button>
               </.form>
             </div>
           </div>
@@ -519,7 +519,7 @@ defmodule TcmEduWeb.TeacherCourseEditLive do
               <.input field={@chapter_form[:title]} type="text" label="章节标题" placeholder="如：第一章 阴阳五行" maxlength="100" required />
               <div class="modal-action">
                 <button type="button" class="btn btn-soft" phx-click="close-chapter-modal">取消</button>
-                <.button type="submit" class="btn-primary">保存</.button>
+                <.button type="submit" phx-disable-with="保存中..." class="btn-primary">保存</.button>
               </div>
             </.form>
           </div>
@@ -537,7 +537,7 @@ defmodule TcmEduWeb.TeacherCourseEditLive do
               <.input field={@lesson_form[:is_free_preview]} type="checkbox" label="免费试看" />
               <div class="modal-action">
                 <button type="button" class="btn btn-soft" phx-click="close-lesson-modal">取消</button>
-                <.button type="submit" class="btn-primary">保存</.button>
+                <.button type="submit" phx-disable-with="保存中..." class="btn-primary">保存</.button>
               </div>
             </.form>
           </div>

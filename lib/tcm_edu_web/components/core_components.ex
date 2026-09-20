@@ -302,7 +302,7 @@ defmodule TcmEduWeb.CoreComponents do
   """
   attr :type, :string, default: nil
   attr :class, :string, default: "btn-primary"
-  attr :rest, :global, include: ~w(disabled form name value)
+  attr :rest, :global, include: ~w(disabled form name value phx-disable-with)
 
   slot :inner_block, required: true
 

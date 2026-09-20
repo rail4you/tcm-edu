@@ -83,7 +83,7 @@ defmodule TcmEduWeb.TeacherCourseNewLive do
                 prompt="选择分类（可选）"
                 options={Enum.map(@categories, &{&1.name, &1.id})}
               />
-              <.button type="submit" class="btn-primary mt-2 w-fit">创建并去添加章节</.button>
+              <.button type="submit" phx-disable-with="创建中..." class="btn-primary mt-2 w-fit">创建并去添加章节</.button>
             </.form>
           </div>
         </div>

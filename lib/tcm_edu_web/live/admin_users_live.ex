@@ -280,7 +280,7 @@ defmodule TcmEduWeb.AdminUsersLive do
               <.input field={@create_form[:role]} type="select" label="角色" options={role_options()} />
               <div class="modal-action">
                 <button type="button" class="btn btn-soft" phx-click="close-modal">取消</button>
-                <.button type="submit" class="btn-primary">创建</.button>
+                <.button type="submit" phx-disable-with="创建中..." class="btn-primary">创建</.button>
               </div>
             </.form>
           </div>
@@ -294,7 +294,7 @@ defmodule TcmEduWeb.AdminUsersLive do
               <.input field={@role_form[:role]} type="select" label="角色" options={role_options()} />
               <div class="modal-action">
                 <button type="button" class="btn btn-soft" phx-click="close-modal">取消</button>
-                <.button type="submit" class="btn-primary">保存</.button>
+                <.button type="submit" phx-disable-with="保存中..." class="btn-primary">保存</.button>
               </div>
             </.form>
           </div>
