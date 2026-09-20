@@ -125,7 +125,7 @@ defmodule TcmEduWeb.AdminAuth do
     params
     |> login_changeset()
     |> Map.put(:action, :validate)
-    |> to_form(as: "admin")
+    |> to_form(as: "login")
   end
 
   @doc "Validation changeset backing the login form."

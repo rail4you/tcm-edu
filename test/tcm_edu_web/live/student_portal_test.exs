@@ -111,6 +111,9 @@ defmodule TcmEduWeb.StudentPortalTest do
       assert html =~ "教师"
       assert html =~ "管理"
       assert html =~ "login-form"
+      # Field names must nest under login[...] so the submit handler sees them.
+      assert html =~ ~s(name="login[email]")
+      assert html =~ ~s(name="login[password]")
       refute html =~ "免费注册"
       refute html =~ "password_confirmation"
     end

@@ -90,7 +90,7 @@ defmodule TcmEduWeb.TeacherAuth do
     params
     |> login_changeset()
     |> Map.put(:action, :validate)
-    |> to_form(as: "teacher")
+    |> to_form(as: "login")
   end
 
   @doc "Validation changeset backing the login form."

@@ -89,7 +89,7 @@ defmodule TcmEduWeb.StudentAuth do
 
   @doc "Login form (live validation)."
   def login_form(params \\ %{}) do
-    params |> login_changeset() |> Map.put(:action, :validate) |> to_form(as: "student")
+    params |> login_changeset() |> Map.put(:action, :validate) |> to_form(as: "login")
   end
 
   def login_changeset(params \\ %{}) do
@@ -98,9 +98,7 @@ defmodule TcmEduWeb.StudentAuth do
     {%{}, types}
     |> Ecto.Changeset.cast(params, Map.keys(types))
     |> Ecto.Changeset.validate_required([:email, :password])
-    |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/,
-      message: "邮箱格式不正确"
-    )
+    |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/, message: "邮箱格式不正确")
     |> Ecto.Changeset.validate_length(:password, min: 1, message: "请输入密码")
   end
 
