@@ -25,7 +25,10 @@ config :tcm_edu, TcmEduWeb.Endpoint,
   code_reloader: true,
   debug_errors: true,
   secret_key_base: "Zb9OjGJToABRjI5xwCJrXOYoVL/KyLHtFHt1ttEtVqg04pPeZQNaLAOHpLM6choI",
-  watchers: []
+  watchers: [
+    npm: ["run", "watch:js", cd: Path.expand("../assets", __DIR__)],
+    npm: ["run", "watch:css", cd: Path.expand("../assets", __DIR__)]
+  ]
 
 # ## SSL Support
 #

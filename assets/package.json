@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "scripts": {
+    "build:js": "esbuild js/app.js --bundle --minify --target=es2020 --outdir=../priv/static/assets",
+    "build:css": "tailwindcss -i css/app.css -o ../priv/static/assets/app.css --minify",
+    "build": "npm run build:js && npm run build:css",
+    "watch:js": "esbuild js/app.js --bundle --target=es2020 --outdir=../priv/static/assets --watch",
+    "watch:css": "tailwindcss -i css/app.css -o ../priv/static/assets/app.css --watch"
+  },
+  "dependencies": {
+    "phoenix": "^1.8.0",
+    "phoenix_html": "^4.2",
+    "phoenix_live_view": "^1.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1",
+    "daisyui": "^5.0",
+    "esbuild": "^0.25.0",
+    "heroicons": "^2.2",
+    "tailwindcss": "^4.1"
+  }
+}

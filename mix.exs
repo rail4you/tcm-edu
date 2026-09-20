@@ -126,8 +126,11 @@ defmodule TcmEdu.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "ash.setup"],
+      setup: ["deps.get", "ash.setup", "assets.setup"],
       "ash.setup": ["ash.codegen --dev", "ash.migrate"],
+      "assets.setup": ["cmd npm install --prefix assets"],
+      "assets.build": ["cmd npm run build --prefix assets"],
+      "assets.deploy": ["assets.build", "phx.digest"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       # NOTE: tcm_edu.migrate 确保 test 库也有 tenant_default schema + 租户表，

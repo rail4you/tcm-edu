@@ -1,28 +1,20 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-gray-50 text-gray-900">
+<html lang="zh-CN" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
-    <.live_title default="TCM Education" suffix=" · Phoenix LiveView">
+    <.live_title default="中医教学" suffix=" · 管理端">
       {assigns[:page_title]}
     </.live_title>
-    <%!--
-      This project does not run a frontend assets pipeline. The static
-      export in priv/app is produced by the sibling Next.js project
-      and has no Phoenix client. To get LiveView working anyway, we
-      serve the minified clients that ship with the `phoenix` and
-      `phoenix_live_view` deps and copy them into priv/static at build
-      time. The Phoenix client (`window.Phoenix.Socket`) must be
-      present *before* the LiveView client loads — the LiveView client
-      looks it up on connect. Without these scripts the browser never
-      opens the WebSocket and the connected mount never runs.
-    ---%>
-    <script defer phx-track-static type="text/javascript" src={~p"/phoenix.min.js"}>
-    </script>
-    <script defer phx-track-static type="text/javascript" src={~p"/phoenix_live_view.min.js"}>
-    </script>
-    <script defer phx-track-static type="text/javascript" src={~p"/app.js"}>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
+      rel="stylesheet"
+    />
+    <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
     </script>
   </head>
   <body class="font-sans antialiased">

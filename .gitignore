@@ -35,3 +35,8 @@ frontend-monorepo/**/node_modules/
 frontend-monorepo/apps/*/.next/
 frontend-monorepo/apps/*/out/
 *.tsbuildinfo
+
+# Phoenix assets pipeline (Tailwind v4 + daisyUI + esbuild in assets/):
+# npm deps and compiled output are rebuilt via `mix assets.setup/build`.
+/assets/node_modules/
+/priv/static/assets/

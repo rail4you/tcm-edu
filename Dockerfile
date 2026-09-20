@@ -32,7 +32,12 @@ RUN pnpm --filter @tcm-edu/web build
 FROM ${BUILDER_IMAGE} AS builder
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential git \
+  && apt-get install -y --no-install-recommends build-essential git curl \
+  && rm -rf /var/lib/apt/lists/*
+
+# Node.js for the Phoenix assets pipeline (Tailwind v4 + daisyUI + esbuild).
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+  && apt-get install -y --no-install-recommends nodejs \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -51,6 +56,13 @@ RUN mix deps.get --only $MIX_ENV && mix deps.compile
 COPY config/ config/
 COPY priv priv
 COPY lib lib
+
+# Build Phoenix LiveView assets (assets/ → priv/static/assets/)
+COPY assets/package.json assets/package-lock.json* assets/
+COPY assets/css/ assets/css/
+COPY assets/js/ assets/js/
+COPY assets/vendor/ assets/vendor/
+RUN npm --prefix assets ci && npm --prefix assets run build
 
 # Copy Next.js static export into priv/app
 COPY --from=frontend /build/frontend-monorepo/apps/web/out ./priv/app

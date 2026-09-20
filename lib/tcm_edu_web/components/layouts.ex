@@ -1,13 +1,15 @@
 defmodule TcmEduWeb.Layouts do
   @moduledoc """
-  This module holds layouts and related functionality used by the
-  application's LiveView pages.
+  Layouts for LiveView pages.
 
-  The Phoenix v1.8 generator ships a richer `Layouts` module (with theme
-  toggle, flash group, etc.) and a DaisyUI-styled `app/1` slot. This
-  project is API-first and has no compiled assets yet, so we keep the
-  layout minimal but still satisfy the `<Layouts.app flash={@flash}>`
-  contract used by LiveView templates.
+  Two shells:
+
+    * `:default` — slim top navbar + centered content (used by `/db`).
+    * `:admin` — bare full-viewport slot for the admin dashboard shell
+      (`AdminComponents.admin_shell/1` renders its own drawer/navbar).
+      Flash messages are still rendered here.
+
+  Every LiveView template must still begin with `<Layouts.app flash={@flash}>`.
   """
   use TcmEduWeb, :html
 
@@ -15,15 +17,18 @@ defmodule TcmEduWeb.Layouts do
   # `root.html.heex`.
   embed_templates "layouts/*"
 
-  @doc """
-  Renders the app shell — a navbar with the application name and a
-  centered main content area. Always wrap your LiveView template's inner
-  content with this component.
-  """
   attr :flash, :map, required: true, doc: "the map of flash messages"
   attr :current_scope, :map, default: nil, doc: "the current scope (unused for now)"
+  attr :shell, :atom, default: :default, values: [:default, :admin]
 
   slot :inner_block, required: true
+
+  def app(%{shell: :admin} = assigns) do
+    ~H"""
+    {render_slot(@inner_block)}
+    <.flash_group flash={@flash} />
+    """
+  end
 
   def app(assigns) do
     ~H"""

@@ -108,6 +108,42 @@ defmodule TcmEduWeb.Router do
     post "/posts/:post_id/upload/:attachment_name", PostUploadController, :upload
   end
 
+  # ── Admin panel (LiveView + daisyUI, session auth) ────────────────
+  # Login POST target for the trigger-action form on AdminLoginLive.
+  scope "/admin", TcmEduWeb do
+    pipe_through :browser
+
+    post "/session", AdminSessionController, :create
+    post "/logout", AdminSessionController, :delete
+  end
+
+  live_session :admin_public do
+    scope "/admin", TcmEduWeb do
+      pipe_through :browser
+
+      live "/login", AdminLoginLive, :index
+    end
+  end
+
+  live_session :admin,
+    on_mount: [{TcmEduWeb.AdminAuth, :ensure_admin}] do
+    scope "/admin", TcmEduWeb do
+      pipe_through :browser
+
+      live "/", AdminDashboardLive, :index
+      live "/users", AdminUsersLive, :index
+    end
+  end
+
+  live_session :admin_super,
+    on_mount: [{TcmEduWeb.AdminAuth, :ensure_super_admin}] do
+    scope "/admin", TcmEduWeb do
+      pipe_through :browser
+
+      live "/tenants", AdminTenantsLive, :index
+    end
+  end
+
   # ── Course static page ─────────────────────────────────────────────
   scope "/", TcmEduWeb do
     pipe_through :browser
@@ -125,8 +161,6 @@ defmodule TcmEduWeb.Router do
     get "/", FallbackController, :root
     get "/posts", FallbackController, :spa
     get "/posts/new", FallbackController, :spa
-    get "/admin", FallbackController, :spa
-    get "/admin/*path", FallbackController, :spa
     # 学生端 Phase 9 新增的静态路由（生产静态导出 + dev 直连都可达）
     get "/courses", FallbackController, :spa
     get "/course", FallbackController, :spa
