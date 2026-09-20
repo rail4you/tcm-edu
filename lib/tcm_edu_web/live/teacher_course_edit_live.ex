@@ -347,7 +347,12 @@ defmodule TcmEduWeb.TeacherCourseEditLive do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} shell={:admin}>
-      <.teacher_shell current_teacher={@current_teacher} current_page={:courses} page_title="编辑课程">
+      <.teacher_shell
+        current_teacher={@current_teacher}
+        current_page={:courses}
+        page_title="编辑课程"
+        page_subtitle={@course && @course.title}
+      >
         <:page_actions>
           <.link navigate="/teacher/courses" class="btn btn-soft btn-sm">返回列表</.link>
           <button
@@ -378,37 +383,38 @@ defmodule TcmEduWeb.TeacherCourseEditLive do
           </div>
         </div>
 
-        <div :if={!@not_found} class="flex max-w-4xl flex-col gap-6">
-          <div class="card bg-base-100 shadow-sm">
-            <div class="card-body gap-2.5 p-4 sm:p-6">
-              <div class="flex items-center gap-2">
-                <p class="font-medium">基本信息</p>
-                <.status_badge :if={@course} status={@course.status} />
-              </div>
-              <.form
-                for={@basic_form}
-                id="edit-course-form"
-                phx-change="validate-basic"
-                phx-submit="save-basic"
-                class="flex flex-col gap-2.5"
-              >
-                <.input field={@basic_form[:title]} type="text" label="标题" maxlength="100" required />
-                <.input field={@basic_form[:subtitle]} type="text" label="副标题" maxlength="200" />
-                <.input field={@basic_form[:description]} type="textarea" label="简介" rows="3" maxlength="2000" />
-                <.input field={@basic_form[:cover_image_url]} type="text" label="封面图片 URL" />
+        <div :if={!@not_found} class="grid max-w-6xl items-start gap-6">
+          <fieldset class="fieldset rounded-box border border-base-300 bg-base-100 p-4 shadow-sm sm:p-6">
+            <legend class="fieldset-legend px-2 text-sm font-medium">基本信息</legend>
+            <div class="flex items-center gap-2">
+              <p class="text-xs text-base-content/60">当前状态</p>
+              <.status_badge :if={@course} status={@course.status} />
+            </div>
+            <.form
+              for={@basic_form}
+              id="edit-course-form"
+              phx-change="validate-basic"
+              phx-submit="save-basic"
+              class="mt-2 flex flex-col gap-2.5"
+            >
+              <.input field={@basic_form[:title]} type="text" label="标题" maxlength="100" required />
+              <.input field={@basic_form[:subtitle]} type="text" label="副标题" maxlength="200" />
+              <.input field={@basic_form[:description]} type="textarea" label="简介" rows="3" maxlength="2000" />
+              <.input field={@basic_form[:cover_image_url]} type="text" label="封面图片 URL" />
+              <div class="grid gap-2.5 sm:grid-cols-2">
                 <.input field={@basic_form[:level]} type="select" label="难度" options={level_options()} />
                 <.input field={@basic_form[:price_yuan]} type="number" label="价格（元，0 = 免费）" min="0" step="0.01" />
-                <.input
-                  field={@basic_form[:category_id]}
-                  type="select"
-                  label="分类"
-                  prompt="选择分类（可选）"
-                  options={Enum.map(@categories, &{&1.name, &1.id})}
-                />
-                <.button type="submit" phx-disable-with="保存中..." class="btn-primary mt-2 w-fit">保存基本信息</.button>
-              </.form>
-            </div>
-          </div>
+              </div>
+              <.input
+                field={@basic_form[:category_id]}
+                type="select"
+                label="分类"
+                prompt="选择分类（可选）"
+                options={Enum.map(@categories, &{&1.name, &1.id})}
+              />
+              <.button type="submit" phx-disable-with="保存中..." class="btn-primary mt-2 w-fit">保存基本信息</.button>
+            </.form>
+          </fieldset>
 
           <div class="card bg-base-100 shadow-sm">
             <div class="card-body gap-2.5 p-4 sm:p-6">

@@ -151,6 +151,8 @@ defmodule TcmEduWeb.Router do
       live "/courses/new", TeacherCourseNewLive, :index
       live "/courses/:id/edit", TeacherCourseEditLive, :index
       live "/students", TeacherStudentsLive, :index
+      live "/ai/lesson-plan", TeacherAILessonLive, :index
+      live "/ai/image", TeacherAIImageLive, :index
     end
   end
 

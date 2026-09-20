@@ -1,5 +1,7 @@
 @import "tailwindcss";
-@plugin "daisyui";
+@plugin "daisyui" {
+  themes: light --default, tcm;
+}
 @plugin "../vendor/heroicons.js";
 
 @source "../../lib";
@@ -8,3 +10,41 @@
   --font-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
+
+/* Nexus-style teacher theme: brand blue primary, distinct sidebar /
+  topbar / canvas surfaces via daisyUI layout tokens. Applied with
+  `data-theme="tcm"` on the teacher shell (other portals stay light). */
+@plugin "daisyui/theme" {
+  name: "tcm";
+  default: false;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-primary: #167bff;
+  --color-primary-content: #ffffff;
+  --color-secondary: #6366f1;
+  --color-secondary-content: #ffffff;
+  --color-accent: #0ea5e9;
+  --color-accent-content: #ffffff;
+  --color-neutral: #1e293b;
+  --color-neutral-content: #f1f5f6;
+  --color-base-100: #ffffff;
+  --color-base-200: #f1f5f9;
+  --color-base-300: #e2e8f0;
+  --color-base-content: #0f172a;
+  --color-info: #0ea5e9;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+
+  /* layout surfaces (Nexus convention) */
+  --layout-background: #f6f8fb;
+  --layout-sidebar-background: #0f1f3d;
+  --layout-sidebar-color: #cbd5e1;
+  --layout-topbar-background: #ffffff;
+}
+

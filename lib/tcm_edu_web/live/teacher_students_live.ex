@@ -32,25 +32,32 @@ defmodule TcmEduWeb.TeacherStudentsLive do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} shell={:admin}>
-      <.teacher_shell current_teacher={@current_teacher} current_page={:students} page_title="我的学生">
+      <.teacher_shell
+        current_teacher={@current_teacher}
+        current_page={:students}
+        page_title="我的学生"
+        page_subtitle={"本机构共 #{length(@students)} 名学生"}
+      >
         <:page_actions>
-          <form phx-change="search" phx-submit="search" class="join">
-            <input
-              type="search"
-              name="keyword"
-              value={@keyword}
-              placeholder="按邮箱 / 姓名筛选"
-              class="input input-bordered input-sm join-item w-64"
-              aria-label="按邮箱或姓名筛选学生"
-            />
+          <form phx-change="search" phx-submit="search">
+            <label class="input input-bordered input-sm flex items-center gap-2">
+              <.icon name="hero-magnifying-glass" class="size-4 text-base-content/60" />
+              <input
+                type="search"
+                name="keyword"
+                value={@keyword}
+                placeholder="按邮箱 / 姓名筛选"
+                class="grow"
+                aria-label="按邮箱或姓名筛选学生"
+              />
+            </label>
           </form>
         </:page_actions>
 
         <div class="card bg-base-100 shadow-sm">
           <div class="card-body gap-2.5 p-4 sm:p-6">
-            <p class="text-sm text-base-content/60">当前为本机构全部学生。</p>
-            <div class="overflow-x-auto">
-              <table class="table">
+            <div class="overflow-x-auto rounded-box border border-base-300">
+              <table class="table table-zebra table-pin-rows">
                 <thead>
                   <tr>
                     <th>邮箱</th>
