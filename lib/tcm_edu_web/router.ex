@@ -144,6 +144,35 @@ defmodule TcmEduWeb.Router do
     end
   end
 
+  # ── Teacher portal (LiveView + daisyUI, session auth) ─────────────
+  scope "/teacher", TcmEduWeb do
+    pipe_through :browser
+
+    post "/session", TeacherSessionController, :create
+    post "/logout", TeacherSessionController, :delete
+  end
+
+  live_session :teacher_public do
+    scope "/teacher", TcmEduWeb do
+      pipe_through :browser
+
+      live "/login", TeacherLoginLive, :index
+    end
+  end
+
+  live_session :teacher,
+    on_mount: [{TcmEduWeb.TeacherAuth, :ensure_teacher}] do
+    scope "/teacher", TcmEduWeb do
+      pipe_through :browser
+
+      live "/", TeacherDashboardLive, :index
+      live "/courses", TeacherCoursesLive, :index
+      live "/courses/new", TeacherCourseNewLive, :index
+      live "/courses/:id/edit", TeacherCourseEditLive, :index
+      live "/students", TeacherStudentsLive, :index
+    end
+  end
+
   # ── Course static page ─────────────────────────────────────────────
   scope "/", TcmEduWeb do
     pipe_through :browser

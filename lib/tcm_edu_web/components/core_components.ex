@@ -58,7 +58,7 @@ defmodule TcmEduWeb.CoreComponents do
   `assets/vendor/heroicons.js`. Use `<.icon name="hero-x-mark" />`.
   """
   attr :name, :string, required: true
-  attr :class, :string, default: "size-4"
+  attr :class, :any, default: "size-4"
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
