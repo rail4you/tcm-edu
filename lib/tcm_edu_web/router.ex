@@ -173,6 +173,40 @@ defmodule TcmEduWeb.Router do
     end
   end
 
+  # ── Student portal (LiveView storefront) ────────────────────────
+  # Public pages work anonymously; learning pages require a student.
+  scope "/", TcmEduWeb do
+    pipe_through :browser
+
+    post "/student/session", StudentSessionController, :create
+    post "/student/logout", StudentSessionController, :delete
+  end
+
+  live_session :student_public, on_mount: [{TcmEduWeb.StudentAuth, :fetch_student}] do
+    scope "/", TcmEduWeb do
+      pipe_through :browser
+
+      live "/", StudentHomeLive, :index
+      live "/login", StudentLoginLive, :index
+      live "/courses", StudentCoursesLive, :index
+      live "/courses/:id", StudentCourseDetailLive, :index
+    end
+  end
+
+  live_session :student, on_mount: [{TcmEduWeb.StudentAuth, :ensure_student}] do
+    scope "/", TcmEduWeb do
+      pipe_through :browser
+
+      live "/learn", StudentLearnLive, :index
+      live "/my-learning", StudentMyLearningLive, :index
+      live "/my-learning/mistakes", StudentMistakesLive, :index
+      live "/posts", StudentPostsLive, :index
+      live "/posts/new", StudentPostNewLive, :index
+      live "/chat", StudentChatLive, :index
+      live "/notifications", StudentNotificationsLive, :index
+    end
+  end
+
   # ── Course static page ─────────────────────────────────────────────
   scope "/", TcmEduWeb do
     pipe_through :browser
@@ -181,22 +215,10 @@ defmodule TcmEduWeb.Router do
     get "/course/*path", FallbackController, :course
   end
 
-  # ── SPA pages ─────────────────────────────────────────────────────
+  # ── DB inspector ───────────────────────────────────────────────────
   scope "/", TcmEduWeb do
     pipe_through :browser
 
     live "/db", DbStatsLive, :index
-
-    get "/", FallbackController, :root
-    get "/posts", FallbackController, :spa
-    get "/posts/new", FallbackController, :spa
-    # 学生端 Phase 9 新增的静态路由（生产静态导出 + dev 直连都可达）
-    get "/courses", FallbackController, :spa
-    get "/course", FallbackController, :spa
-    get "/learn", FallbackController, :spa
-    get "/my-learning", FallbackController, :spa
-    get "/login", FallbackController, :spa
-    get "/app", FallbackController, :app
-    get "/app/*path", FallbackController, :app
   end
 end

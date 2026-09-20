@@ -134,7 +134,7 @@ defmodule TcmEduWeb.AdminComponents do
               <span class="truncate">{@current_admin.email}</span>
             </li>
             <li>
-              <form action="/admin/logout" method="post" class="contents">
+              <form action="/admin/logout" method="post" id="admin-logout-form" class="contents">
                 <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
                 <button type="submit" class="w-full text-error hover:bg-error/10">
                   <.icon name="hero-arrow-right-start-on-rectangle" class="size-4" />

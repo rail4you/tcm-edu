@@ -31,16 +31,6 @@ defmodule TcmEduWeb.Endpoint do
   plug TcmEduWeb.Plugs.StorageServe,
     root: "priv/storage"
 
-  # Serve the Next.js static export from `priv/app/` under `/app/*`.
-  # The directory is created at build time by `pnpm --dir frontend build`.
-  # We intentionally don't restrict with `:only` here so that arbitrary
-  # page bundles produced by Next.js (e.g. `/app/about/`, `/app/about.html`)
-  # are served verbatim; the directory is fully under our control.
-  plug Plug.Static,
-    at: "/app",
-    from: {:tcm_edu, "priv/app"},
-    gzip: not code_reloading?
-
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do

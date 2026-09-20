@@ -6,29 +6,7 @@
 ARG BUILDER_IMAGE="docker.io/hexpm/elixir:1.18.4-erlang-26.2.5.21-debian-trixie-20260610"
 ARG RUNNER_IMAGE="docker.io/debian:trixie-20260610-slim"
 
-# ─── Stage 1: Frontend (pnpm monorepo → Next.js static export) ───────────
-# 单一 Next.js 应用 @tcm-edu/web，承载学生/教师/管理三端，basePath=/app。
-FROM docker.io/node:22-bookworm-slim AS frontend
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable && corepack prepare pnpm@11 --activate
-
-WORKDIR /build/frontend-monorepo
-
-# 先拷 workspace 顶层 manifest + packages 元数据，让 pnpm install 能识别 workspace 拓扑
-COPY frontend-monorepo/package.json frontend-monorepo/pnpm-workspace.yaml frontend-monorepo/pnpm-lock.yaml* ./
-COPY frontend-monorepo/packages/ ./packages/
-COPY frontend-monorepo/apps/web/package.json ./apps/web/
-
-RUN pnpm install --frozen-lockfile --ignore-scripts
-
-# 拷 web app 源码（packages/rpc-client 的 generated 文件随源码一起 COPY，git 里已 check-in）
-COPY frontend-monorepo/apps/web/ ./apps/web/
-
-ENV NODE_ENV=production
-RUN pnpm --filter @tcm-edu/web build
-
-# ─── Stage 2: Elixir builder (compile + release) ──────────────────────────
+# ─── Stage 1: Elixir builder (compile + release) ────────────────────────
 FROM ${BUILDER_IMAGE} AS builder
 
 RUN apt-get update \
@@ -63,9 +41,6 @@ COPY assets/css/ assets/css/
 COPY assets/js/ assets/js/
 COPY assets/vendor/ assets/vendor/
 RUN npm --prefix assets ci && npm --prefix assets run build
-
-# Copy Next.js static export into priv/app
-COPY --from=frontend /build/frontend-monorepo/apps/web/out ./priv/app
 
 RUN mix compile
 
