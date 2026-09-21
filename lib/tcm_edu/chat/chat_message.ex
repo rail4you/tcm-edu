@@ -32,6 +32,12 @@ defmodule TcmEdu.Chat.ChatMessage do
       public?(true)
     end
 
+    attribute :metadata, :map do
+      default(%{})
+      public?(true)
+      description("附加元数据：如 AI 回答引用的知识库文档（references）")
+    end
+
     create_timestamp(:inserted_at, public?: true)
   end
 
@@ -40,7 +46,7 @@ defmodule TcmEdu.Chat.ChatMessage do
 
     create :create do
       primary?(true)
-      accept([:session_id, :role, :content])
+      accept([:session_id, :role, :content, :metadata])
     end
 
     read :for_session do

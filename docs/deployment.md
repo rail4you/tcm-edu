@@ -121,6 +121,30 @@ REMOTE_HOST=tcm-edu REMOTE_DIR=~/tcm-edu ./deploy.sh
 2. `docker images $IMAGE` 展示镜像大小
 3. `docker push $IMAGE`
 
+### rustler / NIF（`extractous_ex` 文档解析）构建说明
+
+知识库文档解析用 `extractous_ex`（Rustler NIF，基于 Apache Tika）。构建与运行要点：
+
+- **默认走预编译二进制**：`rustler_precompiled` 在编译时按目标平台从
+  GitHub Release 下载 `libextractousex_native-<ver>-nif-<otp>-<target>.so.tar.gz`
+  并解压到 `priv/native`。**要求编译环境能访问 github.com**；产物随镜像打包，
+  运行阶段不再联网。
+- **平台**：macOS (arm64/x64)、Linux (arm64/x64)、Windows (x64) 均有预编译包；
+  本仓库 Docker 目标 `linux/amd64` 受支持。
+- **下载失败 / 需要本地编译时**，二选一：
+  - `EXTRACTOUS_EX_BUILD=1 mix deps.compile extractous_ex` —— 强制本地编译，
+    需要 Dockerfile builder 里安装 Rust 工具链（`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`）
+    与 `cargo`、`libclang` 等（当前 Dockerfile **未**装 Rust）。
+  - 或在 `config/config.exs` 设 `config :rustler_precompiled, :force_build, extractous_ex: true`
+    （同样需要 Rust 工具链）。
+- **GitHub 不可达（如阿里云/内网构建）**：预编译下载会失败。缓解：
+  - 设置 `RUSTLER_PRECOMPILED_BASE_URL=https://<自托管>/...` 指向内网镜像，或
+  - 本机 `buildx` 构建前先 `mix deps.compile extractous_ex` 让缓存命中
+    （缓存目录 `~/.cache/rustler_precompiled`），再复制进构建上下文，或
+  - 在本地预编译后把 `priv/native` 打进镜像（保持与目标 `linux/amd64` 一致）。
+- **NIF 校验**：部署后 `docker exec tcm-edu ls /app/lib/tcm_edu-<ver>/priv/native/`
+  应能看到 `libextractousex_native-*.so`；否则上传文档解析会报 NIF 加载失败。
+
 ### 远程部署细节（`./deploy.sh remote`）
 
 1. 同步部署文件到 `~/tcm-edu/`
@@ -245,6 +269,7 @@ ssh tcm-edu 'docker ps --filter name=tcm-edu'
 | 容器启动报 `port 4000 already in use` | 上一个容器未停，先 `docker rm -f tcm-edu`。 |
 | 登录失败重定向回 `/login` | 密码不对（用户被外部创建、非 seed 默认密码）。可重置密码哈希。 |
 | 上传封面能看到预览，但提交后没保存 / 容器日志 `OSS_ACCESS_KEY_SECRET 未配置` | 容器缺 OSS 凭证：检查 `.env` 是否有 `OSS_ACCESS_KEY_ID`/`OSS_ACCESS_KEY_SECRET` 且 `deploy.sh` 已注入（`docker exec tcm-edu env | grep OSS_`）。§3。 |
+| 知识库上传文档解析报 NIF 加载失败 / `failed to load NIF library` | release 缺 `extractous_ex` 的预编译 `.so`：`docker exec tcm-edu ls /app/lib/tcm_edu-<ver>/priv/native/` 检查；构建时 GitHub 不可达或未走预编译，见「rustler / NIF 构建说明」。 |
 | 公网直连 4000 不可达 | 正常：4000 仅绑定回环，nginx 反代 80。 |
 
 ---

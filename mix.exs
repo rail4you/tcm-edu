@@ -108,10 +108,14 @@ defmodule TcmEdu.MixProject do
       {:elixlsx, "~> 0.6"},
       # xlsx parsing (teacher quiz import).
       {:xlsxir, "~> 1.6"},
+      # Office/PDF document text extraction (tenant knowledge base ingestion).
+      {:extractous_ex, "~> 0.2.1"},
       # Agent framework
       {:jido, "~> 2.0"},
       {:jido_ai, "~> 2.0"},
       {:jido_browser, "~> 2.0"},
+      # AI vectorization (tenant knowledge RAG); pinned to 1.0.x to stay on ash 3.28
+      {:ash_ai, "~> 1.0.0"},
       # Background jobs
       {:oban, "~> 2.18"},
       # File storage and attachments (not yet published to Hex)

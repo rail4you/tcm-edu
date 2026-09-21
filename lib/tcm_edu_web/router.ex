@@ -201,6 +201,7 @@ defmodule TcmEduWeb.Router do
       live "/ai/image", TeacherAIImageLive, :index
       live "/ai/quiz", TeacherAIQuizLive, :index
       live "/ai/jobs", TeacherAIJobsLive, :index
+      live "/ai/knowledge", TeacherAIKnowledgeLive, :index
       live "/ai/chat", AiChatLive, :index
     end
   end

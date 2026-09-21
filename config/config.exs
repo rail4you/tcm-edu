@@ -11,6 +11,9 @@ config :tcm_edu,
   ecto_repos: [TcmEdu.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# Postgrex type set including the AshPostgres vector extension (pgvector).
+config :tcm_edu, TcmEdu.Repo, types: TcmEdu.PostgrexTypes
+
 # AshStorage：所有上传走 `xingningshu` OSS bucket（阶段一部署前提）
 config :tcm_edu,
   storage: [
@@ -29,7 +32,8 @@ config :tcm_edu,
     TcmEdu.PostDomain,
     TcmEdu.Quiz,
     TcmEdu.Notification,
-    TcmEdu.Storage
+    TcmEdu.Storage,
+    TcmEdu.Knowledge
   ],
   # Storage: local Disk service for file uploads
   storage_root: "priv/storage",

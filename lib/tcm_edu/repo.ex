@@ -6,10 +6,20 @@ defmodule TcmEdu.Repo do
   use AshPostgres.Repo, otp_app: :tcm_edu
 
   @impl true
+  def all_tenants do
+    query = "SELECT nspname FROM pg_namespace WHERE nspname LIKE 'tenant_%' ORDER BY nspname"
+
+    case __MODULE__.query(query) do
+      {:ok, %{rows: rows}} -> Enum.map(rows, fn [name] -> name end)
+      _ -> []
+    end
+  end
+
+  @impl true
   def installed_extensions do
-    # Enables citext, pg_trgm, etc. if your resources need them. Keep the
+    # Enables citext, pg_trgm, vector, etc. if your resources need them. Keep the
     # ash-functions extension so AshPostgres' internal helpers are available.
-    ["ash-functions", "citext"]
+    ["ash-functions", "citext", "vector"]
   end
 
   @impl true

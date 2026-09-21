@@ -56,7 +56,8 @@ defmodule TcmEduWeb.AiChatLive do
        |> assign(:messages, list_messages(current))
        |> assign(:form, message_form())
        |> assign(:answering, false)
-       |> assign(:run_ref, nil)}
+       |> assign(:run_ref, nil)
+       |> assign(:knowledge_search, knowledge_search_enabled?(identity))}
     end
   end
 
@@ -162,10 +163,12 @@ defmodule TcmEduWeb.AiChatLive do
   end
 
   @impl true
-  def handle_info({:qa_done, ref, answer}, socket) do
+  def handle_info({:qa_done, ref, result}, socket) do
     if ref == socket.assigns.run_ref do
       session = socket.assigns.chat_session
-      store_message(session, "assistant", answer)
+      answer = result.answer
+      references = result.references || []
+      store_message(session, "assistant", answer, %{references: references})
       maybe_rename_session(socket, session)
 
       {:noreply,
@@ -174,7 +177,8 @@ defmodule TcmEduWeb.AiChatLive do
        |> assign(:run_ref, nil)
        |> assign(
          :messages,
-         socket.assigns.messages ++ [%{role: "assistant", content: answer, time: now_time()}]
+         socket.assigns.messages ++
+           [%{role: "assistant", content: answer, references: references, time: now_time()}]
        )
        |> refresh_sessions()}
     else
@@ -339,6 +343,17 @@ defmodule TcmEduWeb.AiChatLive do
               ]}>
                 <p class="whitespace-pre-line text-sm">{message.content}</p>
               </div>
+              <div :if={message.role != "user" and message.references not in [nil, []]}
+                class="flex flex-wrap items-center gap-1"
+              >
+                <span class="text-xs text-base-content/60">依据</span>
+                <span
+                  :for={ref <- message.references}
+                  class="badge badge-soft badge-info badge-sm"
+                >
+                  <span class="truncate max-w-40">{ref.section || ref.title}</span>
+                </span>
+              </div>
               <p class="text-xs text-base-content/60">
                 {if message.role == "user", do: "你", else: "AI 助手"}
                 <span :if={message.time != ""}> · {message.time}</span>
@@ -396,6 +411,15 @@ defmodule TcmEduWeb.AiChatLive do
   end
 
   # ── 身份 / 路径 ─────────────────────────────────────────────
+
+  # 知识库检索：仅当租户已有已嵌入文档时启用（避免每条问题都白花 embedding 费用）
+  defp knowledge_search_enabled?(%{tenant: tenant}) when is_binary(tenant) do
+    TcmEdu.Knowledge.has_embedded_docs?(tenant)
+  rescue
+    _ -> false
+  end
+
+  defp knowledge_search_enabled?(_), do: false
 
   defp current_identity(assigns) do
     Map.get(assigns, :current_student) || Map.get(assigns, :current_teacher)
@@ -468,10 +492,14 @@ defmodule TcmEduWeb.AiChatLive do
     |> Ash.read()
     |> case do
       {:ok, messages} ->
-        Enum.map(
-          messages,
-          &%{role: &1.role, content: &1.content, time: format_time(&1.inserted_at)}
-        )
+        Enum.map(messages, fn msg ->
+          %{
+            role: msg.role,
+            content: msg.content,
+            references: metadata_references(msg.metadata),
+            time: format_time(msg.inserted_at)
+          }
+        end)
 
       _ ->
         []
@@ -480,18 +508,37 @@ defmodule TcmEduWeb.AiChatLive do
     _ -> []
   end
 
+  # jsonb 解码后 metadata 的 key 是 string（存的时候是 atom key），统一归一化
+  defp metadata_references(nil), do: []
+
+  defp metadata_references(%{"references" => refs}) when is_list(refs),
+    do: normalize_refs(refs)
+
+  defp metadata_references(%{references: refs}) when is_list(refs), do: normalize_refs(refs)
+  defp metadata_references(_), do: []
+
+  defp normalize_refs(refs) do
+    Enum.map(refs, fn
+      %{"title" => title} = ref -> %{title: title, section: Map.get(ref, "section")}
+      %{title: title} = ref -> %{title: title, section: Map.get(ref, :section)}
+      _ -> %{}
+    end)
+  end
+
   # ── 发送 ────────────────────────────────────────────────────
 
   defp do_send(socket, content) do
     session = socket.assigns.chat_session
     history = socket.assigns.messages |> QaChat.normalize_history() |> Enum.take(-@history_limit)
+    tenant = socket.assigns.identity.tenant
+    knowledge_search = socket.assigns.knowledge_search
     lv = self()
     ref = make_ref()
 
     store_message(session, "user", content)
     maybe_rename_session(socket, session, content)
 
-    Task.start(fn -> run_qa(lv, ref, content, history) end)
+    Task.start(fn -> run_qa(lv, ref, content, history, tenant, knowledge_search) end)
 
     socket
     |> assign(:answering, true)
@@ -504,10 +551,15 @@ defmodule TcmEduWeb.AiChatLive do
     |> refresh_sessions()
   end
 
-  defp run_qa(lv_pid, ref, content, history) do
-    case QaChat.ask(content, history: history) do
-      {:ok, answer} ->
-        if Process.alive?(lv_pid), do: send(lv_pid, {:qa_done, ref, answer})
+  defp run_qa(lv_pid, ref, content, history, tenant, knowledge_search) do
+    case QaChat.ask_with_references(content,
+           history: history,
+           tenant: tenant,
+           knowledge_search: knowledge_search
+         ) do
+      {:ok, %{answer: answer, references: references}} ->
+        if Process.alive?(lv_pid),
+          do: send(lv_pid, {:qa_done, ref, %{answer: answer, references: references}})
 
       {:error, :missing_key} ->
         if Process.alive?(lv_pid),
@@ -525,14 +577,17 @@ defmodule TcmEduWeb.AiChatLive do
         do: send(lv_pid, {:qa_error, ref, Exception.message(e)})
   end
 
-  defp store_message(nil, _role, _content), do: :ok
+  defp store_message(session, role, content, metadata \\ %{})
 
-  defp store_message(session, role, content) do
+  defp store_message(nil, _role, _content, _metadata), do: :ok
+
+  defp store_message(session, role, content, metadata) do
     ChatMessage
     |> Ash.Changeset.for_create(:create, %{
       session_id: session.id,
       role: role,
-      content: content
+      content: content,
+      metadata: metadata
     })
     |> Ash.create()
   rescue

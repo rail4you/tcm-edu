@@ -78,6 +78,26 @@ defmodule TcmEduWeb.AiChatLiveTest do
     assert message.content == "什么是经络？"
   end
 
+  test "renders knowledge-base references on assistant messages", %{conn: conn, student: student} do
+    {:ok, session} = create_session(student, "知识库问答")
+
+    {:ok, _} =
+      ChatMessage
+      |> Ash.Changeset.for_create(:create, %{
+        session_id: session.id,
+        role: "assistant",
+        content: "桂枝汤由桂枝、芍药、甘草、生姜、大枣组成。",
+        metadata: %{references: [%{title: "病例库：桂枝汤类方临证医案"}]}
+      })
+      |> Ash.create()
+
+    conn
+    |> visit("/ai-chat")
+    |> assert_has("p", "桂枝汤由桂枝、芍药、甘草、生姜、大枣组成。")
+    |> assert_has("span", "依据")
+    |> assert_has("span", "病例库：桂枝汤类方临证医案")
+  end
+
   test "sessions are isolated per user", %{conn: conn, student: student} do
     other = create_user(:student)
     {:ok, _} = create_session(other, "别人的会话")
