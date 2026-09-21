@@ -1,0 +1,115 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.admin_shell current_admin={@current_admin} current_page={:ai_keys} page_title="AI Key 管理">
+    <p class="text-sm text-base-content/60">
+      Key 存数据库（<code>ApiKeyConfig</code>），即时生效，无需重启服务。密钥不对外回传明文。
+    </p>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body gap-3 p-4 sm:p-6">
+        <div class="flex items-center justify-between gap-2">
+          <p class="font-medium">已配置的 Provider</p>
+          <span class="badge badge-soft">{length(@configs)} 个</span>
+        </div>
+        <div class="overflow-x-auto rounded-box border border-base-300">
+          <table class="table table-zebra table-pin-rows">
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>默认模型</th>
+                <th>状态</th>
+                <th class="text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={config <- @configs} class="hover:bg-base-200" id={"key-#{config.provider}"}>
+                <td>
+                  <span class="badge badge-soft badge-success">{provider_label(to_string(config.provider))}</span>
+                </td>
+                <td><code class="text-xs">{config.model || "系统默认"}</code></td>
+                <td>
+                  <span :if={config.is_active} class="badge badge-soft badge-info">启用</span>
+                  <span :if={!config.is_active} class="badge badge-soft badge-error">停用</span>
+                </td>
+                <td>
+                  <div class="flex justify-end gap-1">
+                    <button
+                      class="btn btn-ghost btn-sm"
+                      phx-click="toggle"
+                      phx-value-provider={config.provider}
+                    >
+                      {if config.is_active, do: "停用", else: "启用"}
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-sm text-error"
+                      phx-click="delete"
+                      phx-value-provider={config.provider}
+                      data-confirm={"确认删除 #{config.provider} 的 Key 配置？"}
+                    >
+                      删除
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr :if={@configs == []}>
+                <td colspan="100%">
+                  <div class="flex flex-col items-center gap-2 py-10">
+                    <.icon name="hero-key" class="size-8 text-base-content/40" />
+                    <p class="text-sm text-base-content/60">暂无配置，请用下方表单设置</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body gap-3 p-4 sm:p-6">
+        <p class="font-medium">设置 / 更新 Key</p>
+        <.form
+          for={@form}
+          id="ai-key-form"
+          phx-change="validate"
+          phx-submit="save"
+          class="grid grid-cols-1 gap-3 md:grid-cols-2"
+        >
+          <.input
+            field={@form[:provider]}
+            type="select"
+            label="Provider"
+            options={provider_options()}
+            required
+          />
+          <.input
+            field={@form[:api_key]}
+            type="password"
+            label="API Key"
+            placeholder="sk-...（DashScope / DeepSeek）"
+            required
+          />
+          <.input
+            field={@form[:base_url]}
+            type="text"
+            label="Base URL（可选）"
+            placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
+          />
+          <.input
+            field={@form[:model]}
+            type="text"
+            label="默认模型（可选）"
+            placeholder="如 qwen-flash / deepseek-chat"
+          />
+          <label class="label cursor-pointer justify-start gap-3 md:col-span-2">
+            <.input field={@form[:is_active]} type="checkbox" label="启用" />
+          </label>
+          <div class="md:col-span-2">
+            <.button type="submit" phx-disable-with="保存中..." class="btn-primary" id="save-ai-key-btn">
+              <.icon name="hero-check" class="size-4" /> 保存
+            </.button>
+          </div>
+        </.form>
+      </div>
+    </div>
+  </.admin_shell>
+</Layouts.app>

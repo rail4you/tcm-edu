@@ -137,6 +137,8 @@ defmodule TcmEduWeb.Router do
       pipe_through :browser
 
       live "/tenants", AdminTenantsLive, :index
+      live "/ai-dashboard", AdminAIDashboardLive, :index
+      live "/ai-keys", AdminAIKeysLive, :index
     end
   end
 
@@ -151,6 +153,7 @@ defmodule TcmEduWeb.Router do
       live "/courses/new", TeacherCourseNewLive, :index
       live "/courses/:id/edit", TeacherCourseEditLive, :index
       live "/students", TeacherStudentsLive, :index
+      live "/quiz", TeacherQuizLive, :index
       live "/ai/lesson-plan", TeacherAILessonLive, :index
       live "/ai/image", TeacherAIImageLive, :index
     end

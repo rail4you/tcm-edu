@@ -1,0 +1,73 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.admin_shell current_admin={@current_admin} current_page={:ai_dashboard} page_title="AI 驾驶舱">
+    <:page_actions>
+      <button class="btn btn-soft btn-sm" phx-click="refresh" phx-disable-with="刷新中...">
+        <.icon name="hero-arrow-path" class="size-4" /> 刷新
+      </button>
+      <.link navigate="/admin/ai-keys" class="btn btn-primary btn-sm">
+        <.icon name="hero-key" class="size-4" /> AI Key 管理
+      </.link>
+    </:page_actions>
+
+    <p class="text-sm text-base-content/60">
+      监控 AI 能力配置与默认模型（文本 {TcmEdu.AI.text_model()} · 配图 {TcmEdu.AI.image_model()}）。
+    </p>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <.stat_card title="已配置 Provider" value={@stats.providers} hint="ApiKeyConfig 记录数" icon="hero-cpu-chip" />
+      <.stat_card title="启用中" value={@stats.active} hint="is_active 为 true" icon="hero-check-circle" />
+      <.stat_card title="未启用" value={@stats.inactive} hint="停用或待配置" icon="hero-pause-circle" />
+    </div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body gap-3 p-4 sm:p-6">
+        <p class="font-medium">AI Key 配置状态</p>
+        <div :if={@configs == []} class="rounded-box bg-base-200/30 px-4 py-8 text-center">
+          <p class="text-sm text-base-content/60">尚未配置 AI Key</p>
+          <.link navigate="/admin/ai-keys" class="btn btn-primary btn-sm mt-3">去配置</.link>
+        </div>
+        <ul :if={@configs != []} class="divide-y divide-base-300">
+          <li :for={config <- @configs} class="flex flex-wrap items-center justify-between gap-2 py-2">
+            <div class="flex items-center gap-2">
+              <span class="badge badge-soft badge-success">{provider_label(config.provider)}</span>
+              <code class="text-xs">{config.model || "系统默认模型"}</code>
+            </div>
+            <span :if={config.is_active} class="badge badge-soft badge-info">启用</span>
+            <span :if={!config.is_active} class="badge badge-soft badge-error">停用</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body gap-3 p-4 sm:p-6">
+        <p class="font-medium">最近操作日志</p>
+        <div class="overflow-x-auto rounded-box border border-base-300">
+          <table class="table table-zebra table-pin-rows">
+            <thead>
+              <tr>
+                <th>动作</th>
+                <th>资源</th>
+                <th>时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={log <- @recent_logs} class="hover:bg-base-200">
+                <td><code class="text-xs">{log.action}</code></td>
+                <td class="text-sm">{log.resource_type}</td>
+                <td class="text-xs text-base-content/60">
+                  {if log.inserted_at, do: Calendar.strftime(log.inserted_at, "%m-%d %H:%M"), else: "-"}
+                </td>
+              </tr>
+              <tr :if={@recent_logs == []}>
+                <td colspan="100%">
+                  <p class="py-6 text-center text-sm text-base-content/60">暂无操作日志</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </.admin_shell>
+</Layouts.app>

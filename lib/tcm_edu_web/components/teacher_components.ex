@@ -124,7 +124,7 @@ defmodule TcmEduWeb.TeacherComponents do
           <nav class="flex-1 overflow-y-auto p-4 lg:is-drawer-close:p-2" aria-label="教师端导航">
             <ul class="menu w-full gap-1 lg:is-drawer-close:hidden">
               <li>
-                <details open={@current_page in [:dashboard, :courses]}>
+                <details open={@current_page in [:dashboard, :courses, :quiz]}>
                   <summary>
                     <.icon name="hero-book-open" class="size-4" />
                     <span>教学</span>
@@ -143,6 +143,15 @@ defmodule TcmEduWeb.TeacherComponents do
                       >
                         <.icon name="hero-book-open" class="size-4" />
                         我的课程
+                      </.link>
+                    </li>
+                    <li>
+                      <.link
+                        navigate="/teacher/quiz"
+                        class={["w-full", @current_page == :quiz && "menu-active"]}
+                      >
+                        <.icon name="hero-archive-box" class="size-4" />
+                        题库管理
                       </.link>
                     </li>
                   </ul>
@@ -214,6 +223,15 @@ defmodule TcmEduWeb.TeacherComponents do
                   data-tip="我的课程"
                 >
                   <.icon name="hero-book-open" class="size-4" />
+                </.link>
+              </li>
+              <li>
+                <.link
+                  navigate="/teacher/quiz"
+                  class={["tooltip tooltip-right w-full", @current_page == :quiz && "menu-active"]}
+                  data-tip="题库管理"
+                >
+                  <.icon name="hero-archive-box" class="size-4" />
                 </.link>
               </li>
               <li>

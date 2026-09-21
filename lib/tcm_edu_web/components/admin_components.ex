@@ -18,7 +18,11 @@ defmodule TcmEduWeb.AdminComponents do
   import TcmEduWeb.CoreComponents, only: [icon: 1]
 
   attr :current_admin, :map, required: true
-  attr :current_page, :atom, required: true, values: [:dashboard, :tenants, :users, :login]
+
+  attr :current_page, :atom,
+    required: true,
+    values: [:dashboard, :tenants, :users, :ai_dashboard, :ai_keys, :login]
+
   attr :page_title, :string, default: "工作台"
 
   slot :inner_block, required: true
@@ -259,6 +263,34 @@ defmodule TcmEduWeb.AdminComponents do
             </ul>
           </details>
         </li>
+        <li :if={@current_admin.role == "super_admin"}>
+          <details open={@current_page in [:ai_dashboard, :ai_keys]}>
+            <summary>
+              <.icon name="hero-sparkles" class="size-4" />
+              <span>AI 能力</span>
+            </summary>
+            <ul>
+              <li>
+                <.link
+                  navigate="/admin/ai-dashboard"
+                  class={["w-full", @current_page == :ai_dashboard && "menu-active"]}
+                >
+                  <.icon name="hero-squares-2x2" class="size-4" />
+                  AI 驾驶舱
+                </.link>
+              </li>
+              <li>
+                <.link
+                  navigate="/admin/ai-keys"
+                  class={["w-full", @current_page == :ai_keys && "menu-active"]}
+                >
+                  <.icon name="hero-key" class="size-4" />
+                  AI Key 管理
+                </.link>
+              </li>
+            </ul>
+          </details>
+        </li>
       </ul>
 
       <ul class="menu w-full gap-1 lg:is-drawer-open:hidden">
@@ -287,6 +319,24 @@ defmodule TcmEduWeb.AdminComponents do
             data-tip="用户管理"
           >
             <.icon name="hero-users" class="size-4" />
+          </.link>
+        </li>
+        <li :if={@current_admin.role == "super_admin"}>
+          <.link
+            navigate="/admin/ai-dashboard"
+            class={["tooltip tooltip-right w-full", @current_page == :ai_dashboard && "menu-active"]}
+            data-tip="AI 驾驶舱"
+          >
+            <.icon name="hero-sparkles" class="size-4" />
+          </.link>
+        </li>
+        <li :if={@current_admin.role == "super_admin"}>
+          <.link
+            navigate="/admin/ai-keys"
+            class={["tooltip tooltip-right w-full", @current_page == :ai_keys && "menu-active"]}
+            data-tip="AI Key 管理"
+          >
+            <.icon name="hero-key" class="size-4" />
           </.link>
         </li>
       </ul>
