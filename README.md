@@ -57,6 +57,8 @@ mix phx.server                               # http://localhost:4000
 Open `http://localhost:4000/` and log in through `/login` (student /
 teacher / admin tabs).
 
+生产部署（构建镜像 / 远程部署 / 迁移 / nginx 反代）见 **[docs/deployment.md](docs/deployment.md)**。
+
 ### Seeded users
 
 See `lib/mix/tasks/tcm_edu.seed_super_admin.ex` and the tenant seed for
