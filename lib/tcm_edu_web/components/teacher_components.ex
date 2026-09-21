@@ -158,7 +158,7 @@ defmodule TcmEduWeb.TeacherComponents do
                 </details>
               </li>
               <li>
-                <details open={@current_page in [:ai_lesson, :ai_image, :ai_chat]}>
+                <details open={@current_page in [:ai_lesson, :ai_image, :ai_quiz, :ai_jobs, :ai_chat]}>
                   <summary>
                     <.icon name="hero-sparkles" class="size-4" />
                     <span>智能备课</span>
@@ -180,6 +180,24 @@ defmodule TcmEduWeb.TeacherComponents do
                       >
                         <.icon name="hero-photo" class="size-4" />
                         AI 配图
+                      </.link>
+                    </li>
+                    <li>
+                      <.link
+                        navigate="/teacher/ai/quiz"
+                        class={["w-full", @current_page == :ai_quiz && "menu-active"]}
+                      >
+                        <.icon name="hero-clipboard-document-list" class="size-4" />
+                        AI 出题
+                      </.link>
+                    </li>
+                    <li>
+                      <.link
+                        navigate="/teacher/ai/jobs"
+                        class={["w-full", @current_page == :ai_jobs && "menu-active"]}
+                      >
+                        <.icon name="hero-queue-list" class="size-4" />
+                        任务管理
                       </.link>
                     </li>
                     <li>
@@ -259,6 +277,24 @@ defmodule TcmEduWeb.TeacherComponents do
                   data-tip="AI 配图"
                 >
                   <.icon name="hero-photo" class="size-4" />
+                </.link>
+              </li>
+              <li>
+                <.link
+                  navigate="/teacher/ai/quiz"
+                  class={["tooltip tooltip-right w-full", @current_page == :ai_quiz && "menu-active"]}
+                  data-tip="AI 出题"
+                >
+                  <.icon name="hero-clipboard-document-list" class="size-4" />
+                </.link>
+              </li>
+              <li>
+                <.link
+                  navigate="/teacher/ai/jobs"
+                  class={["tooltip tooltip-right w-full", @current_page == :ai_jobs && "menu-active"]}
+                  data-tip="任务管理"
+                >
+                  <.icon name="hero-queue-list" class="size-4" />
                 </.link>
               </li>
               <li>

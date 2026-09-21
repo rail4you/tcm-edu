@@ -14,7 +14,6 @@ defmodule TcmEdu.Notification.Notification do
   use Ash.Resource,
     domain: TcmEdu.Notification,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   require Ash.Query
@@ -27,10 +26,6 @@ defmodule TcmEdu.Notification.Notification do
   postgres do
     table("notifications")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("Notification")
   end
 
   attributes do
@@ -51,7 +46,8 @@ defmodule TcmEdu.Notification.Notification do
           :course_published,
           :progress,
           :quiz_graded,
-          :ai_lesson
+          :ai_lesson,
+          :quiz_generated
         ]
       )
 

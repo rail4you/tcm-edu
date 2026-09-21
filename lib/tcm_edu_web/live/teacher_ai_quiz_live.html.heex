@@ -1,0 +1,201 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.teacher_shell
+    current_teacher={@current_teacher}
+    current_page={:ai_quiz}
+    page_title="AI 出题"
+    page_subtitle="Jido agent 后台生成，可离开页面；完成后有横幅提示"
+  >
+    <:page_actions>
+      <.link navigate="/teacher/ai/jobs" class="btn btn-soft btn-sm" id="goto-jobs-btn">
+        <.icon name="hero-queue-list" class="size-4" /> 任务管理
+      </.link>
+    </:page_actions>
+
+    <div :if={@banner_job} class="alert alert-success" role="status" id="quiz-done-banner">
+      <.icon name="hero-check-circle" class="size-5 shrink-0" />
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium">
+          《{@banner_job.topic}》已生成 {@banner_job.generated_count} 道习题，已写入「{bank_name(
+            @banks,
+            @banner_job.bank_id
+          )}」
+        </p>
+        <p class="text-xs opacity-70">生成在后台完成，你离开页面不受影响</p>
+      </div>
+      <div class="flex shrink-0 items-center gap-2">
+        <.link navigate="/teacher/quiz" class="btn btn-sm" id="banner-goto-quiz-btn">
+          查看题库
+        </.link>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          phx-click="dismiss-banner"
+          aria-label="关闭提示"
+          id="banner-dismiss-btn"
+        >
+          <.icon name="hero-x-mark" class="size-4" />
+          <span class="sr-only">关闭</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="grid items-start gap-6 xl:grid-cols-5">
+      <div class="card rounded-box border border-base-300 bg-base-100 xl:col-span-2">
+        <div class="card-body gap-3 p-4 sm:p-6">
+          <p class="font-medium">出题需求</p>
+          <.form
+            for={@form}
+            id="ai-quiz-form"
+            phx-change="validate"
+            phx-submit="submit"
+            class="flex flex-col gap-3"
+          >
+            <.input
+              field={@form[:bank_id]}
+              type="select"
+              label="目标题库"
+              prompt="请选择题库"
+              options={Enum.map(@banks, &{&1.name, &1.id})}
+              required
+            />
+            <.input
+              field={@form[:topic]}
+              type="text"
+              label="主题"
+              placeholder="如：手太阴肺经腧穴"
+              maxlength="200"
+              required
+            />
+            <.input
+              field={@form[:subject]}
+              type="text"
+              label="学科"
+              placeholder="如：中医基础（可选）"
+              maxlength="50"
+            />
+            <div class="grid grid-cols-2 gap-3">
+              <.input
+                field={@form[:question_count]}
+                type="select"
+                label="题目数量"
+                options={Enum.map(1..10, &{to_string(&1), &1})}
+              />
+              <.input
+                field={@form[:difficulty]}
+                type="select"
+                label="难度（1-5）"
+                options={Enum.map(1..5, &{to_string(&1), &1})}
+              />
+            </div>
+            <div>
+              <span class="label-text mb-1 block text-sm">题型（至少选一种）</span>
+              <div class="flex flex-wrap gap-2">
+                <label
+                  :for={{label, value} <- type_options()}
+                  class="label cursor-pointer gap-2 rounded-box border border-base-300 px-3 py-2 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                >
+                  <input
+                    type="checkbox"
+                    name="quiz[question_types][]"
+                    value={value}
+                    checked={value in Ecto.Changeset.get_field(@form.source, :question_types, [])}
+                    class="checkbox checkbox-sm checkbox-primary"
+                  />
+                  <span class="text-sm">{label}</span>
+                </label>
+              </div>
+              <p
+                :if={@form[:question_types].errors != []}
+                class="mt-1 text-xs text-error"
+              >
+                {Enum.map_join(@form[:question_types].errors, "，", fn {msg, _} -> msg end)}
+              </p>
+            </div>
+            <.input
+              field={@form[:knowledge_points]}
+              type="text"
+              label="知识点（逗号分隔，可选）"
+              placeholder="如：肺经，腧穴定位"
+              maxlength="200"
+            />
+            <.input
+              field={@form[:requirements]}
+              type="textarea"
+              label="补充要求（可选）"
+              placeholder="如：侧重临床应用，多出病例分析型单选"
+              rows="2"
+              maxlength="500"
+            />
+            <.button
+              type="submit"
+              phx-disable-with="提交中..."
+              class="btn-primary mt-2 w-full"
+              disabled={@submitting}
+              id="start-quiz-gen-btn"
+            >
+              <.icon name="hero-sparkles" class="size-4" /> 开始生成
+            </.button>
+          </.form>
+          <p class="label">生成在 Oban 后台任务中进行，提交后可离开页面；完成后本页会弹出横幅</p>
+        </div>
+      </div>
+
+      <div class="card rounded-box border border-base-300 bg-base-100 xl:col-span-3">
+        <div class="card-body gap-3 p-4 sm:p-6">
+          <div class="flex items-center justify-between gap-2">
+            <p class="font-medium">我的生成任务</p>
+            <span class="badge badge-soft">{length(@jobs)} 个</span>
+          </div>
+
+          <div :if={@jobs == []} class="rounded-box bg-base-200/30 px-4 py-8 text-center">
+            <.icon name="hero-sparkles" class="size-8 text-base-content/40" />
+            <p class="mt-2 text-sm text-base-content/60">暂无任务，在左侧填写需求后开始生成</p>
+          </div>
+
+          <ul :if={@jobs != []} class="flex flex-col gap-2">
+            <li
+              :for={job <- @jobs}
+              id={"quiz-job-#{job.id}"}
+              class="flex items-center gap-3 rounded-box border border-base-300 p-3"
+            >
+              <span class={["badge badge-soft shrink-0", status_badge(job.status)]}>
+                {status_text(job.status)}
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-medium">{job.topic}</span>
+                <span class="mt-0.5 block truncate text-xs text-base-content/60">
+                  {bank_name(@banks, job.bank_id)} · {job.question_count} 题 · {Enum.map_join(
+                    job.question_types || [],
+                    "/",
+                    &type_label/1
+                  )} · {format_time(job.inserted_at)}
+                </span>
+                <span :if={job.status == :failed} class="mt-0.5 block truncate text-xs text-error">
+                  {job.error_message}
+                </span>
+              </span>
+              <span :if={job.status == :completed} class="badge badge-soft badge-sm shrink-0">
+                {job.generated_count} 题已入库
+              </span>
+              <button
+                :if={job.status == :failed}
+                type="button"
+                class="btn btn-soft btn-xs shrink-0"
+                phx-click="retry"
+                phx-value-id={job.id}
+                id={"retry-job-#{job.id}"}
+              >
+                重试
+              </button>
+            </li>
+          </ul>
+
+          <p class="text-xs text-base-content/60">
+            完整历史、筛选与重试请前往
+            <.link navigate="/teacher/ai/jobs" class="link link-primary">任务管理</.link>
+          </p>
+        </div>
+      </div>
+    </div>
+  </.teacher_shell>
+</Layouts.app>

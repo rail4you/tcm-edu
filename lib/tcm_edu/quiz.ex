@@ -7,39 +7,12 @@ defmodule TcmEdu.Quiz do
   """
 
   use Ash.Domain,
-    otp_app: :tcm_edu,
-    extensions: [AshTypescript.Rpc]
-
-  typescript_rpc do
-    resource TcmEdu.Quiz.QuestionBank do
-      rpc_action(:list_question_banks, :read)
-      rpc_action(:get_question_bank, :read, get_by: [:id])
-      rpc_action(:create_question_bank, :create)
-      rpc_action(:update_question_bank, :update)
-      rpc_action(:delete_question_bank, :destroy)
-    end
-
-    resource TcmEdu.Quiz.Question do
-      rpc_action(:list_questions, :read)
-      rpc_action(:list_questions_by_bank, :list_by_bank)
-      rpc_action(:get_question, :read, get_by: [:id])
-      rpc_action(:create_question, :create)
-      rpc_action(:update_question, :update)
-      rpc_action(:archive_question, :archive)
-      rpc_action(:delete_question, :destroy)
-    end
-
-    resource TcmEdu.Quiz.Attempt do
-      rpc_action(:list_attempts, :read)
-      rpc_action(:submit_attempt, :submit)
-      rpc_action(:my_attempts, :my_attempts)
-      rpc_action(:my_mistakes, :my_mistakes)
-    end
-  end
+    otp_app: :tcm_edu
 
   resources do
     resource TcmEdu.Quiz.QuestionBank
     resource TcmEdu.Quiz.Question
     resource TcmEdu.Quiz.Attempt
+    resource TcmEdu.Quiz.QuizJob
   end
 end

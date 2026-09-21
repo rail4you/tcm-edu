@@ -104,16 +104,9 @@ defmodule TcmEduWeb.Router do
     auth_routes(AuthController, TcmEdu.Accounts.User, path: "/")
   end
 
-  # ── JSON RPC surface exposed by AshTypescript ──────────────────────
-  # Uses the authenticated pipeline so Ash policies can check the actor.
+  # ── Chat / SSE endpoints ──────────────────────────────────────
   scope "/api", TcmEduWeb do
     pipe_through :api_auth
-
-    match :options, "/rpc/run", AshTypescriptRpcController, :run
-    match :options, "/rpc/validate", AshTypescriptRpcController, :validate
-
-    post "/rpc/run", AshTypescriptRpcController, :run
-    post "/rpc/validate", AshTypescriptRpcController, :validate
 
     # Chat endpoint — SSE streaming responses from AI agents
     match :options, "/chat", ChatController, :options
@@ -206,6 +199,8 @@ defmodule TcmEduWeb.Router do
       live "/quiz", TeacherQuizLive, :index
       live "/ai/lesson-plan", TeacherAILessonLive, :index
       live "/ai/image", TeacherAIImageLive, :index
+      live "/ai/quiz", TeacherAIQuizLive, :index
+      live "/ai/jobs", TeacherAIJobsLive, :index
       live "/ai/chat", AiChatLive, :index
     end
   end

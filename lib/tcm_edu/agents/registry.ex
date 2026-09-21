@@ -21,6 +21,7 @@ defmodule TcmEdu.Agents.Registry do
     LongTaskAction,
     MultiplyAction,
     QuizGeneratorAction,
+    QuizQuestionAction,
     ResetAction,
     SetAction,
     WebFetchAction
@@ -40,6 +41,7 @@ defmodule TcmEdu.Agents.Registry do
       "qa_agent" -> qa_agent()
       "counter_agent" -> counter_agent()
       "quiz_agent" -> quiz_agent()
+      "quiz_gen_agent" -> quiz_gen_agent()
       "bg_task_agent" -> bg_task_agent()
       "ping_agent" -> ping_agent()
       "pong_agent" -> pong_agent()
@@ -49,7 +51,8 @@ defmodule TcmEdu.Agents.Registry do
 
   @spec names() :: [String.t()]
   def names,
-    do: ~w(chat_agent qa_agent counter_agent quiz_agent bg_task_agent ping_agent pong_agent)
+    do:
+      ~w(chat_agent qa_agent counter_agent quiz_agent quiz_gen_agent bg_task_agent ping_agent pong_agent)
 
   @spec fallback() :: config()
   def fallback, do: chat_agent()
@@ -106,6 +109,16 @@ defmodule TcmEdu.Agents.Registry do
         "You generate quiz questions. Use markdown. If tool fails, explain the error.",
       tools: %{generate_quiz: QuizGeneratorAction},
       max_iterations: 5
+    }
+  end
+
+  # AI 出题（结构化）：供 Oban Worker / 聊天编排复用，工具自带 JSON 校验。
+  defp quiz_gen_agent do
+    %{
+      model: :qwen,
+      system_prompt: "你是资深医学命题专家。必须调用 generate_structured_questions 工具出题，不要自己编造题目文本。",
+      tools: %{generate_structured_questions: QuizQuestionAction},
+      max_iterations: 3
     }
   end
 

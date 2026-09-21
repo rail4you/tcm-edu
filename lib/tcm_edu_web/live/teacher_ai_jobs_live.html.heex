@@ -1,0 +1,166 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.teacher_shell
+    current_teacher={@current_teacher}
+    current_page={:ai_jobs}
+    page_title="任务管理"
+    page_subtitle="AI 出题任务与 Oban 执行状态跟踪"
+  >
+    <:page_actions>
+      <.link navigate="/teacher/ai/quiz" class="btn btn-primary btn-sm" id="goto-ai-quiz-btn">
+        <.icon name="hero-sparkles" class="size-4" /> 新建出题任务
+      </.link>
+    </:page_actions>
+
+    <div class="card rounded-box border border-base-300 bg-base-100">
+      <div class="card-body gap-3 p-4 sm:p-6">
+        <form
+          id="jobs-filter-form"
+          phx-change="filter-status"
+          class="flex flex-wrap items-end gap-3"
+        >
+          <label class="form-control w-44">
+            <span class="label-text mb-1 block text-sm">状态</span>
+            <select
+              name="filter[status]"
+              class="select select-bordered select-sm w-full"
+              id="status-filter-select"
+            >
+              <option
+                :for={{label, value} <- status_options()}
+                value={value}
+                selected={@status_filter == value}
+              >
+                {label}
+              </option>
+            </select>
+          </label>
+        </form>
+
+        <form id="mine-toggle-form" phx-change="toggle-mine" class="flex items-center gap-2">
+          <input type="hidden" name="filter[mine_only]" value="false" />
+          <label class="label cursor-pointer gap-2">
+            <input
+              type="checkbox"
+              name="filter[mine_only]"
+              value="true"
+              checked={@mine_only}
+              class="checkbox checkbox-sm checkbox-primary"
+              id="mine-only-checkbox"
+            />
+            <span class="text-sm">只看我的</span>
+          </label>
+          <span class="badge badge-soft">{length(@jobs)} 个任务</span>
+        </form>
+
+        <div :if={@jobs == []} class="rounded-box bg-base-200/30 px-4 py-10 text-center">
+          <.icon name="hero-queue-list" class="size-8 text-base-content/40" />
+          <p class="mt-2 text-sm text-base-content/60">暂无符合条件的任务</p>
+        </div>
+
+        <div :if={@jobs != []} class="overflow-x-auto rounded-box border border-base-300">
+          <table class="table table-zebra table-pin-rows table-sm">
+            <thead>
+              <tr>
+                <th>主题</th>
+                <th>题库</th>
+                <th>参数</th>
+                <th>业务状态</th>
+                <th>Oban 状态</th>
+                <th>结果</th>
+                <th>发起人</th>
+                <th>提交时间</th>
+                <th class="text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={job <- @jobs} id={"quiz-job-#{job.id}"} class="hover:bg-base-200">
+                <td>
+                  <p class="max-w-48 truncate text-sm font-medium" title={job.topic}>{job.topic}</p>
+                  <p :if={job.status == :failed} class="max-w-48 truncate text-xs text-error" title={job.error_message}>
+                    {job.error_message}
+                  </p>
+                </td>
+                <td class="text-sm">{Map.get(@bank_names, job.bank_id, "—")}</td>
+                <td class="text-xs text-base-content/60">
+                  {job.question_count} 题 · {Enum.map_join(
+                    job.question_types || [],
+                    "/",
+                    &type_label/1
+                  )} · 难度 {job.difficulty}
+                </td>
+                <td>
+                  <span class={["badge badge-soft badge-sm", status_badge(job.status)]}>
+                    {status_text(job.status)}
+                  </span>
+                </td>
+                <td class="text-xs text-base-content/60">
+                  <span :if={job.oban_job_id}>#{job.oban_job_id} · </span>{oban_state_text(
+                    job,
+                    @oban_states
+                  )}
+                </td>
+                <td class="text-xs tabular-nums">
+                  <span :if={job.status == :completed}>{job.generated_count} 题已入库</span>
+                  <span :if={job.status != :completed}>—</span>
+                </td>
+                <td class="max-w-40 truncate text-xs" title={job.requested_by_email}>
+                  {job.requested_by_email || "—"}
+                </td>
+                <td class="text-xs whitespace-nowrap text-base-content/60">
+                  {format_time(job.inserted_at)}
+                </td>
+                <td>
+                  <div class="flex justify-end gap-1">
+                    <button
+                      :if={job.status == :failed}
+                      class="btn btn-ghost btn-xs"
+                      phx-click="retry"
+                      phx-value-id={job.id}
+                      id={"retry-job-#{job.id}"}
+                    >
+                      重试
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-xs text-error"
+                      phx-click="ask-delete"
+                      phx-value-id={job.id}
+                      id={"delete-job-#{job.id}"}
+                    >
+                      删除
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-base-content/60">
+          业务状态由 Worker 维护（排队中 → 生成中 → 已完成/失败）；Oban 状态是执行层视角，二者正常情况下一致。
+        </p>
+      </div>
+    </div>
+
+    <div :if={@confirming} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <p class="text-lg font-medium">删除这条任务记录？</p>
+        <p class="mt-2 line-clamp-3 text-sm text-base-content/60">{@confirming.topic}</p>
+        <div class="alert alert-soft alert-error mt-3">
+          <.icon name="hero-exclamation-triangle" class="size-5" />
+          <p class="text-sm">仅删除任务记录，已生成的题目不受影响。</p>
+        </div>
+        <div class="modal-action">
+          <button type="button" class="btn btn-soft" phx-click="cancel-delete">取消</button>
+          <button
+            type="button"
+            class="btn btn-error"
+            phx-click="delete"
+            id="confirm-delete-job-btn"
+          >
+            确认删除
+          </button>
+        </div>
+      </div>
+      <div class="modal-backdrop" phx-click="cancel-delete"></div>
+    </div>
+  </.teacher_shell>
+</Layouts.app>
