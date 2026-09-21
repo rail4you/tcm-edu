@@ -47,9 +47,10 @@ custom classes must fully style the input
 
 ### UI containers (daisyUI)
 
-- Content cards/panels use a **bordered contour, never shadow**: `rounded-box border border-base-300 bg-base-100` (e.g. `fieldset`, `card`, chat sidebars and chat windows). **Never** put `border` and `shadow-*` on the same element.
+- Content cards/panels use a **bordered contour, never shadow**: `rounded-box border border-base-300 bg-base-100` (e.g. `card`, chat sidebars and chat windows). **Never** put `border` and `shadow-*` on the same element.
 - Split card interiors with subtle dividers: `border-b border-base-300` (header) / `border-t border-base-300` (footer); round inner edge blocks with `rounded-t-box` / `rounded-b-box` so they don't poke outside the card.
 - Chat bubbles are hand-built flex rows (`rounded-2xl`, user `bg-primary text-primary-content`, assistant `bg-base-200`) — do NOT use daisyUI `.chat-bubble` (its `::before` mask tail + zeroed corner can't be cleanly removed). Reference: `TcmEduWeb.AiChatLive`.
+- Do NOT use `fieldset` + `legend` for panel titles: the legend renders embedded in the top border, so the left column's title sits higher than a neighbouring card's title and the two columns never top-align. Use the same `card > card-body` structure with a `<p class="font-medium">` title row on both sides instead (see `teacher_ai_lesson_live.html.heex` / `teacher_ai_image_live.html.heex`).
 <!-- usage_rules-start -->
 ## usage_rules usage
 _A config-driven dev tool for Elixir projects to manage AGENTS.md files and agent skills from dependencies_

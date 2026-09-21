@@ -6,9 +6,10 @@
     page_subtitle="生成经络腧穴、中药、示意图等教学配图，自动归档"
   >
     <div class="grid items-start gap-6 xl:grid-cols-5">
-      <fieldset class="fieldset rounded-box border border-base-300 bg-base-100 p-4 sm:p-6 xl:col-span-2">
-        <legend class="fieldset-legend px-2 text-sm font-medium">作画需求</legend>
-        <.form
+      <div class="card border border-base-300 bg-base-100 xl:col-span-2">
+        <div class="card-body gap-3 p-4 sm:p-6">
+          <p class="font-medium">作画需求</p>
+          <.form
           for={@form}
           id="ai-image-form"
           phx-change="validate"
@@ -37,8 +38,9 @@
             <.icon name="hero-photo" class="size-4" /> 生成配图
           </.button>
         </.form>
-        <p class="label">图片生成 + 归档约需半分钟；需要配置图片模型 Key 才能使用</p>
-      </fieldset>
+          <p class="label">图片生成 + 归档约需半分钟；需要配置图片模型 Key 才能使用</p>
+        </div>
+      </div>
 
       <div class="card border border-base-300 bg-base-100 xl:col-span-3">
         <div class="card-body gap-3 p-4 sm:p-6">
