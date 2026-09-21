@@ -12,7 +12,6 @@ defmodule TcmEdu.Enrollment.Enrollment do
   use Ash.Resource,
     domain: TcmEdu.Enrollment,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   require Ash.Query
@@ -24,10 +23,6 @@ defmodule TcmEdu.Enrollment.Enrollment do
   postgres do
     table("enrollments")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("Enrollment")
   end
 
   attributes do

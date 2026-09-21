@@ -18,16 +18,11 @@ defmodule TcmEdu.System.ApiKeyConfig do
   use Ash.Resource,
     domain: TcmEdu.System,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   postgres do
     table("api_key_configs")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("ApiKeyConfig")
   end
 
   attributes do

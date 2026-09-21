@@ -15,7 +15,6 @@ defmodule TcmEdu.Quiz.Question do
   use Ash.Resource,
     domain: TcmEdu.Quiz,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   multitenancy do
@@ -25,10 +24,6 @@ defmodule TcmEdu.Quiz.Question do
   postgres do
     table("questions")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("Question")
   end
 
   attributes do

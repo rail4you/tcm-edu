@@ -10,16 +10,11 @@ defmodule TcmEdu.Chat.ChatTask do
     otp_app: :tcm_edu,
     domain: TcmEdu.ChatDomain,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   postgres do
     table("chat_tasks")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("ChatTask")
   end
 
   attributes do

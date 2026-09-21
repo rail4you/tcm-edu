@@ -11,7 +11,7 @@ defmodule TcmEdu.Courses.Course do
   use Ash.Resource,
     domain: TcmEdu.Courses,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshStorage, AshTypescript.Resource],
+    extensions: [AshStorage],
     authorizers: [Ash.Policy.Authorizer],
     otp_app: :tcm_edu
 
@@ -37,10 +37,6 @@ defmodule TcmEdu.Courses.Course do
     # 自动生成 `cover_image` 关系与 `cover_image_url` calculation；
     # 替换掉原来的 `cover_image_url` 字符串字段。
     has_one_attached(:cover_image)
-  end
-
-  typescript do
-    type_name("Course")
   end
 
   attributes do
@@ -139,7 +135,6 @@ defmodule TcmEdu.Courses.Course do
   end
 
   calculations do
-    # AshTypescript 只暴露 calculation（不暴露 aggregate），故用 calculation 镜像：
     # lesson_count 用 expr 内联聚合；duration_seconds 引用上面的 sum 聚合
     # （expr 的 sum 不支持嵌套路径，但 aggregate 支持）。
     calculate :lesson_count, :integer, expr(total_lessons) do

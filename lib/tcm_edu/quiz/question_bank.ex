@@ -11,7 +11,6 @@ defmodule TcmEdu.Quiz.QuestionBank do
   use Ash.Resource,
     domain: TcmEdu.Quiz,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   multitenancy do
@@ -21,10 +20,6 @@ defmodule TcmEdu.Quiz.QuestionBank do
   postgres do
     table("question_banks")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("QuestionBank")
   end
 
   attributes do

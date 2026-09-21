@@ -10,7 +10,6 @@ defmodule TcmEdu.Courses.CourseCategory do
   use Ash.Resource,
     domain: TcmEdu.Courses,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   multitenancy do
@@ -20,10 +19,6 @@ defmodule TcmEdu.Courses.CourseCategory do
   postgres do
     table("course_categories")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("CourseCategory")
   end
 
   attributes do

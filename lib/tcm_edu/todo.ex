@@ -1,6 +1,6 @@
 defmodule TcmEdu.Todo do
   @moduledoc """
-  Simple Todo resource exposed via AshTypescript RPC.
+  Simple Todo resource.
 
   All actions are permitted (`authorize_if always()`) — adjust the policies
   block once you wire up authentication.
@@ -10,16 +10,11 @@ defmodule TcmEdu.Todo do
     otp_app: :tcm_edu,
     domain: TcmEdu.TodoDomain,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   postgres do
     table("todos")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("Todo")
   end
 
   attributes do

@@ -6,7 +6,6 @@ defmodule TcmEdu.Courses.Chapter do
   use Ash.Resource,
     domain: TcmEdu.Courses,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   multitenancy do
@@ -16,10 +15,6 @@ defmodule TcmEdu.Courses.Chapter do
   postgres do
     table("chapters")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("Chapter")
   end
 
   attributes do

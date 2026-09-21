@@ -65,7 +65,9 @@ defmodule TcmEduWeb.LoginLive do
     tab = socket.assigns.tab
 
     if changeset_for(tab, params).valid? do
-      {:noreply, assign(socket, form_assign(tab), form_for(socket.assigns, params)) |> assign(:trigger_action, true)}
+      {:noreply,
+       assign(socket, form_assign(tab), form_for(socket.assigns, params))
+       |> assign(:trigger_action, true)}
     else
       {:noreply, assign(socket, form_assign(tab), form_for(socket.assigns, params))}
     end

@@ -88,8 +88,6 @@ defmodule TcmEduWeb.Plugs.SetTenantFromToken do
 
     case actor do
       {:ok, user_or_admin} ->
-        # 用 Ash.PlugHelpers.set_tenant/2 写 conn.private[:ash][:tenant]，
-        # 这样 AshTypescript.Rpc 读取时能拿到。
         conn
         |> Ash.PlugHelpers.set_actor(user_or_admin)
         |> Ash.PlugHelpers.set_tenant(tenant)

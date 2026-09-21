@@ -30,7 +30,7 @@ defmodule TcmEdu.Accounts.User do
 
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAuthentication, AshTypescript.Resource],
+    extensions: [AshAuthentication],
     authorizers: [Ash.Policy.Authorizer],
     domain: TcmEdu.Accounts
 
@@ -256,8 +256,9 @@ defmodule TcmEdu.Accounts.User do
     # 注意：公开自助注册已关闭（见下面的 register_with_password policy），
     # 账户只能由超管/管理员在管理端分配，因此 bypass 白名单不含注册动作。
     bypass AshAuthentication.Checks.AshAuthenticationInteraction do
-      authorize_if {Ash.Policy.Check.Action,
-                    action: [:sign_in_with_password, :sign_in_with_token]}
+      authorize_if(
+        {Ash.Policy.Check.Action, action: [:sign_in_with_password, :sign_in_with_token]}
+      )
     end
 
     # SuperAdmin 跨租户管理：actor 是 SuperAdmin struct 时全放行。
@@ -346,9 +347,5 @@ defmodule TcmEdu.Accounts.User do
     end
 
     # 未匹配任何 policy 的动作 Ash 默认拒绝，无需显式 deny。
-  end
-
-  typescript do
-    type_name("User")
   end
 end

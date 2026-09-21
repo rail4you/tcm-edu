@@ -19,7 +19,6 @@ defmodule TcmEdu.System.SuperAdmin do
   use Ash.Resource,
     domain: TcmEdu.System,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   require Logger
@@ -27,10 +26,6 @@ defmodule TcmEdu.System.SuperAdmin do
   postgres do
     table("super_admins")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("SuperAdmin")
   end
 
   attributes do

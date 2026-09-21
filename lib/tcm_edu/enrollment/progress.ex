@@ -13,7 +13,6 @@ defmodule TcmEdu.Enrollment.Progress do
   use Ash.Resource,
     domain: TcmEdu.Enrollment,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   multitenancy do
@@ -23,10 +22,6 @@ defmodule TcmEdu.Enrollment.Progress do
   postgres do
     table("progress")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("Progress")
   end
 
   attributes do

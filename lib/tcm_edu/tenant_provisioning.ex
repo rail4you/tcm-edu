@@ -124,7 +124,16 @@ defmodule TcmEdu.TenantProvisioning do
     :ok
   end
 
+  # 迁移目录用 app_dir 解析：dev 下指向项目 priv/，release 下指向
+  # /app/lib/tcm_edu-<ver>/priv/。若仍配了相对路径（旧配置），
+  # 也统一基于 app_dir 解析，避免 release 容器里 CWD=/app 找不到文件。
   defp tenant_migrations_path do
-    Application.get_env(:tcm_edu, :tenant_migrations_path, @tenant_migrations_path)
+    path = Application.get_env(:tcm_edu, :tenant_migrations_path, @tenant_migrations_path)
+
+    if Path.type(path) == :absolute do
+      path
+    else
+      Application.app_dir(:tcm_edu, path)
+    end
   end
 end

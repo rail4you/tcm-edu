@@ -138,7 +138,7 @@ docker run -d \
   --hostname tcm-edu \
   --network knowledgehub_abp-network \
   --restart unless-stopped \
-  -p ${HOST_PORT:-4000}:4000 \
+  -p 127.0.0.1:4000:4000 \
   -e PHX_SERVER=true \
   -e PORT=4000 \
   -e PHX_HOST=${PHX_HOST:-0.0.0.0} \
@@ -218,7 +218,7 @@ cmd_all() {
     echo ""
     DISPLAY_HOST="${REMOTE_HOST#*@}"
     [ "$DISPLAY_HOST" = "tcm-edu" ] && DISPLAY_HOST="111.229.72.15"
-    ok "全部完成 (${OVERALL_ELAPSED}s) → http://${DISPLAY_HOST}:4000/"
+    ok "全部完成 (${OVERALL_ELAPSED}s) → http://${DISPLAY_HOST}/ (nginx :80 → 容器 :4000)"
 }
 
 # ─── 帮助 ──────────────────────────────────────────────────────

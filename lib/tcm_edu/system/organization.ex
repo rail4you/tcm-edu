@@ -25,7 +25,6 @@ defmodule TcmEdu.System.Organization do
   use Ash.Resource,
     domain: TcmEdu.System,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   require Logger
@@ -39,10 +38,6 @@ defmodule TcmEdu.System.Organization do
     manage_tenant do
       template(["tenant_", :slug])
     end
-  end
-
-  typescript do
-    type_name("Organization")
   end
 
   attributes do

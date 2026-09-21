@@ -39,8 +39,8 @@ cmd_up() {
 
     echo
     ok "服务已启动"
-    echo "  应用: http://${PUBLIC_URL:-localhost}:${HOST_PORT:-4000}/"
-    echo "  RPC:  http://${PUBLIC_URL:-localhost}:${HOST_PORT:-4000}/api/rpc/run"
+    echo "  应用: http://${PUBLIC_URL:-localhost}/"
+    echo "  登录: http://${PUBLIC_URL:-localhost}/login"
 }
 
 cmd_down() {

@@ -2,10 +2,9 @@
 # docker-compose.yml - tcm-edu 生产环境
 # ============================================================
 #
-# 单容器方案：Phoenix 同时承担
-#   - 静态资源服务（Next.js export → /app/*）
-#   - AshTypescript RPC（/api/rpc/*）
-#   - SPA fallback（/，由 FallbackController 返回 priv/app/index.html）
+# 单容器方案：Phoenix 承担全部职责
+#   - 静态资源服务（Phoenix 原生 assets）
+#   - LiveView 页面（课程 / 学生 / 教师 / 管理）
 #
 # 镜像由本地 Mac 通过 docker buildx 交叉构建（linux/amd64）并推送到
 # 阿里云容器镜像仓库。详见项目根目录的 build-and-push.sh。
@@ -39,7 +38,8 @@ services:
     hostname: tcm-edu
     restart: unless-stopped
     ports:
-      - "${HOST_PORT:-4000}:4000"
+      # 只绑定本机回环，由宿主 nginx (80/443) 反代；公网不直接暴露 4000
+      - "127.0.0.1:4000:4000"
     environment:
       # Phoenix 服务端
       - PHX_SERVER=true

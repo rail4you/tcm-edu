@@ -37,31 +37,6 @@ config :tcm_edu,
   # Tenant migrations path (used by TcmEdu.TenantProvisioning)
   tenant_migrations_path: "priv/repo/tenant_migrations"
 
-# AshTypescript codegen config. Output is written into the shared workspace
-# package `frontend-monorepo/packages/rpc-client/src/` so the student, admin
-# and teacher apps all import the same generated client via `@tcm-edu/rpc-client`.
-config :ash_typescript,
-  output_file: "frontend-monorepo/packages/rpc-client/src/ash_rpc.ts",
-  types_output_file: "frontend-monorepo/packages/rpc-client/src/ash_types.ts",
-  zod_output_file: "frontend-monorepo/packages/rpc-client/src/ash_zod.ts",
-  generate_zod_schemas: true,
-  zod_import_path: "zod",
-  zod_schema_suffix: "Schema",
-  output_field_formatter: :camel_case,
-  input_field_formatter: :camel_case,
-  run_endpoint: "/api/rpc/run",
-  validate_endpoint: "/api/rpc/validate",
-  # Lifecycle hooks: inject Bearer token from localStorage into every RPC request
-  rpc_action_before_request_hook: "RpcHooks.beforeRequest",
-  rpc_action_after_request_hook: "RpcHooks.afterRequest",
-  rpc_action_hook_context_type: "RpcHooks.ActionHookContext",
-  import_into_generated: [
-    %{
-      import_name: "RpcHooks",
-      file: "frontend-monorepo/packages/rpc-client/src/rpcHooks.ts"
-    }
-  ]
-
 # Configure the endpoint
 config :tcm_edu, TcmEduWeb.Endpoint,
   url: [host: "localhost"],

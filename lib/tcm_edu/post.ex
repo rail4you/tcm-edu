@@ -10,17 +10,13 @@ defmodule TcmEdu.Post do
   use Ash.Resource,
     domain: TcmEdu.PostDomain,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshStorage, AshTypescript.Resource],
+    extensions: [AshStorage],
     authorizers: [Ash.Policy.Authorizer],
     otp_app: :tcm_edu
 
   postgres do
     table("posts")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("Post")
   end
 
   storage do

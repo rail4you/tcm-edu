@@ -17,7 +17,6 @@ defmodule TcmEdu.System.AuditLog do
   use Ash.Resource,
     domain: TcmEdu.System,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   require Ash.Query
@@ -25,10 +24,6 @@ defmodule TcmEdu.System.AuditLog do
   postgres do
     table("audit_logs")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("AuditLog")
   end
 
   attributes do

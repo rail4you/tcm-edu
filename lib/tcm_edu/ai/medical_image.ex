@@ -76,7 +76,9 @@ defmodule TcmEdu.AI.MedicalImage do
             # bucket 私有 → 返回预签名 URL，前端可直接 <img>
             case TcmEdu.Storage.OSS.signed_url(key) do
               {:ok, signed} -> {:cont, {:ok, [signed | acc]}}
-              {:error, reason} -> {:halt, {:error, reason}}
+              # signed_url/2 只返回 {:ok, url}（缺凭证时直接 raise），
+              # 这里留兜底以防未来实现变更
+              other -> {:halt, {:error, {:signed_url, other}}}
             end
 
           {:error, reason} ->

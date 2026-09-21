@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
 # herdr-services.sh — start / stop / restart / status / logs for tcm-edu
 #
-# Manages Phoenix (4011) and Next.js (3000) dev servers via herdr panes.
+# Manages the Phoenix (:4011) dev server via herdr panes.
 # Layout (created on first `start` if missing):
 #
 #   ┌─────────────┬──────────────────┐
 #   │             │ Phoenix  :4011   │  pane $PANE_PHOENIX
 #   │  Claude     ├──────────────────┤
-#   │             │ Next.js  :3000   │  pane $PANE_NEXTJS
+#   │             │                  │
 #   └─────────────┴──────────────────┘
 #
-# Both services run in the FOREGROUND of their herdr pane so the user
-# can read the live output directly — no /tmp log files.
+# Phoenix runs in the FOREGROUND of its herdr pane so the user can read
+# the live output directly — no /tmp log files.
 #
 # Usage:
-#   bin/herdr-services.sh start    # create panes if needed, launch services
-#   bin/herdr-services.sh stop     # Ctrl-C both panes, force-kill orphans
+#   bin/herdr-services.sh start    # create pane if needed, launch Phoenix
+#   bin/herdr-services.sh stop     # Ctrl-C the pane, force-kill orphans
 #   bin/herdr-services.sh restart  # stop + start
-#   bin/herdr-services.sh status   # pane + port + HTTP status, RPC smoke test
-#   bin/herdr-services.sh logs     # tail both panes' recent output
+#   bin/herdr-services.sh status   # pane + port + HTTP status
+#   bin/herdr-services.sh logs     # tail the pane's recent output
 #
 # Pane discovery: panes are matched by their `cwd` rather than hard-coded
 # IDs, so the script survives herdr workspace restarts / ID rotation.
@@ -27,15 +27,10 @@ set -euo pipefail
 
 # ─── Config ────────────────────────────────────────────────────────────────
 WORKSPACE_ROOT="/Users/bai/projects/tcm-edu"
-FRONTEND_DIR="$WORKSPACE_ROOT/frontend"
 PORT_PHOENIX=4011
-PORT_NEXTJS=3000
 
 PHOENIX_CWD="$WORKSPACE_ROOT"
-NEXTJS_CWD="$FRONTEND_DIR"
-
 PHOENIX_CMD="mix phx.server"
-NEXTJS_CMD="node node_modules/next/dist/bin/next dev -p ${PORT_NEXTJS} -H 127.0.0.1"
 
 # ─── Colors ────────────────────────────────────────────────────────────────
 if [ -t 1 ]; then
@@ -141,9 +136,6 @@ wait_port() {
 }
 
 # ─── Pane setup ────────────────────────────────────────────────────────────
-# Ensure the Phoenix and Next.js panes exist on the right of the Claude pane.
-# If they're missing (or in a different workspace), split them into the right
-# workspace's tab 1.
 ensure_panes() {
   local claude_id
   claude_id=$(find_claude_pane)
@@ -153,27 +145,17 @@ ensure_panes() {
   fi
 
   PANE_PHOENIX=$(find_pane_by_cwd "$PHOENIX_CWD")
-  PANE_NEXTJS=$(find_pane_by_cwd "$NEXTJS_CWD")
 
   if [ -z "$PANE_PHOENIX" ]; then
     say "Creating Phoenix pane (right of Claude)"
-    # Split Claude right → top-right slot
     PANE_PHOENIX=$(herdr pane split "$claude_id" --direction right --cwd "$PHOENIX_CWD" 2>/dev/null \
       | python3 -c "import sys, json; print(json.load(sys.stdin)['result']['pane']['pane_id'])" 2>/dev/null || true)
     [ -n "$PANE_PHOENIX" ] || { ko "Failed to create Phoenix pane"; exit 4; }
     ok "Phoenix pane: $PANE_PHOENIX"
   fi
 
-  if [ -z "$PANE_NEXTJS" ]; then
-    say "Creating Next.js pane (below Phoenix)"
-    PANE_NEXTJS=$(herdr pane split "$PANE_PHOENIX" --direction down --cwd "$NEXTJS_CWD" 2>/dev/null \
-      | python3 -c "import sys, json; print(json.load(sys.stdin)['result']['pane']['pane_id'])" 2>/dev/null || true)
-    [ -n "$PANE_NEXTJS" ] || { ko "Failed to create Next.js pane"; exit 4; }
-    ok "Next.js pane: $PANE_NEXTJS"
-  fi
-
   # Save for other commands in the same invocation
-  export PANE_PHOENIX PANE_NEXTJS
+  export PANE_PHOENIX
 }
 
 # ─── Commands ──────────────────────────────────────────────────────────────
@@ -181,48 +163,34 @@ cmd_start() {
   require_herdr
   ensure_panes
 
-  say "Starting services"
+  say "Starting Phoenix"
 
-  # Clear any old foreground process and any orphan listeners
   pane_interrupt "$PANE_PHOENIX"
-  pane_interrupt "$PANE_NEXTJS"
   sleep 1
   kill_port "$PORT_PHOENIX" "Phoenix"
-  kill_port "$PORT_NEXTJS" "Next.js"
 
-  # Reset cwd if pane drifted (e.g. user ran other commands in it)
   local phx_cwd; phx_cwd=$(pane_field "$PANE_PHOENIX" foreground_cwd)
   if [ "$phx_cwd" != "$PHOENIX_CWD" ]; then
     pane_exec "$PANE_PHOENIX" "cd $PHOENIX_CWD && clear"
     sleep 1
   fi
-  local nx_cwd; nx_cwd=$(pane_field "$PANE_NEXTJS" foreground_cwd)
-  if [ "$nx_cwd" != "$NEXTJS_CWD" ]; then
-    pane_exec "$PANE_NEXTJS" "cd $NEXTJS_CWD && clear"
-    sleep 1
-  fi
 
-  printf "${DIM}  Phoenix → pane %s, Next.js → pane %s${RST}\n" "$PANE_PHOENIX" "$PANE_NEXTJS"
-  pane_exec "$PANE_PHOENIX" "echo '━━━ Phoenix RPC :${PORT_PHOENIX} ━━━' && $PHOENIX_CMD"
-  pane_exec "$PANE_NEXTJS" "echo '━━━ Next.js HMR :${PORT_NEXTJS} ━━━' && $NEXTJS_CMD"
+  pane_exec "$PANE_PHOENIX" "echo '━━━ Phoenix :${PORT_PHOENIX} ━━━' && $PHOENIX_CMD"
 
   echo
   wait_port "$PORT_PHOENIX" "Phoenix" 45
-  wait_port "$PORT_NEXTJS" "Next.js" 45
   echo
-  ok "Both services launched. Run '$0 status' or '$0 logs' to inspect."
+  ok "Phoenix launched. Run '$0 status' or '$0 logs' to inspect."
 }
 
 cmd_stop() {
   require_herdr
   ensure_panes
 
-  say "Stopping services"
+  say "Stopping Phoenix"
   pane_interrupt "$PANE_PHOENIX"
-  pane_interrupt "$PANE_NEXTJS"
   sleep 2
   kill_port "$PORT_PHOENIX" "Phoenix"
-  kill_port "$PORT_NEXTJS" "Next.js"
   ok "Stopped"
 }
 
@@ -238,47 +206,20 @@ cmd_status() {
 
   say "Service status"
 
-  # Port checks
   if port_listening "$PORT_PHOENIX"; then
     printf "  ${GRN}●${RST} ${B}%-10s${RST} port=${YLW}%-5s${RST} pid=${DIM}%-7s${RST} http=${GRN}%-4s${RST}\n" \
       "Phoenix" "$PORT_PHOENIX" "$(port_pid $PORT_PHOENIX)" "$(port_http $PORT_PHOENIX)"
   else
     printf "  ${RED}●${RST} ${B}%-10s${RST} port=${YLW}%-5s${RST} ${RED}DOWN${RST}\n" "Phoenix" "$PORT_PHOENIX"
   fi
-  if port_listening "$PORT_NEXTJS"; then
-    printf "  ${GRN}●${RST} ${B}%-10s${RST} port=${YLW}%-5s${RST} pid=${DIM}%-7s${RST} http=${GRN}%-4s${RST}\n" \
-      "Next.js" "$PORT_NEXTJS" "$(port_pid $PORT_NEXTJS)" "$(port_http $PORT_NEXTJS)"
-  else
-    printf "  ${RED}●${RST} ${B}%-10s${RST} port=${YLW}%-5s${RST} ${RED}DOWN${RST}\n" "Next.js" "$PORT_NEXTJS"
-  fi
 
-  # Pane state
   hr
-  printf "${B}Panes${RST}\n"
-  for pane_id in "$PANE_PHOENIX" "$PANE_NEXTJS"; do
-    local cwd focus
-    cwd=$(pane_field "$pane_id" foreground_cwd)
-    focus=$(pane_field "$pane_id" focused)
-    [ "$focus" = "True" ] && focus="${GRN}focused${RST}" || focus="${DIM}unfocused${RST}"
-    printf "  %s  cwd=%s  %b\n" "$pane_id" "$cwd" "$focus"
-  done
-
-  # RPC smoke test
-  if port_listening "$PORT_NEXTJS"; then
-    hr
-    printf "${B}RPC smoke test${RST} (Next.js :${PORT_NEXTJS} → Phoenix :${PORT_PHOENIX})\n"
-    local resp
-    resp=$(curl -s --max-time 8 -L -X POST "http://localhost:${PORT_NEXTJS}/api/rpc/run" \
-      -H "Content-Type: application/json" \
-      -d '{"action":"list_todos","fields":["id","title","completed"]}' 2>/dev/null || echo "")
-    if echo "$resp" | grep -q '"success":true'; then
-      local n
-      n=$(echo "$resp" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null || echo "?")
-      printf "  ${GRN}✓${RST} list_todos → %s rows\n" "$n"
-    else
-      printf "  ${RED}✗${RST} list_todos failed (response: %.120s…)\n" "$resp"
-    fi
-  fi
+  printf "${B}Pane${RST}\n"
+  local cwd focus
+  cwd=$(pane_field "$PANE_PHOENIX" foreground_cwd)
+  focus=$(pane_field "$PANE_PHOENIX" focused)
+  [ "$focus" = "True" ] && focus="${GRN}focused${RST}" || focus="${DIM}unfocused${RST}"
+  printf "  %s  cwd=%s  %b\n" "$PANE_PHOENIX" "$cwd" "$focus"
 }
 
 cmd_logs() {
@@ -288,11 +229,6 @@ cmd_logs() {
   say "Phoenix pane $PANE_PHOENIX (last 30 lines)"
   hr
   herdr pane read "$PANE_PHOENIX" --source visible --lines 30 --format text 2>&1 || true
-
-  echo
-  say "Next.js pane $PANE_NEXTJS (last 30 lines)"
-  hr
-  herdr pane read "$PANE_NEXTJS" --source visible --lines 30 --format text 2>&1 || true
 }
 
 usage() {

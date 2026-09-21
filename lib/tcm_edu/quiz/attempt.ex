@@ -14,7 +14,6 @@ defmodule TcmEdu.Quiz.Attempt do
   use Ash.Resource,
     domain: TcmEdu.Quiz,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
     authorizers: [Ash.Policy.Authorizer]
 
   require Ash.Query
@@ -26,10 +25,6 @@ defmodule TcmEdu.Quiz.Attempt do
   postgres do
     table("question_attempts")
     repo(TcmEdu.Repo)
-  end
-
-  typescript do
-    type_name("Attempt")
   end
 
   attributes do

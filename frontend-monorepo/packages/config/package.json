@@ -1,8 +1,0 @@
-{
-  "name": "@tcm-edu/config",
-  "version": "0.1.0",
-  "description": "Shared TypeScript / lint base config.",
-  "private": true,
-  "files": ["tsconfig.base.json"],
-  "license": "UNLICENSED"
-}

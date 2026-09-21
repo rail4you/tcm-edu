@@ -10,18 +10,7 @@ defmodule TcmEdu.Notification do
   """
 
   use Ash.Domain,
-    otp_app: :tcm_edu,
-    extensions: [AshTypescript.Rpc]
-
-  typescript_rpc do
-    resource TcmEdu.Notification.Notification do
-      rpc_action(:list_notifications, :read)
-      rpc_action(:get_notification, :read, get_by: [:id])
-      rpc_action(:create_notification, :notify)
-      rpc_action(:mark_read, :mark_read)
-      rpc_action(:mark_all_read, :mark_all_read)
-    end
-  end
+    otp_app: :tcm_edu
 
   resources do
     resource TcmEdu.Notification.Notification

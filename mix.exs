@@ -52,7 +52,7 @@ defmodule TcmEdu.MixProject do
         build: [
           "ash-framework": [
             description:
-              "Use when working with Ash Framework or any Ash extension (ash_postgres, ash_authentication, ash_typescript, etc). Always consult this for domain changes, resources, or Ash-related features.",
+              "Use when working with Ash Framework or any Ash extension (ash_postgres, ash_authentication, etc). Always consult this for domain changes, resources, or Ash-related features.",
             usage_rules: [:ash, ~r/^ash_/]
           ],
           "phoenix-framework": [
@@ -92,15 +92,13 @@ defmodule TcmEdu.MixProject do
       # Ash framework
       {:ash, "~> 3.0"},
       {:ash_postgres, "~> 2.0"},
-      {:ash_typescript, "~> 0.17"},
       # SAT solver required by Ash.Policy.Authorizer
       {:picosat_elixir, "~> 0.2"},
       # Authentication
       {:ash_authentication, "~> 4.0"},
       {:ash_authentication_phoenix, "~> 2.0"},
       {:bcrypt_elixir, "~> 3.0"},
-      # RPC / CORS support
-      {:jsonrpc2, "~> 1.0"},
+      # CORS support
       {:cors_plug, "~> 3.0"},
       # LiveView test helper (parses rendered HTML for assertions).
       {:lazy_html, ">= 0.1.0", only: :test},

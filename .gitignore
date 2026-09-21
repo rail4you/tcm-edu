@@ -28,14 +28,6 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 tcm_edu-*.tar
 
-priv/app/
-
-# Frontend monorepo (pnpm workspaces) build artifacts
-frontend-monorepo/**/node_modules/
-frontend-monorepo/apps/*/.next/
-frontend-monorepo/apps/*/out/
-*.tsbuildinfo
-
 # Phoenix assets pipeline (Tailwind v4 + daisyUI + esbuild in assets/):
 # npm deps and compiled output are rebuilt via `mix assets.setup/build`.
 /assets/node_modules/
