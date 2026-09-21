@@ -1,8 +1,8 @@
 defmodule TcmEduWeb.TeacherCoursesLive do
   @moduledoc """
   Teacher course list at `/teacher/courses`: keyword search, status
-  filter tabs with counts, table / card view switch, publish / archive /
-  delete with confirmation.
+  filter tabs with counts, table / card view switch, inline create and
+  edit modals, publish / archive / delete with confirmation.
   """
 
   use TcmEduWeb, :live_view
@@ -10,11 +10,16 @@ defmodule TcmEduWeb.TeacherCoursesLive do
   import TcmEduWeb.TeacherComponents, only: [teacher_shell: 1]
 
   alias TcmEdu.Courses.Course
+  alias TcmEdu.Courses.CourseCategory
+
+  @levels ~w(beginner intermediate advanced)
 
   on_mount {TcmEduWeb.TeacherAuth, :ensure_teacher}
 
   @impl true
   def mount(_params, _session, socket) do
+    teacher = socket.assigns.current_teacher
+
     {:ok,
      socket
      |> assign(:page_title, "我的课程")
@@ -23,6 +28,12 @@ defmodule TcmEduWeb.TeacherCoursesLive do
      |> assign(:status_filter, "all")
      |> assign(:view, "table")
      |> assign(:deleting, nil)
+     |> assign(:categories, list_categories(teacher))
+     |> assign(:create_modal, false)
+     |> assign(:create_form, course_form(%{}))
+     |> assign(:edit_modal, false)
+     |> assign(:editing, nil)
+     |> assign(:edit_form, course_form(%{}))
      |> load_courses()}
   end
 
@@ -40,6 +51,52 @@ defmodule TcmEduWeb.TeacherCoursesLive do
     {:noreply, assign(socket, :view, view)}
   end
 
+  def handle_event("open-create", _params, socket) do
+    {:noreply, assign(socket, :create_modal, true) |> assign(:create_form, course_form(%{}))}
+  end
+
+  def handle_event("close-create", _params, socket) do
+    {:noreply, assign(socket, :create_modal, false)}
+  end
+
+  def handle_event("validate-create", %{"course" => params}, socket) do
+    {:noreply, assign(socket, :create_form, course_form(params))}
+  end
+
+  def handle_event("create-course", %{"course" => params}, socket) do
+    teacher = socket.assigns.current_teacher
+    changeset = course_changeset(params)
+
+    if changeset.valid? do
+      get = &Ecto.Changeset.get_field(changeset, &1)
+
+      attrs = %{
+        title: get.(:title) |> to_string() |> String.trim(),
+        subtitle: get_optional(changeset, :subtitle),
+        description: get_optional(changeset, :description),
+        cover_image_url: get_optional(changeset, :cover_image_url),
+        level: get_atom(changeset, :level, :beginner),
+        price_cents: get_price_cents(changeset),
+        teacher_id: teacher.id,
+        category_id: get_optional(changeset, :category_id)
+      }
+
+      case Course.create_course(attrs, actor: teacher.actor, tenant: teacher.tenant) do
+        {:ok, course} ->
+          {:noreply,
+           socket
+           |> assign(:create_modal, false)
+           |> put_flash(:info, "课程《#{course.title}》已创建，回到列表继续编辑")
+           |> push_navigate(to: "/teacher/courses")}
+
+        {:error, error} ->
+          {:noreply, put_flash(socket, :error, ash_message(error))}
+      end
+    else
+      {:noreply, assign(socket, :create_form, Phoenix.Component.to_form(changeset, as: "course"))}
+    end
+  end
+
   def handle_event("transition", %{"id" => id, "to" => to}, socket)
       when to in ["publish", "archive"] do
     action = String.to_existing_atom(to)
@@ -53,8 +110,83 @@ defmodule TcmEduWeb.TeacherCoursesLive do
       message = if to == "publish", do: "已发布", else: "已下架"
       {:noreply, socket |> put_flash(:info, message) |> load_courses()}
     else
-      nil -> {:noreply, put_flash(socket, :error, "课程不存在")}
-      {:error, error} -> {:noreply, put_flash(socket, :error, ash_message(error))}
+      nil ->
+        {:noreply, put_flash(socket, :error, "课程不存在")}
+
+      {:error, error} ->
+        if to == "publish" do
+          {:noreply,
+           socket
+           |> put_flash(
+             :error,
+             "还不能发布：至少需要 1 个章节且章节下有 1 个课时，请先添加内容"
+           )
+           |> load_courses()}
+        else
+          {:noreply, put_flash(socket, :error, ash_message(error))}
+        end
+    end
+  end
+
+  def handle_event("open-edit", %{"id" => id}, socket) do
+    case find_course(socket, id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "课程不存在")}
+
+      course ->
+        {:noreply,
+         assign(socket,
+           edit_modal: true,
+           editing: course,
+           edit_form: course_form(course_to_params(course))
+         )}
+    end
+  end
+
+  def handle_event("close-edit", _params, socket) do
+    {:noreply, assign(socket, edit_modal: false, editing: nil)}
+  end
+
+  def handle_event("validate-edit", %{"course" => params}, socket) do
+    {:noreply, assign(socket, :edit_form, course_form(params))}
+  end
+
+  def handle_event("save-edit", %{"course" => params}, socket) do
+    teacher = socket.assigns.current_teacher
+    course = socket.assigns.editing
+    changeset = course_changeset(params)
+
+    if changeset.valid? do
+      get = &Ecto.Changeset.get_field(changeset, &1)
+
+      attrs = %{
+        title: get.(:title) |> to_string() |> String.trim(),
+        subtitle: get_optional(changeset, :subtitle),
+        description: get_optional(changeset, :description),
+        cover_image_url: get_optional(changeset, :cover_image_url),
+        level: get_atom(changeset, :level, :beginner),
+        price_cents: get_price_cents(changeset),
+        category_id: get_optional(changeset, :category_id)
+      }
+
+      case course
+           |> Ash.Changeset.for_update(:update, attrs,
+             actor: teacher.actor,
+             tenant: teacher.tenant
+           )
+           |> Ash.update() do
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> assign(edit_modal: false, editing: nil)
+           |> put_flash(:info, "课程信息已保存")
+           |> load_courses()}
+
+        {:error, error} ->
+          {:noreply, put_flash(socket, :error, ash_message(error))}
+      end
+    else
+      {:noreply, assign(socket, :edit_form, Phoenix.Component.to_form(changeset, as: "course"))}
     end
   end
 
@@ -86,245 +218,13 @@ defmodule TcmEduWeb.TeacherCoursesLive do
     end
   end
 
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <Layouts.app flash={@flash} shell={:admin}>
-      <.teacher_shell
-        current_teacher={@current_teacher}
-        current_page={:courses}
-        page_title="我的课程"
-        page_subtitle="创建课程 → 添加章节与课时 → 发布，学生即可选课"
-      >
-        <:page_actions>
-          <.link navigate="/teacher/courses/new" class="btn btn-primary btn-sm" id="new-course-btn">
-            <.icon name="hero-plus" class="size-4" /> 创建课程
-          </.link>
-        </:page_actions>
-
-        <div class="card bg-base-100 shadow-sm">
-          <div class="card-body gap-4 p-4 sm:p-6">
-            <div class="flex flex-wrap items-center gap-2">
-              <form phx-change="search" phx-submit="search" class="min-w-52 flex-1">
-                <label class="input input-bordered input-sm flex items-center gap-2">
-                  <.icon name="hero-magnifying-glass" class="size-4 text-base-content/60" />
-                  <input
-                    type="search"
-                    name="keyword"
-                    value={@keyword}
-                    placeholder="搜索课程标题"
-                    class="grow"
-                    aria-label="搜索课程"
-                  />
-                </label>
-              </form>
-              <div class="join" role="tablist" aria-label="视图切换">
-                <button
-                  class={["btn join-item btn-sm", @view == "table" && "btn-active"]}
-                  phx-click="view"
-                  phx-value-view="table"
-                  aria-label="表格视图"
-                >
-                  <.icon name="hero-bars-3-bottom-left" class="size-4" />
-                </button>
-                <button
-                  class={["btn join-item btn-sm", @view == "card" && "btn-active"]}
-                  phx-click="view"
-                  phx-value-view="card"
-                  aria-label="卡片视图"
-                >
-                  <.icon name="hero-squares-2x2" class="size-4" />
-                </button>
-              </div>
-            </div>
-
-            <div class="tabs tabs-boxed w-fit" role="tablist" aria-label="按状态筛选">
-              <button
-                :for={s <- ["all", "draft", "published", "archived"]}
-                role="tab"
-                class={["tab", @status_filter == s && "tab-active"]}
-                phx-click="filter"
-                phx-value-status={s}
-              >
-                {status_label(s)}（{count_by(@courses, s)}）
-              </button>
-            </div>
-
-            <div :if={@view == "table"} class="overflow-x-auto rounded-box border border-base-300">
-              <table class="table table-zebra table-pin-rows">
-                <thead>
-                  <tr>
-                    <th>课程</th>
-                    <th>状态</th>
-                    <th>难度</th>
-                    <th class="text-right tabular-nums">课时</th>
-                    <th class="text-right tabular-nums">价格</th>
-                    <th class="text-right">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr :for={course <- visible(@courses, @status_filter, @keyword)} id={"course-#{course.id}"}>
-                    <td>
-                      <div class="flex items-center gap-3">
-                        <span class="avatar">
-                          <span class="flex size-10 items-center justify-center overflow-hidden rounded-box bg-base-200">
-                            <img
-                              :if={course.cover_image_url}
-                              src={course.cover_image_url}
-                              alt=""
-                              loading="lazy"
-                              class="h-full w-full object-cover"
-                            />
-                            <span :if={!course.cover_image_url} class="text-sm font-semibold text-primary">
-                              {String.first(course.title)}
-                            </span>
-                          </span>
-                        </span>
-                        <div class="min-w-0">
-                          <p class="max-w-64 truncate font-medium">{course.title}</p>
-                          <p class="max-w-64 truncate text-xs text-base-content/60">{course.subtitle || "暂无简介"}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td><.status_badge status={course.status} /></td>
-                    <td>{level_label(course.level)}</td>
-                    <td class="text-right tabular-nums">{course.lesson_count || 0}</td>
-                    <td class="text-right tabular-nums">{price_label(course.price_cents)}</td>
-                    <td>
-                      <div class="flex justify-end gap-1">
-                        <.link navigate={"/teacher/courses/#{course.id}/edit"} class="btn btn-ghost btn-xs">
-                          编辑
-                        </.link>
-                        <button
-                          :if={course.status != :published}
-                          class="btn btn-ghost btn-xs"
-                          phx-click="transition"
-                          phx-value-id={course.id}
-                          phx-value-to="publish"
-                        >
-                          发布
-                        </button>
-                        <button
-                          :if={course.status == :published}
-                          class="btn btn-ghost btn-xs"
-                          phx-click="transition"
-                          phx-value-id={course.id}
-                          phx-value-to="archive"
-                        >
-                          下架
-                        </button>
-                        <button
-                          class="btn btn-ghost btn-xs text-error"
-                          phx-click="confirm-delete"
-                          phx-value-id={course.id}
-                        >
-                          删除
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr :if={visible(@courses, @status_filter, @keyword) == []}>
-                    <td colspan="100%">
-                      <div class="flex flex-col items-center gap-2 py-8">
-                        <.icon name="hero-book-open" class="size-8 text-base-content/40" />
-                        <p class="text-sm text-base-content/60">没有匹配的课程</p>
-                        <.link navigate="/teacher/courses/new" class="btn btn-sm btn-primary">
-                          创建课程
-                        </.link>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div :if={@view == "card"} class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <div
-                :for={course <- visible(@courses, @status_filter, @keyword)}
-                class="card bg-base-100 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-                id={"course-card-#{course.id}"}
-              >
-                <figure class="relative aspect-[16/9] overflow-hidden bg-base-200">
-                  <img
-                    :if={course.cover_image_url}
-                    src={course.cover_image_url}
-                    alt={course.title}
-                    loading="lazy"
-                    class="h-full w-full object-cover"
-                  />
-                  <span :if={!course.cover_image_url} class="flex h-full w-full items-center justify-center text-4xl font-semibold text-primary/60">
-                    {String.first(course.title)}
-                  </span>
-                  <span class="absolute left-2 top-2"><.status_badge status={course.status} /></span>
-                </figure>
-                <div class="card-body gap-2 p-4">
-                  <p class="truncate font-medium">{course.title}</p>
-                  <p class="line-clamp-2 min-h-8 text-xs text-base-content/60">{course.subtitle || "暂无简介"}</p>
-                  <div class="flex flex-wrap gap-2">
-                    <span class="badge badge-soft badge-xs">{level_label(course.level)}</span>
-                    <span class="badge badge-soft badge-info badge-xs">{course.lesson_count || 0} 课时</span>
-                    <span class="badge badge-soft badge-success badge-xs">{price_label(course.price_cents)}</span>
-                  </div>
-                  <div class="card-actions justify-end">
-                    <.link navigate={"/teacher/courses/#{course.id}/edit"} class="btn btn-ghost btn-xs">
-                      编辑
-                    </.link>
-                    <button
-                      :if={course.status != :published}
-                      class="btn btn-ghost btn-xs"
-                      phx-click="transition"
-                      phx-value-id={course.id}
-                      phx-value-to="publish"
-                    >
-                      发布
-                    </button>
-                    <button
-                      :if={course.status == :published}
-                      class="btn btn-ghost btn-xs"
-                      phx-click="transition"
-                      phx-value-id={course.id}
-                      phx-value-to="archive"
-                    >
-                      下架
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div :if={visible(@courses, @status_filter, @keyword) == []} class="card bg-base-100 shadow-sm md:col-span-2 xl:col-span-3">
-                <div class="card-body items-center gap-2 p-8">
-                  <.icon name="hero-book-open" class="size-8 text-base-content/40" />
-                  <p class="text-sm text-base-content/60">没有匹配的课程</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div :if={@deleting} class="modal modal-open" role="dialog" aria-modal="true">
-          <div class="modal-box">
-            <p class="text-lg font-medium">删除课程《{@deleting.title}》？</p>
-            <p class="py-2 text-sm text-base-content/60">章节课时将一并删除，该操作不可恢复。</p>
-            <div class="modal-action">
-              <button type="button" class="btn btn-soft" phx-click="close-delete">取消</button>
-              <button type="button" class="btn btn-error" phx-click="delete" id="confirm-delete-btn">
-                确认删除
-              </button>
-            </div>
-          </div>
-          <div class="modal-backdrop" phx-click="close-delete"></div>
-        </div>
-      </.teacher_shell>
-    </Layouts.app>
-    """
-  end
-
   attr :status, :atom, required: true
 
   defp status_badge(assigns) do
     ~H"""
-    <span :if={@status == :draft} class="badge badge-soft badge-ghost">草稿</span>
-    <span :if={@status == :published} class="badge badge-soft badge-success">已发布</span>
-    <span :if={@status == :archived} class="badge badge-soft badge-warning">已下架</span>
+    <span :if={@status == :draft} class="badge badge-soft badge-xs badge-ghost">草稿</span>
+    <span :if={@status == :published} class="badge badge-soft badge-xs badge-success">已发布</span>
+    <span :if={@status == :archived} class="badge badge-soft badge-xs badge-warning">已下架</span>
     """
   end
 
@@ -376,7 +276,7 @@ defmodule TcmEduWeb.TeacherCoursesLive do
           actor: teacher.actor,
           tenant: teacher.tenant
         )
-        |> Ash.Query.load([:lesson_count])
+        |> Ash.Query.load([:lesson_count, :chapter_count])
         |> Ash.read!()
         |> Enum.sort_by(& &1.inserted_at, {:desc, DateTime})
       rescue
@@ -386,9 +286,97 @@ defmodule TcmEduWeb.TeacherCoursesLive do
     assign(socket, :courses, courses)
   end
 
+  defp can_publish?(course) do
+    (course.chapter_count || 0) > 0 and (course.lesson_count || 0) > 0
+  end
+
+  defp course_to_params(course) do
+    %{
+      "title" => course.title,
+      "subtitle" => course.subtitle || "",
+      "description" => course.description || "",
+      "cover_image_url" => course.cover_image_url || "",
+      "level" => to_string(course.level || :beginner),
+      "price_yuan" => if(is_nil(course.price_cents), do: 0, else: course.price_cents / 100),
+      "category_id" => course.category_id || ""
+    }
+  end
+
+  defp level_options, do: [{"初级", "beginner"}, {"中级", "intermediate"}, {"高级", "advanced"}]
+
+  defp list_categories(teacher) do
+    case CourseCategory
+         |> Ash.Query.for_read(:read, %{}, actor: teacher.actor, tenant: teacher.tenant)
+         |> Ash.read() do
+      {:ok, cats} -> Enum.sort_by(cats, & &1.name)
+      _ -> []
+    end
+  end
+
+  defp course_form(params) do
+    params |> course_changeset() |> Phoenix.Component.to_form(as: "course")
+  end
+
+  defp course_changeset(params) do
+    types = %{
+      title: :string,
+      subtitle: :string,
+      description: :string,
+      cover_image_url: :string,
+      level: :string,
+      price_yuan: :float,
+      category_id: :string
+    }
+
+    {%{level: "beginner"}, types}
+    |> Ecto.Changeset.cast(params, Map.keys(types))
+    |> Ecto.Changeset.validate_required([:title])
+    |> Ecto.Changeset.validate_length(:title, max: 100)
+    |> Ecto.Changeset.validate_inclusion(:level, @levels)
+    |> Ecto.Changeset.validate_number(:price_yuan, greater_than_or_equal_to: 0)
+  end
+
+  defp get_optional(changeset, field) do
+    case Ecto.Changeset.get_field(changeset, field) do
+      nil -> nil
+      "" -> nil
+      value when is_binary(value) -> String.trim(value)
+      value -> value
+    end
+  end
+
+  defp get_atom(changeset, field, default) do
+    case Ecto.Changeset.get_field(changeset, field) do
+      nil -> default
+      "" -> default
+      value -> String.to_existing_atom(value)
+    end
+  end
+
+  defp get_price_cents(changeset) do
+    case Ecto.Changeset.get_field(changeset, :price_yuan) do
+      nil -> 0
+      yuan when is_number(yuan) -> round(yuan * 100)
+      _ -> 0
+    end
+  end
+
+  defp ash_message(%Ash.Error.Invalid{} = error) do
+    error.errors
+    |> Enum.map(&Exception.message/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.join("；")
+  end
+
+  defp ash_message(%Ash.Error.Forbidden{}) do
+    "没有权限执行该操作"
+  end
+
   defp ash_message(error) do
-    Exception.message(error)
-  rescue
-    _ -> "操作失败，请稍后重试"
+    error
+    |> Exception.message()
+    |> String.split("\n")
+    |> hd()
+    |> String.trim()
   end
 end

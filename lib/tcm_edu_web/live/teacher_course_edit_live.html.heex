@@ -1,0 +1,249 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.teacher_shell
+    current_teacher={@current_teacher}
+    current_page={:courses}
+    page_title="编辑课程"
+    page_subtitle={@course && @course.title}
+  >
+    <:page_actions>
+      <.link navigate="/teacher/courses" class="btn btn-soft btn-sm">返回列表</.link>
+      <button
+        :if={@course && @course.status == :published}
+        class="btn btn-soft btn-sm"
+        phx-click="transition"
+        phx-value-to="archive"
+      >
+        下架
+      </button>
+      <button
+        :if={@course && @course.status != :published}
+        class="btn btn-primary btn-sm"
+        phx-click="transition"
+        phx-value-to="publish"
+        disabled={!can_publish?(@course)}
+        title={if can_publish?(@course), do: "", else: "至少需要 1 个章节且章节下有 1 个课时才能发布"}
+      >
+        发布课程
+      </button>
+    </:page_actions>
+
+    <div :if={@not_found} class="card bg-base-100 shadow-sm">
+      <div class="card-body items-center gap-2 p-8">
+        <.icon name="hero-exclamation-triangle" class="size-8 text-base-content/40" />
+        <p class="text-sm text-base-content/60">课程不存在或您没有权限查看</p>
+        <.link navigate="/teacher/courses" class="btn btn-primary btn-sm">返回列表</.link>
+      </div>
+    </div>
+
+    <div :if={!@not_found} class="grid max-w-6xl items-start gap-6">
+      <fieldset class="fieldset rounded-box bg-base-100 p-4 shadow-sm sm:p-6">
+        <legend class="fieldset-legend px-2 text-sm font-medium">基本信息</legend>
+        <div class="flex items-center gap-2">
+          <p class="text-xs text-base-content/60">当前状态</p>
+          <.status_badge :if={@course} status={@course.status} />
+        </div>
+        <.form
+          for={@basic_form}
+          id="edit-course-form"
+          phx-change="validate-basic"
+          phx-submit="save-basic"
+          class="mt-3 flex flex-col gap-3"
+        >
+          <.input field={@basic_form[:title]} type="text" label="标题" maxlength="100" required />
+          <.input field={@basic_form[:subtitle]} type="text" label="副标题" maxlength="200" />
+          <.input field={@basic_form[:description]} type="textarea" label="简介" rows="3" maxlength="2000" />
+          <.input field={@basic_form[:cover_image_url]} type="text" label="封面图片 URL" />
+          <div class="grid gap-3 sm:grid-cols-2">
+            <.input field={@basic_form[:level]} type="select" label="难度" options={level_options()} />
+            <.input field={@basic_form[:price_yuan]} type="number" label="价格（元，0 = 免费）" min="0" step="0.01" />
+          </div>
+          <.input
+            field={@basic_form[:category_id]}
+            type="select"
+            label="分类"
+            prompt="选择分类（可选）"
+            options={Enum.map(@categories, &{&1.name, &1.id})}
+          />
+          <.button type="submit" phx-disable-with="保存中..." class="btn-primary mt-2 w-fit">保存基本信息</.button>
+        </.form>
+      </fieldset>
+
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body gap-3 p-4 sm:p-6">
+          <div class="flex items-center justify-between gap-2">
+            <p class="font-medium">章节与课时</p>
+            <button class="btn btn-primary btn-sm" phx-click="open-create-chapter" id="add-chapter-btn">
+              <.icon name="hero-plus" class="size-4" /> 添加章节
+            </button>
+          </div>
+
+          <p :if={@course && @course.chapters == []} class="text-sm text-base-content/60">
+            暂无章节，点击右上「添加章节」开始备课。
+          </p>
+
+          <div :for={{chapter, index} <- Enum.with_index((@course && @course.chapters) || [], 1)} class="flex flex-col gap-2">
+            <div class={[
+              "collapse bg-base-200/30",
+              MapSet.member?(@open_chapters, chapter.id) && "collapse-open"
+            ]}>
+              <div class="collapse-title flex items-center gap-2 p-4">
+                <span
+                  class="flex min-w-0 flex-1 cursor-pointer items-center gap-2"
+                  phx-click="toggle-chapter"
+                  phx-value-id={chapter.id}
+                  role="button"
+                  tabindex="0"
+                  aria-expanded={to_string(MapSet.member?(@open_chapters, chapter.id))}
+                >
+                  <.icon
+                    name="hero-chevron-down"
+                    class={[
+                      "size-4 shrink-0 transition-transform",
+                      MapSet.member?(@open_chapters, chapter.id) && "rotate-180"
+                    ]}
+                  />
+                  <p class="truncate font-medium">
+                    第 {index} 章 · {chapter.title}（{length(chapter.lessons || [])} 课时）
+                  </p>
+                </span>
+                <div class="flex shrink-0 gap-1">
+                  <button
+                    class="btn btn-ghost btn-sm"
+                    phx-click="open-edit-chapter"
+                    phx-value-id={chapter.id}
+                  >
+                    改名
+                  </button>
+                  <button
+                    class="btn btn-ghost btn-sm text-error"
+                    phx-click="confirm-delete-chapter"
+                    phx-value-id={chapter.id}
+                  >
+                    删除
+                  </button>
+                </div>
+              </div>
+              <div class="collapse-content">
+                <div class="flex flex-col">
+                  <div
+                    :for={{lesson, li} <- Enum.with_index(sorted_lessons(chapter.lessons), 1)}
+                    class="flex items-center justify-between gap-2 border-t border-base-300 py-2"
+                  >
+                    <div class="flex min-w-0 flex-wrap items-center gap-2">
+                      <span class="badge badge-soft badge-xs badge-ghost">{li}</span>
+                      <p class="truncate text-sm">{lesson.title}</p>
+                      <span class="badge badge-soft badge-xs badge-info">{content_type_label(lesson.content_type)}</span>
+                      <span :if={lesson.is_free_preview} class="badge badge-soft badge-xs badge-success">试看</span>
+                      <span :if={lesson.duration_seconds} class="badge badge-soft badge-xs">
+                        {div(lesson.duration_seconds, 60)} 分钟
+                      </span>
+                    </div>
+                    <div class="flex shrink-0 gap-1">
+                      <button
+                        class="btn btn-ghost btn-sm"
+                        phx-click="open-edit-lesson"
+                        phx-value-id={lesson.id}
+                      >
+                        编辑
+                      </button>
+                      <button
+                        class="btn btn-ghost btn-sm text-error"
+                        phx-click="confirm-delete-lesson"
+                        phx-value-id={lesson.id}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    class="btn btn-soft btn-sm mt-2 w-full"
+                    phx-click="open-create-lesson"
+                    phx-value-chapter-id={chapter.id}
+                  >
+                    <.icon name="hero-plus" class="size-4" /> 添加课时
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div :if={@chapter_modal} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <div class="flex items-start justify-between gap-4">
+          <p class="text-lg font-medium">{if @chapter_editing, do: "重命名章节", else: "添加章节"}</p>
+          <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-chapter-modal" aria-label="关闭">
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </div>
+        <.form for={@chapter_form} id="chapter-form" phx-submit="save-chapter" class="mt-4 flex flex-col gap-3">
+          <.input field={@chapter_form[:title]} type="text" label="章节标题" placeholder="如：第一章 阴阳五行" maxlength="100" required />
+          <div class="modal-action">
+            <button type="button" class="btn btn-soft" phx-click="close-chapter-modal">取消</button>
+            <.button type="submit" phx-disable-with="保存中..." class="btn-primary">保存</.button>
+          </div>
+        </.form>
+      </div>
+      <div class="modal-backdrop" phx-click="close-chapter-modal"></div>
+    </div>
+
+    <div :if={@lesson_modal} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <div class="flex items-start justify-between gap-4">
+          <p class="text-lg font-medium">{if @lesson_editing, do: "编辑课时", else: "添加课时"}</p>
+          <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-lesson-modal" aria-label="关闭">
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </div>
+        <.form for={@lesson_form} id="lesson-form" phx-submit="save-lesson" class="mt-4 flex flex-col gap-3">
+          <.input field={@lesson_form[:title]} type="text" label="课时标题" placeholder="如：1.1 阴阳学说概述" maxlength="100" required />
+          <.input field={@lesson_form[:content_type]} type="select" label="类型" options={content_type_options()} />
+          <.input field={@lesson_form[:content_url]} type="text" label="内容链接" placeholder="视频 / PDF URL（文章类型可留空）" />
+          <.input field={@lesson_form[:duration_seconds]} type="number" label="时长（秒）" min="0" step="1" />
+          <.input field={@lesson_form[:is_free_preview]} type="checkbox" label="免费试看" />
+          <div class="modal-action">
+            <button type="button" class="btn btn-soft" phx-click="close-lesson-modal">取消</button>
+            <.button type="submit" phx-disable-with="保存中..." class="btn-primary">保存</.button>
+          </div>
+        </.form>
+      </div>
+      <div class="modal-backdrop" phx-click="close-lesson-modal"></div>
+    </div>
+
+    <div :if={@deleting_chapter} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <p class="text-lg font-medium">删除章节 {@deleting_chapter.title}？</p>
+        <div class="alert alert-soft alert-error mt-3">
+          <.icon name="hero-exclamation-triangle" class="size-5" />
+          <p class="text-sm">其下课时将一并删除，该操作不可恢复。</p>
+        </div>
+        <div class="modal-action">
+          <button type="button" class="btn btn-soft" phx-click="close-delete-chapter">取消</button>
+          <button type="button" class="btn btn-error" phx-click="delete-chapter" id="confirm-delete-chapter-btn">
+            确认删除
+          </button>
+        </div>
+      </div>
+      <div class="modal-backdrop" phx-click="close-delete-chapter"></div>
+    </div>
+
+    <div :if={@deleting_lesson} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <p class="text-lg font-medium">删除课时 {@deleting_lesson.title}？</p>
+        <div class="alert alert-soft alert-error mt-3">
+          <.icon name="hero-exclamation-triangle" class="size-5" />
+          <p class="text-sm">该操作不可恢复。</p>
+        </div>
+        <div class="modal-action">
+          <button type="button" class="btn btn-soft" phx-click="close-delete-lesson">取消</button>
+          <button type="button" class="btn btn-error" phx-click="delete-lesson" id="confirm-delete-lesson-btn">
+            确认删除
+          </button>
+        </div>
+      </div>
+      <div class="modal-backdrop" phx-click="close-delete-lesson"></div>
+    </div>
+  </.teacher_shell>
+</Layouts.app>

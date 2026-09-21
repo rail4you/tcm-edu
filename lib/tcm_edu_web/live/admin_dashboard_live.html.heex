@@ -1,0 +1,83 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.admin_shell current_admin={@current_admin} current_page={:dashboard} page_title="工作台">
+    <div :if={@current_admin.role == "super_admin"} class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <.stat_card title="租户总数" value={@stats.total} hint="平台累计创建" icon="hero-building-office-2" />
+      <.stat_card
+        title="运营中"
+        value={@stats.active}
+        hint="状态为 active 的租户"
+        icon="hero-check-circle"
+        tone="text-success"
+      />
+      <.stat_card
+        title="已暂停"
+        value={@stats.suspended}
+        hint="需要跟进处理"
+        icon="hero-pause-circle"
+        tone="text-warning"
+      />
+      <.stat_card title="已归档" value={@stats.archived} hint="历史保留数据" icon="hero-archive-box" />
+    </div>
+
+    <div :if={@current_admin.role == "super_admin"} class="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
+      <div class="card bg-base-100 shadow-sm xl:col-span-2">
+        <div class="card-body gap-3 p-4 sm:p-6">
+          <div class="flex items-center justify-between gap-2">
+            <p class="font-medium">最近创建的租户</p>
+            <.link navigate="/admin/tenants" class="link link-primary text-sm">查看全部</.link>
+          </div>
+          <.tenant_table orgs={@recent_orgs} />
+        </div>
+      </div>
+      <div class="flex flex-col gap-6">
+        <div class="card bg-base-100 shadow-sm">
+          <div class="card-body gap-3 p-4 sm:p-6">
+            <p class="font-medium">快捷入口</p>
+            <div class="flex flex-col gap-2">
+              <.link navigate="/admin/tenants" class="btn btn-primary justify-start">
+                <.icon name="hero-plus" class="size-4" /> 创建租户
+              </.link>
+              <.link navigate="/admin/users" class="btn btn-soft justify-start">
+                <.icon name="hero-users" class="size-4" /> 用户管理
+              </.link>
+            </div>
+            <div class="divider my-1" />
+            <p class="text-xs text-base-content/60">套餐分布</p>
+            <div class="flex flex-wrap gap-2">
+              <span :for={{plan, count} <- @stats.plans} class="badge badge-soft">
+                {plan_label(plan)} · {count}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div :if={@current_admin.role == "tenant_admin"} class="flex flex-col gap-6">
+      <div class="alert alert-soft alert-info">
+        <.icon name="hero-information-circle" class="size-5" />
+        <p class="text-sm">
+          当前机构：<span class="font-medium">{@current_admin.tenant}</span>
+        </p>
+      </div>
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <.stat_card title="用户总数" value={@stats.users} hint="本机构全部用户" icon="hero-users" />
+        <.stat_card title="教师" value={@stats.teachers} hint="在职授课教师" icon="hero-academic-cap" />
+        <.stat_card title="学生" value={@stats.students} hint="在册学习学生" icon="hero-book-open" />
+      </div>
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body gap-3 p-4 sm:p-6">
+          <div class="flex items-center justify-between gap-2">
+            <p class="font-medium">快捷入口</p>
+            <.link navigate="/admin/users" class="link link-primary text-sm">管理用户</.link>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <.link navigate="/admin/users" class="btn btn-primary">
+              <.icon name="hero-user-plus" class="size-4" /> 创建用户
+            </.link>
+          </div>
+        </div>
+      </div>
+    </div>
+  </.admin_shell>
+</Layouts.app>

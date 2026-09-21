@@ -14,85 +14,42 @@ defmodule TcmEduWeb.TeacherStudentsLive do
 
   on_mount {TcmEduWeb.TeacherAuth, :ensure_teacher}
 
+  @page_size 10
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(:page_title, "我的学生")
      |> assign(:keyword, "")
+     |> assign(:page, 1)
      |> load_students()}
   end
 
   @impl true
   def handle_event("search", %{"keyword" => keyword}, socket) do
-    {:noreply, assign(socket, :keyword, String.trim(keyword))}
+    {:noreply, socket |> assign(:keyword, String.trim(keyword)) |> assign(:page, 1)}
   end
 
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <Layouts.app flash={@flash} shell={:admin}>
-      <.teacher_shell
-        current_teacher={@current_teacher}
-        current_page={:students}
-        page_title="我的学生"
-        page_subtitle={"本机构共 #{length(@students)} 名学生"}
-      >
-        <:page_actions>
-          <form phx-change="search" phx-submit="search">
-            <label class="input input-bordered input-sm flex items-center gap-2">
-              <.icon name="hero-magnifying-glass" class="size-4 text-base-content/60" />
-              <input
-                type="search"
-                name="keyword"
-                value={@keyword}
-                placeholder="按邮箱 / 姓名筛选"
-                class="grow"
-                aria-label="按邮箱或姓名筛选学生"
-              />
-            </label>
-          </form>
-        </:page_actions>
+  def handle_event("page", %{"page" => page}, socket) do
+    page =
+      case Integer.parse(page) do
+        {n, _} when n >= 1 -> min(n, total_pages(socket.assigns.students, socket.assigns.keyword))
+        _ -> 1
+      end
 
-        <div class="card bg-base-100 shadow-sm">
-          <div class="card-body gap-2.5 p-4 sm:p-6">
-            <div class="overflow-x-auto rounded-box border border-base-300">
-              <table class="table table-zebra table-pin-rows">
-                <thead>
-                  <tr>
-                    <th>邮箱</th>
-                    <th>姓名</th>
-                    <th>状态</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr :for={student <- filtered(@students, @keyword)} class="hover:bg-base-200" id={"student-#{student.id}"}>
-                    <td class="font-medium">{student.email}</td>
-                    <td>{student.name || "-"}</td>
-                    <td>
-                      <span :if={student.status == :active} class="badge badge-soft badge-success">启用</span>
-                      <span :if={student.status != :active} class="badge badge-soft badge-error">停用</span>
-                    </td>
-                  </tr>
-                  <tr :if={filtered(@students, @keyword) == []}>
-                    <td colspan="100%">
-                      <div class="flex flex-col items-center gap-2 py-8">
-                        <.icon name="hero-users" class="size-8 text-base-content/40" />
-                        <p class="text-sm text-base-content/60">
-                          {if @keyword == "", do: "还没有学生", else: "没有匹配的学生"}
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </.teacher_shell>
-    </Layouts.app>
-    """
+    {:noreply, assign(socket, :page, page)}
   end
+
+  defp student_initial(%{name: name}) when is_binary(name) and byte_size(name) > 0 do
+    name |> String.trim() |> String.first() |> String.upcase()
+  end
+
+  defp student_initial(%{email: email}) when is_binary(email) and byte_size(email) > 0 do
+    email |> String.trim() |> String.first() |> String.upcase()
+  end
+
+  defp student_initial(_), do: "S"
 
   defp filtered(students, ""), do: students
 
@@ -104,6 +61,29 @@ defmodule TcmEduWeb.TeacherStudentsLive do
         String.contains?(String.downcase(student.name || ""), kw)
     end)
   end
+
+  defp page_size, do: @page_size
+
+  defp page_students(students, keyword, page) do
+    students
+    |> filtered(keyword)
+    |> Enum.slice((page - 1) * @page_size, @page_size)
+  end
+
+  defp total_pages(students, keyword) do
+    total = students |> filtered(keyword) |> length()
+    max(1, ceil(total / @page_size))
+  end
+
+  defp total_count(students, keyword), do: students |> filtered(keyword) |> length()
+
+  defp format_date(nil), do: "-"
+
+  defp format_date(%DateTime{} = dt) do
+    Calendar.strftime(dt, "%Y-%m-%d")
+  end
+
+  defp format_date(date), do: to_string(date)
 
   defp load_students(socket) do
     teacher = socket.assigns.current_teacher

@@ -1,0 +1,98 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.teacher_shell
+    current_teacher={@current_teacher}
+    current_page={:students}
+    page_title="我的学生"
+    page_subtitle={"本机构共 #{length(@students)} 名学生"}
+  >
+    <:page_actions>
+      <form phx-change="search" phx-submit="search" class="contents">
+        <label class="input input-sm flex items-center gap-2" for="student-search-input">
+          <.icon name="hero-magnifying-glass" class="size-4 text-base-content/60" />
+          <input
+            id="student-search-input"
+            type="search"
+            name="keyword"
+            value={@keyword}
+            placeholder="按邮箱 / 姓名筛选"
+            class="grow"
+            aria-label="按邮箱或姓名筛选学生"
+          />
+        </label>
+      </form>
+    </:page_actions>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body gap-3 p-4 sm:p-6">
+        <div class="overflow-x-auto">
+          <table class="table table-sm table-zebra table-pin-rows">
+            <thead>
+              <tr>
+                <th>学生</th>
+                <th>状态</th>
+                <th class="text-right tabular-nums">加入时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={student <- page_students(@students, @keyword, @page)} class="transition-colors hover:bg-base-200" id={"student-#{student.id}"}>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <span class="avatar avatar-placeholder">
+                      <span class="flex size-10 items-center justify-center rounded-full bg-neutral text-sm text-neutral-content">
+                        {student_initial(student)}
+                      </span>
+                    </span>
+                    <div class="min-w-0">
+                      <p class="truncate font-medium">{student.name || student.email}</p>
+                      <p class="truncate text-xs text-base-content/60">{student.email}</p>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span :if={student.status == :active} class="badge badge-soft badge-xs badge-success">启用</span>
+                  <span :if={student.status != :active} class="badge badge-soft badge-xs badge-error">停用</span>
+                </td>
+                <td class="text-right tabular-nums text-base-content/60">
+                  {format_date(student.inserted_at)}
+                </td>
+              </tr>
+              <tr :if={total_count(@students, @keyword) == 0}>
+                <td colspan="100%">
+                  <div class="flex flex-col items-center gap-2 py-10">
+                    <.icon name="hero-users" class="size-8 text-base-content/40" />
+                    <p class="text-sm text-base-content/60">
+                      {if @keyword == "", do: "还没有学生", else: "没有匹配的学生"}
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div
+          :if={total_count(@students, @keyword) > page_size()}
+          class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 pt-3"
+        >
+          <p class="text-sm text-base-content/60">共 {total_count(@students, @keyword)} 名学生</p>
+          <div class="join">
+            <button class="btn join-item" phx-click="page" phx-value-page={@page - 1} disabled={@page <= 1}>
+              上一页
+            </button>
+            <button class="btn join-item btn-active" disabled>
+              {@page} / {total_pages(@students, @keyword)}
+            </button>
+            <button
+              class="btn join-item"
+              phx-click="page"
+              phx-value-page={@page + 1}
+              disabled={@page >= total_pages(@students, @keyword)}
+            >
+              下一页
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </.teacher_shell>
+</Layouts.app>

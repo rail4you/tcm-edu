@@ -164,162 +164,17 @@ defmodule TcmEduWeb.AdminUsersLive do
     end
   end
 
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <Layouts.app flash={@flash} shell={:admin}>
-      <.admin_shell current_admin={@current_admin} current_page={:users} page_title="用户管理">
-        <:page_actions>
-          <span :if={@current_admin.role == "super_admin"} class="flex items-center gap-2">
-            <.form for={%{}} as={:tenant_filter} phx-change="select-tenant" class="contents">
-              <select
-                name="tenant"
-                class="select select-bordered select-sm w-64"
-                aria-label="选择租户"
-              >
-                <option :for={t <- @tenants} value={t.schema_name} selected={t.schema_name == @tenant}>
-                  {t.name}（{t.schema_name}）
-                </option>
-              </select>
-            </.form>
-          </span>
-          <span :if={@current_admin.role != "super_admin" } class="badge badge-soft badge-info">
-            {@tenant}
-          </span>
-          <button class="btn btn-primary" phx-click="open-create" id="new-user-btn" disabled={is_nil(@tenant)}>
-            <.icon name="hero-plus" class="size-4" /> 创建用户
-          </button>
-        </:page_actions>
+  attr :role, :atom, required: true
 
-        <div class="card bg-base-100 shadow-sm">
-          <div class="card-body gap-2.5 p-4 sm:p-6">
-            <div class="overflow-x-auto">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>邮箱</th>
-                    <th>姓名</th>
-                    <th>角色</th>
-                    <th>状态</th>
-                    <th class="text-right">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr :for={user <- @users} class="hover:bg-base-200" id={"user-#{user.id}"}>
-                    <td class="font-medium">{user.email}</td>
-                    <td>{user.name || "-"}</td>
-                    <td><.role_badge role={user.role} /></td>
-                    <td>
-                      <span :if={user.status == :active} class="badge badge-soft badge-success">启用</span>
-                      <span :if={user.status != :active} class="badge badge-soft badge-error">停用</span>
-                    </td>
-                    <td>
-                      <div class="flex justify-end gap-1">
-                        <button class="btn btn-ghost btn-xs" phx-click="open-role" phx-value-id={user.id}>
-                          改角色
-                        </button>
-                        <button
-                          :if={user.status == :active}
-                          class="btn btn-ghost btn-xs"
-                          phx-click="set-status"
-                          phx-value-id={user.id}
-                          phx-value-status="disabled"
-                        >
-                          停用
-                        </button>
-                        <button
-                          :if={user.status != :active}
-                          class="btn btn-ghost btn-xs"
-                          phx-click="set-status"
-                          phx-value-id={user.id}
-                          phx-value-status="active"
-                        >
-                          启用
-                        </button>
-                        <button
-                          class="btn btn-ghost btn-xs text-error"
-                          phx-click="confirm-delete"
-                          phx-value-id={user.id}
-                        >
-                          删除
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr :if={@users == []}>
-                    <td colspan="100%">
-                      <div class="flex flex-col items-center gap-2 py-8">
-                        <.icon name="hero-users" class="size-8 text-base-content/40" />
-                        <p class="text-sm text-base-content/60">该租户还没有用户</p>
-                        <button class="btn btn-sm btn-primary" phx-click="open-create">
-                          创建第一个用户
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <div :if={@modal == :create} class="modal modal-open" role="dialog" aria-modal="true">
-          <div class="modal-box">
-            <p class="text-lg font-medium">创建用户</p>
-            <p class="py-1 text-xs text-base-content/60">目标租户：<code>{@tenant}</code></p>
-            <.form
-              for={@create_form}
-              id="create-user-form"
-              phx-change="validate-create"
-              phx-submit="create"
-              class="mt-2 flex flex-col gap-2.5"
-            >
-              <.input field={@create_form[:email]} type="email" label="邮箱" placeholder="user@example.com" required />
-              <.input field={@create_form[:name]} type="text" label="姓名" placeholder="可选" />
-              <.input field={@create_form[:password]} type="password" label="初始密码" placeholder="至少 6 位" required />
-              <.input field={@create_form[:role]} type="select" label="角色" options={role_options()} />
-              <div class="modal-action">
-                <button type="button" class="btn btn-soft" phx-click="close-modal">取消</button>
-                <.button type="submit" phx-disable-with="创建中..." class="btn-primary">创建</.button>
-              </div>
-            </.form>
-          </div>
-          <div class="modal-backdrop" phx-click="close-modal"></div>
-        </div>
-
-        <div :if={@modal == :role} class="modal modal-open" role="dialog" aria-modal="true">
-          <div class="modal-box">
-            <p class="text-lg font-medium">修改角色：{(@role_editing && @role_editing.email) || ""}</p>
-            <.form for={@role_form} id="edit-role-form" phx-submit="save-role" class="mt-2 flex flex-col gap-2.5">
-              <.input field={@role_form[:role]} type="select" label="角色" options={role_options()} />
-              <div class="modal-action">
-                <button type="button" class="btn btn-soft" phx-click="close-modal">取消</button>
-                <.button type="submit" phx-disable-with="保存中..." class="btn-primary">保存</.button>
-              </div>
-            </.form>
-          </div>
-          <div class="modal-backdrop" phx-click="close-modal"></div>
-        </div>
-
-        <div :if={@modal == :delete} class="modal modal-open" role="dialog" aria-modal="true">
-          <div class="modal-box">
-            <p class="text-lg font-medium">删除用户 {(@deleting && @deleting.email) || ""}？</p>
-            <p class="py-2 text-sm text-base-content/60">该操作不可恢复，请确认。</p>
-            <div class="modal-action">
-              <button type="button" class="btn btn-soft" phx-click="close-modal">取消</button>
-              <button type="button" class="btn btn-error" phx-click="delete" id="confirm-delete-btn">
-                确认删除
-              </button>
-            </div>
-          </div>
-          <div class="modal-backdrop" phx-click="close-modal"></div>
-        </div>
-      </.admin_shell>
-    </Layouts.app>
-    """
+  defp user_initial(%{name: name}) when is_binary(name) and byte_size(name) > 0 do
+    name |> String.trim() |> String.first() |> String.upcase()
   end
 
-  attr :role, :atom, required: true
+  defp user_initial(%{email: email}) when is_binary(email) and byte_size(email) > 0 do
+    email |> String.trim() |> String.first() |> String.upcase()
+  end
+
+  defp user_initial(_), do: "U"
 
   defp role_badge(assigns) do
     ~H"""

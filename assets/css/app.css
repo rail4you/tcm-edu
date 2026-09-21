@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-  themes: light --default, tcm;
+  themes: light --default, dark, tcm, business, winter;
 }
 @plugin "../vendor/heroicons.js";
 

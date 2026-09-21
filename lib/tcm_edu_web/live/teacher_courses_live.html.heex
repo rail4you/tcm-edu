@@ -1,0 +1,427 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.teacher_shell
+    current_teacher={@current_teacher}
+    current_page={:courses}
+    page_title="我的课程"
+    page_subtitle="创建课程 → 添加章节与课时 → 发布，学生即可选课"
+  >
+    <:page_actions>
+      <button class="btn btn-primary btn-sm" phx-click="open-create" id="new-course-btn">
+        <.icon name="hero-plus" class="size-4" /> 创建课程
+      </button>
+    </:page_actions>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body gap-4 p-4 sm:p-6">
+        <div class="flex flex-wrap items-center gap-2">
+          <form phx-change="search" phx-submit="search" class="min-w-52 flex-1">
+            <label class="input input-sm flex items-center gap-2" for="course-search-input">
+              <.icon name="hero-magnifying-glass" class="size-4 text-base-content/60" />
+              <input
+                id="course-search-input"
+                type="search"
+                name="keyword"
+                value={@keyword}
+                placeholder="搜索课程标题"
+                class="grow"
+                aria-label="搜索课程"
+              />
+            </label>
+          </form>
+          <div class="join" role="tablist" aria-label="视图切换">
+            <button
+              class={["btn join-item btn-sm", @view == "table" && "btn-active"]}
+              phx-click="view"
+              phx-value-view="table"
+              aria-label="表格视图"
+            >
+              <.icon name="hero-bars-3-bottom-left" class="size-4" />
+            </button>
+            <button
+              class={["btn join-item btn-sm", @view == "card" && "btn-active"]}
+              phx-click="view"
+              phx-value-view="card"
+              aria-label="卡片视图"
+            >
+              <.icon name="hero-squares-2x2" class="size-4" />
+            </button>
+          </div>
+        </div>
+
+        <div class="tabs tabs-box w-fit" role="tablist" aria-label="按状态筛选">
+          <button
+            :for={s <- ["all", "draft", "published", "archived"]}
+            role="tab"
+            class={["tab", @status_filter == s && "tab-active"]}
+            phx-click="filter"
+            phx-value-status={s}
+          >
+            {status_label(s)}
+            <span class={["badge badge-xs ms-1", @status_filter == s && "badge-primary", @status_filter != s && "badge-ghost"]}>
+              {count_by(@courses, s)}
+            </span>
+          </button>
+        </div>
+
+        <div :if={@view == "table"} class="overflow-x-auto">
+          <table class="table table-sm table-zebra table-pin-rows">
+            <thead>
+              <tr>
+                <th class="whitespace-nowrap">课程</th>
+                <th class="whitespace-nowrap">状态</th>
+                <th class="whitespace-nowrap">难度</th>
+                <th class="text-center whitespace-nowrap">内容</th>
+                <th class="text-right whitespace-nowrap tabular-nums">价格</th>
+                <th class="text-right whitespace-nowrap">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                :for={course <- visible(@courses, @status_filter, @keyword)}
+                id={"course-#{course.id}"}
+                class="transition-colors hover:bg-base-200"
+              >
+                <td>
+                  <div class="flex items-center gap-3">
+                    <span class="avatar">
+                      <span class="flex size-10 items-center justify-center overflow-hidden rounded-box bg-base-200">
+                        <img
+                          :if={course.cover_image_url}
+                          src={course.cover_image_url}
+                          alt=""
+                          loading="lazy"
+                          class="h-full w-full object-cover"
+                        />
+                        <span :if={!course.cover_image_url} class="text-sm font-semibold text-primary">
+                          {String.first(course.title)}
+                        </span>
+                      </span>
+                    </span>
+                    <div class="min-w-0">
+                      <p class="max-w-64 truncate font-medium">{course.title}</p>
+                      <p class="max-w-64 truncate text-xs text-base-content/60">{course.subtitle || "暂无简介"}</p>
+                    </div>
+                  </div>
+                </td>
+                <td><.status_badge status={course.status} /></td>
+                <td><span class="badge badge-soft badge-xs">{level_label(course.level)}</span></td>
+                <td class="text-center">
+                  <span class="badge badge-soft badge-info badge-xs">
+                    {course.chapter_count || 0} 章 · {course.lesson_count || 0} 节
+                  </span>
+                </td>
+                <td class="text-right font-medium tabular-nums">{price_label(course.price_cents)}</td>
+                <td>
+                  <div class="flex items-center justify-end gap-0.5 whitespace-nowrap">
+                    <button
+                      class="btn btn-ghost btn-sm btn-square tooltip tooltip-left"
+                      data-tip="编辑"
+                      aria-label="编辑"
+                      phx-click="open-edit"
+                      phx-value-id={course.id}
+                    >
+                      <.icon name="hero-pencil-square" class="size-4" />
+                    </button>
+                    <.link
+                      navigate={"/teacher/courses/#{course.id}/edit"}
+                      class="btn btn-ghost btn-sm btn-square tooltip tooltip-left"
+                      data-tip="管理章节"
+                      aria-label="管理章节"
+                    >
+                      <.icon name="hero-bars-3" class="size-4" />
+                    </.link>
+                    <button
+                      :if={course.status != :published}
+                      class={["btn btn-ghost btn-sm btn-square tooltip tooltip-left", !can_publish?(course) && "btn-disabled"]}
+                      data-tip={if can_publish?(course), do: "发布", else: "需 1 章节 + 1 课时"}
+                      disabled={!can_publish?(course)}
+                      aria-label="发布"
+                      phx-click="transition"
+                      phx-value-id={course.id}
+                      phx-value-to="publish"
+                    >
+                      <.icon name="hero-arrow-up-tray" class="size-4" />
+                    </button>
+                    <button
+                      :if={course.status == :published}
+                      class="btn btn-ghost btn-sm btn-square tooltip tooltip-left"
+                      data-tip="下架"
+                      aria-label="下架"
+                      phx-click="transition"
+                      phx-value-id={course.id}
+                      phx-value-to="archive"
+                    >
+                      <.icon name="hero-arrow-down-tray" class="size-4" />
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-sm btn-square tooltip tooltip-left text-error"
+                      data-tip="删除"
+                      aria-label="删除"
+                      phx-click="confirm-delete"
+                      phx-value-id={course.id}
+                    >
+                      <.icon name="hero-trash" class="size-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr :if={visible(@courses, @status_filter, @keyword) == []}>
+                <td colspan="100%">
+                  <div class="flex flex-col items-center gap-2 py-10">
+                    <.icon name="hero-book-open" class="size-8 text-base-content/40" />
+                    <p class="text-sm text-base-content/60">没有匹配的课程</p>
+                    <button class="btn btn-primary btn-sm" phx-click="open-create">
+                      创建课程
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div :if={@view == "card"} class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div
+            :for={course <- visible(@courses, @status_filter, @keyword)}
+            class="card bg-base-100 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            id={"course-card-#{course.id}"}
+          >
+            <figure class="relative aspect-[16/9] overflow-hidden bg-base-200">
+              <img
+                :if={course.cover_image_url}
+                src={course.cover_image_url}
+                alt={course.title}
+                loading="lazy"
+                class="h-full w-full object-cover"
+              />
+              <span :if={!course.cover_image_url} class="flex h-full w-full items-center justify-center text-4xl font-semibold text-primary/60">
+                {String.first(course.title)}
+              </span>
+              <span class="absolute left-2 top-2"><.status_badge status={course.status} /></span>
+            </figure>
+            <div class="card-body gap-2 p-4">
+              <p class="truncate font-medium">{course.title}</p>
+              <p class="line-clamp-2 min-h-8 text-xs text-base-content/60">{course.subtitle || "暂无简介"}</p>
+              <div class="flex flex-wrap gap-2">
+                <span class="badge badge-soft badge-xs">{level_label(course.level)}</span>
+                <span class="badge badge-soft badge-info badge-xs">{course.chapter_count || 0} 章 · {course.lesson_count || 0} 节</span>
+                <span class="badge badge-soft badge-success badge-xs">{price_label(course.price_cents)}</span>
+              </div>
+              <div class="card-actions justify-end">
+                <button
+                  class="btn btn-ghost btn-sm btn-square tooltip"
+                  data-tip="编辑"
+                  aria-label="编辑"
+                  phx-click="open-edit"
+                  phx-value-id={course.id}
+                >
+                  <.icon name="hero-pencil-square" class="size-4" />
+                </button>
+                <.link
+                  navigate={"/teacher/courses/#{course.id}/edit"}
+                  class="btn btn-ghost btn-sm btn-square tooltip"
+                  data-tip="管理章节"
+                  aria-label="管理章节"
+                >
+                  <.icon name="hero-bars-3" class="size-4" />
+                </.link>
+                <button
+                  :if={course.status != :published}
+                  class={["btn btn-ghost btn-sm btn-square tooltip", !can_publish?(course) && "btn-disabled"]}
+                  data-tip={if can_publish?(course), do: "发布", else: "需 1 章节 + 1 课时"}
+                  disabled={!can_publish?(course)}
+                  aria-label="发布"
+                  phx-click="transition"
+                  phx-value-id={course.id}
+                  phx-value-to="publish"
+                >
+                  <.icon name="hero-arrow-up-tray" class="size-4" />
+                </button>
+                <button
+                  :if={course.status == :published}
+                  class="btn btn-ghost btn-sm btn-square tooltip"
+                  data-tip="下架"
+                  aria-label="下架"
+                  phx-click="transition"
+                  phx-value-id={course.id}
+                  phx-value-to="archive"
+                >
+                  <.icon name="hero-arrow-down-tray" class="size-4" />
+                </button>
+                <button
+                  class="btn btn-ghost btn-sm btn-square tooltip text-error"
+                  data-tip="删除"
+                  aria-label="删除"
+                  phx-click="confirm-delete"
+                  phx-value-id={course.id}
+                >
+                  <.icon name="hero-trash" class="size-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+          <div :if={visible(@courses, @status_filter, @keyword) == []} class="card bg-base-100 shadow-sm md:col-span-2 xl:col-span-3">
+            <div class="card-body items-center gap-2 p-8">
+              <.icon name="hero-book-open" class="size-8 text-base-content/40" />
+              <p class="text-sm text-base-content/60">没有匹配的课程</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div :if={@create_modal} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-lg font-medium">创建课程</p>
+            <p class="mt-1 text-xs text-base-content/60">先填基本信息，创建后回到列表添加章节</p>
+          </div>
+          <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-create" aria-label="关闭">
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </div>
+        <.form
+          for={@create_form}
+          id="new-course-form"
+          phx-change="validate-create"
+          phx-submit="create-course"
+          class="mt-4 flex flex-col gap-3"
+        >
+          <.input
+            field={@create_form[:title]}
+            type="text"
+            label="课程标题"
+            placeholder="如：中医基础理论（上）"
+            maxlength="100"
+            required
+          />
+          <.input
+            field={@create_form[:subtitle]}
+            type="text"
+            label="副标题"
+            placeholder="一句话介绍（可选）"
+            maxlength="200"
+          />
+          <div class="grid gap-3 sm:grid-cols-2">
+            <.input field={@create_form[:level]} type="select" label="难度" options={level_options()} />
+            <.input
+              field={@create_form[:category_id]}
+              type="select"
+              label="分类"
+              prompt="选择分类（可选）"
+              options={Enum.map(@categories, &{&1.name, &1.id})}
+            />
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <.input
+              field={@create_form[:price_yuan]}
+              type="number"
+              label="价格（元，0 = 免费）"
+              min="0"
+              step="0.01"
+            />
+            <.input
+              field={@create_form[:cover_image_url]}
+              type="text"
+              label="封面图片 URL"
+              placeholder="可选，或去 AI 配图"
+            />
+          </div>
+          <.input
+            field={@create_form[:description]}
+            type="textarea"
+            label="课程简介"
+            placeholder="课程介绍、适合人群、学习目标（可选）"
+            rows="3"
+            maxlength="2000"
+          />
+          <div class="modal-action">
+            <button type="button" class="btn btn-soft" phx-click="close-create">取消</button>
+            <.button type="submit" phx-disable-with="创建中..." class="btn-primary">创建课程</.button>
+          </div>
+        </.form>
+      </div>
+      <div class="modal-backdrop" phx-click="close-create"></div>
+    </div>
+
+    <div :if={@edit_modal} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-lg font-medium">编辑课程</p>
+            <p :if={@editing} class="mt-1 text-xs text-base-content/60">《{@editing.title}》</p>
+          </div>
+          <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-edit" aria-label="关闭">
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </div>
+        <.form
+          for={@edit_form}
+          id="edit-course-form"
+          phx-change="validate-edit"
+          phx-submit="save-edit"
+          class="mt-4 flex flex-col gap-3"
+        >
+          <.input field={@edit_form[:title]} type="text" label="课程标题" maxlength="100" required />
+          <.input field={@edit_form[:subtitle]} type="text" label="副标题" maxlength="200" />
+          <div class="grid gap-3 sm:grid-cols-2">
+            <.input field={@edit_form[:level]} type="select" label="难度" options={level_options()} />
+            <.input
+              field={@edit_form[:category_id]}
+              type="select"
+              label="分类"
+              prompt="选择分类（可选）"
+              options={Enum.map(@categories, &{&1.name, &1.id})}
+            />
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <.input
+              field={@edit_form[:price_yuan]}
+              type="number"
+              label="价格（元，0 = 免费）"
+              min="0"
+              step="0.01"
+            />
+            <.input
+              field={@edit_form[:cover_image_url]}
+              type="text"
+              label="封面图片 URL"
+              placeholder="可选，或去 AI 配图"
+            />
+          </div>
+          <.input
+            field={@edit_form[:description]}
+            type="textarea"
+            label="课程简介"
+            placeholder="课程介绍、适合人群、学习目标（可选）"
+            rows="3"
+            maxlength="2000"
+          />
+          <div class="modal-action">
+            <button type="button" class="btn btn-soft" phx-click="close-edit">取消</button>
+            <.button type="submit" phx-disable-with="保存中..." class="btn-primary">保存</.button>
+          </div>
+        </.form>
+      </div>
+      <div class="modal-backdrop" phx-click="close-edit"></div>
+    </div>
+
+    <div :if={@deleting} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <p class="text-lg font-medium">删除课程《{@deleting.title}》？</p>
+        <div class="alert alert-soft alert-error mt-3">
+          <.icon name="hero-exclamation-triangle" class="size-5" />
+          <p class="text-sm">章节课时将一并删除，该操作不可恢复。</p>
+        </div>
+        <div class="modal-action">
+          <button type="button" class="btn btn-soft" phx-click="close-delete">取消</button>
+          <button type="button" class="btn btn-error" phx-click="delete" id="confirm-delete-btn">
+            确认删除
+          </button>
+        </div>
+      </div>
+      <div class="modal-backdrop" phx-click="close-delete"></div>
+    </div>
+  </.teacher_shell>
+</Layouts.app>

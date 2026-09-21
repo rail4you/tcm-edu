@@ -1,0 +1,240 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.teacher_shell
+    current_teacher={@current_teacher}
+    current_page={:dashboard}
+    page_title="工作台"
+    page_subtitle={@page_subtitle}
+  >
+    <:page_actions>
+      <button class="btn btn-primary btn-sm" phx-click="open-create" id="new-course-btn">
+        <.icon name="hero-plus" class="size-4" /> 创建课程
+      </button>
+    </:page_actions>
+
+    <div class="flex flex-col gap-6">
+      <div class="card bg-primary text-primary-content shadow-sm">
+        <div class="card-body flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex items-center gap-4">
+            <span class="flex size-12 items-center justify-center rounded-full bg-white/15">
+              <.icon name="hero-sparkles" class="size-6" />
+            </span>
+            <div>
+              <p class="text-lg font-semibold">{@page_subtitle}</p>
+              <p class="text-sm opacity-80">从一个想法开始，把经验变成学生的成长。</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button class="btn btn-sm border-0 bg-base-100" phx-click="open-create">
+              <.icon name="hero-plus" class="size-4" /> 创建课程
+            </button>
+            <.link
+              navigate="/teacher/ai/lesson-plan"
+              class="btn btn-sm border border-white/30 bg-transparent text-primary-content hover:bg-white/10"
+            >
+              <.icon name="hero-sparkles" class="size-4" /> AI 备课
+            </.link>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <.stat_card title="全部课程" value={@stats.total} hint="我创建的课程" icon="hero-book-open" />
+        <.stat_card title="草稿" value={@stats.draft} hint="备课中" icon="hero-pencil-square" />
+        <.stat_card
+          title="已发布"
+          value={@stats.published}
+          hint="学生可见"
+          icon="hero-check-circle"
+          tone="text-success"
+        />
+        <.stat_card title="已下架" value={@stats.archived} hint="历史课程" icon="hero-archive-box" />
+      </div>
+
+      <div class="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
+        <div class="card bg-base-100 shadow-sm xl:col-span-2">
+          <div class="card-body gap-3 p-4 sm:p-6">
+            <div class="flex items-center justify-between gap-2">
+              <p class="font-medium">最近更新的课程</p>
+              <.link navigate="/teacher/courses" class="link link-primary text-sm">全部课程</.link>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="table table-pin-rows">
+                <thead>
+                  <tr>
+                    <th>课程</th>
+                    <th>状态</th>
+                    <th class="text-right tabular-nums">课时</th>
+                    <th class="text-right">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr :for={course <- @recent} class="hover:bg-base-200">
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <span class="avatar">
+                          <span class="flex size-10 items-center justify-center overflow-hidden rounded-box bg-base-200">
+                            <img
+                              :if={course.cover_image_url}
+                              src={course.cover_image_url}
+                              alt=""
+                              loading="lazy"
+                              class="h-full w-full object-cover"
+                            />
+                            <span :if={!course.cover_image_url} class="text-sm font-semibold text-primary">
+                              {String.first(course.title)}
+                            </span>
+                          </span>
+                        </span>
+                        <p class="truncate font-medium">{course.title}</p>
+                      </div>
+                    </td>
+                    <td><.status_badge status={course.status} /></td>
+                    <td class="text-right tabular-nums">
+                      <span class="badge badge-soft badge-xs badge-ghost">{course.lesson_count || 0}</span>
+                    </td>
+                    <td class="text-right">
+                      <.link navigate={"/teacher/courses/#{course.id}/edit"} class="btn btn-ghost btn-sm">
+                        编辑
+                      </.link>
+                    </td>
+                  </tr>
+                  <tr :if={@recent == []}>
+                    <td colspan="100%">
+                      <div class="flex flex-col items-center gap-2 py-10">
+                        <.icon name="hero-book-open" class="size-8 text-base-content/40" />
+                        <p class="text-sm text-base-content/60">还没有课程，先创建第一门吧</p>
+                        <button class="btn btn-primary btn-sm" phx-click="open-create">
+                          创建课程
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-6">
+          <div class="card bg-base-100 shadow-sm">
+            <div class="card-body gap-3 p-4 sm:p-6">
+              <p class="font-medium">快捷操作</p>
+              <div class="grid grid-cols-2 gap-2">
+                <button class="btn btn-soft btn-sm justify-start" phx-click="open-create">
+                  <.icon name="hero-plus" class="size-4" /> 创建课程
+                </button>
+                <.link navigate="/teacher/ai/lesson-plan" class="btn btn-soft btn-sm justify-start">
+                  <.icon name="hero-sparkles" class="size-4" /> AI 备课
+                </.link>
+                <.link navigate="/teacher/ai/image" class="btn btn-soft btn-sm justify-start">
+                  <.icon name="hero-photo" class="size-4" /> AI 配图
+                </.link>
+                <.link navigate="/teacher/students" class="btn btn-soft btn-sm justify-start">
+                  <.icon name="hero-users" class="size-4" /> 我的学生
+                </.link>
+              </div>
+            </div>
+          </div>
+
+          <div class="card bg-base-100 shadow-sm">
+            <div class="card-body gap-3 p-4 sm:p-6">
+              <p class="font-medium">备课流程</p>
+              <ul class="steps steps-vertical">
+                <li class="step step-primary text-sm">创建课程</li>
+                <li class="step step-primary text-sm">添加章节与课时</li>
+                <li class="step text-sm">发布，学生即可选课</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="card bg-primary text-primary-content shadow-sm">
+            <div class="card-body gap-3 p-4 sm:p-6">
+              <p class="flex items-center gap-2 font-medium">
+                <.icon name="hero-light-bulb" class="size-5" /> 没灵感？
+              </p>
+              <p class="text-sm opacity-80">用 AI 备课生成大纲，一键存为课程草稿。</p>
+              <.link navigate="/teacher/ai/lesson-plan" class="btn btn-sm border-0 bg-base-100">
+                试试 AI 备课
+              </.link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div :if={@create_modal} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-lg font-medium">创建课程</p>
+            <p class="mt-1 text-xs text-base-content/60">先填基本信息，创建后回到列表添加章节</p>
+          </div>
+          <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-create" aria-label="关闭">
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </div>
+        <.form
+          for={@create_form}
+          id="new-course-form"
+          phx-change="validate-create"
+          phx-submit="create-course"
+          class="mt-4 flex flex-col gap-3"
+        >
+          <.input
+            field={@create_form[:title]}
+            type="text"
+            label="课程标题"
+            placeholder="如：中医基础理论（上）"
+            maxlength="100"
+            required
+          />
+          <.input
+            field={@create_form[:subtitle]}
+            type="text"
+            label="副标题"
+            placeholder="一句话介绍（可选）"
+            maxlength="200"
+          />
+          <div class="grid gap-3 sm:grid-cols-2">
+            <.input field={@create_form[:level]} type="select" label="难度" options={level_options()} />
+            <.input
+              field={@create_form[:category_id]}
+              type="select"
+              label="分类"
+              prompt="选择分类（可选）"
+              options={Enum.map(@categories, &{&1.name, &1.id})}
+            />
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <.input
+              field={@create_form[:price_yuan]}
+              type="number"
+              label="价格（元，0 = 免费）"
+              min="0"
+              step="0.01"
+            />
+            <.input
+              field={@create_form[:cover_image_url]}
+              type="text"
+              label="封面图片 URL"
+              placeholder="可选，或去 AI 配图"
+            />
+          </div>
+          <.input
+            field={@create_form[:description]}
+            type="textarea"
+            label="课程简介"
+            placeholder="课程介绍、适合人群、学习目标（可选）"
+            rows="3"
+            maxlength="2000"
+          />
+          <div class="modal-action">
+            <button type="button" class="btn btn-soft" phx-click="close-create">取消</button>
+            <.button type="submit" phx-disable-with="创建中..." class="btn-primary">创建课程</.button>
+          </div>
+        </.form>
+      </div>
+      <div class="modal-backdrop" phx-click="close-create"></div>
+    </div>
+  </.teacher_shell>
+</Layouts.app>
