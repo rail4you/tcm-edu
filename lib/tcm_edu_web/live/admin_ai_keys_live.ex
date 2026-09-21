@@ -86,7 +86,7 @@ defmodule TcmEduWeb.AdminAIKeysLive do
 
       config ->
         case Ash.destroy(config, actor: actor(socket)) do
-          {:ok, _} ->
+          :ok ->
             {:noreply, socket |> put_flash(:info, "已删除 #{provider}") |> load_keys()}
 
           {:error, error} ->

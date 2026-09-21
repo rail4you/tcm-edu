@@ -13,80 +13,8 @@
       "type": "uuid"
     },
     {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "task_id",
-      "type": "text"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "user_id",
-      "type": "uuid"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "session_id",
-      "type": "text"
-    },
-    {
-      "allow_nil?": false,
-      "default": "\"chat_agent\"",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "agent_name",
-      "type": "text"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "task_name",
-      "type": "text"
-    },
-    {
-      "allow_nil?": false,
-      "default": "15000",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "duration_ms",
-      "type": "bigint"
-    },
-    {
-      "allow_nil?": false,
-      "default": "\"pending\"",
+      "allow_nil?": true,
+      "default": "\"active\"",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
@@ -98,15 +26,15 @@
     },
     {
       "allow_nil?": true,
-      "default": "nil",
+      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "job_id",
-      "type": "bigint"
+      "source": "enrolled_at",
+      "type": "utc_datetime"
     },
     {
       "allow_nil?": true,
@@ -117,8 +45,8 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "result",
-      "type": "map"
+      "source": "expires_at",
+      "type": "utc_datetime"
     },
     {
       "allow_nil?": true,
@@ -129,8 +57,8 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "error_message",
-      "type": "text"
+      "source": "completed_at",
+      "type": "utc_datetime"
     },
     {
       "allow_nil?": false,
@@ -157,28 +85,66 @@
       "type": "utc_datetime_usec"
     },
     {
-      "allow_nil?": true,
+      "allow_nil?": false,
       "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
-      "references": null,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": false,
+          "strategy": "context"
+        },
+        "name": "enrollments_user_id_fkey",
+        "on_delete": null,
+        "on_update": null,
+        "primary_key?": true,
+        "schema": "public",
+        "table": "users"
+      },
       "scale": null,
       "size": null,
-      "source": "started_at",
-      "type": "utc_datetime"
+      "source": "user_id",
+      "type": "uuid"
     },
     {
-      "allow_nil?": true,
+      "allow_nil?": false,
       "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
-      "references": null,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": false,
+          "strategy": "context"
+        },
+        "name": "enrollments_course_id_fkey",
+        "on_delete": null,
+        "on_update": null,
+        "primary_key?": true,
+        "schema": "public",
+        "table": "courses"
+      },
       "scale": null,
       "size": null,
-      "source": "completed_at",
-      "type": "utc_datetime"
+      "source": "course_id",
+      "type": "uuid"
     }
   ],
   "base_filter": null,
@@ -187,14 +153,33 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "B7A8CF843C52C4DDCECA9FED4AC7D594C0E34789798C93ED560F0085447C9003",
-  "identities": [],
+  "hash": "6836FB307E735873E29BC69A6AD031938346378510A89D7D789B90FB96EC6C21",
+  "identities": [
+    {
+      "all_tenants?": false,
+      "base_filter": null,
+      "index_name": "enrollments_unique_user_course_index",
+      "keys": [
+        {
+          "type": "atom",
+          "value": "user_id"
+        },
+        {
+          "type": "atom",
+          "value": "course_id"
+        }
+      ],
+      "name": "unique_user_course",
+      "nils_distinct?": true,
+      "where": null
+    }
+  ],
   "multitenancy": {
     "attribute": null,
-    "global": null,
-    "strategy": null
+    "global": false,
+    "strategy": "context"
   },
   "repo": "Elixir.TcmEdu.Repo",
   "schema": null,
-  "table": "chat_tasks"
+  "table": "enrollments"
 }

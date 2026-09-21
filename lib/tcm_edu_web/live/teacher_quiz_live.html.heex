@@ -18,16 +18,40 @@
             <p class="font-medium">题库列表</p>
             <span class="badge badge-soft">{length(@banks)} 个</span>
           </div>
-          <ul class="menu w-full gap-1 rounded-box bg-base-200/30 p-2">
+          <ul class="flex flex-col gap-2">
             <li :for={bank <- @banks}>
               <button
                 type="button"
                 phx-click="select-bank"
                 phx-value-id={bank.id}
-                class={["flex w-full items-center justify-between gap-2", @selected_bank_id == bank.id && "menu-active"]}
+                class={[
+                  "flex w-full items-center gap-3 rounded-box border p-3 text-left",
+                  @selected_bank_id == bank.id && "border-primary bg-primary/5",
+                  @selected_bank_id != bank.id && "border-base-300 bg-base-100 hover:border-base-content/30"
+                ]}
               >
-                <span class="min-w-0 truncate">{bank.name}</span>
-                <span class="badge badge-soft badge-xs">{subject_label(bank.subject)}</span>
+                <span class={[
+                  "flex size-10 shrink-0 items-center justify-center rounded-box",
+                  @selected_bank_id == bank.id && "bg-primary text-primary-content",
+                  @selected_bank_id != bank.id && "bg-base-200 text-base-content/60"
+                ]}>
+                  <.icon name="hero-archive-box" class="size-5" />
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-sm font-medium">{bank.name}</span>
+                  <span class="mt-1 flex flex-wrap gap-1">
+                    <span class="badge badge-soft badge-xs">{subject_label(bank.subject)}</span>
+                    <span :if={bank.is_public} class="badge badge-soft badge-xs badge-success">公开</span>
+                  </span>
+                </span>
+                <span class="flex shrink-0 flex-col items-end gap-1">
+                  <span class="badge badge-soft badge-sm">{bank.question_count || 0} 题</span>
+                  <.icon
+                    :if={@selected_bank_id == bank.id}
+                    name="hero-check-circle"
+                    class="size-4 text-primary"
+                  />
+                </span>
               </button>
             </li>
           </ul>
@@ -65,28 +89,101 @@
             <p class="text-sm text-base-content/60">该题库暂无题目</p>
           </div>
 
-          <div :for={{question, index} <- Enum.with_index(@questions, 1)} class="card border border-base-300 bg-base-100">
-            <div class="card-body gap-2 p-4">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="badge badge-soft badge-secondary">{type_label(question.type)}</span>
-                <span class="badge badge-soft">难度 {question.difficulty || "?"}</span>
-                <span class="text-xs text-base-content/60">第 {index} 题</span>
-                <div class="ml-auto">
+          <div :if={@selected_bank_id && @questions != []} class="overflow-x-auto rounded-box border border-base-300">
+            <table class="table table-zebra table-pin-rows table-sm">
+              <thead>
+                <tr>
+                  <th class="tabular-nums">#</th>
+                  <th>题型</th>
+                  <th>难度</th>
+                  <th>题干</th>
+                  <th>选项</th>
+                  <th>状态</th>
+                  <th class="text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  :for={{question, index} <- Enum.with_index(paged_questions(@questions, @question_page), 1)}
+                  class="hover:bg-base-200"
+                  id={"question-#{question.id}"}
+                >
+                  <td class="tabular-nums text-base-content/60">{(@question_page - 1) * 10 + index}</td>
+                  <td>
+                    <span class="badge badge-soft badge-secondary badge-sm">{type_label(question.type)}</span>
+                  </td>
+                  <td class="tabular-nums">{question.difficulty || "?"}</td>
+                  <td>
+                    <p class="max-w-48 truncate text-sm" title={question.stem}>{question.stem}</p>
+                  </td>
+                  <td>
+                    <p class="max-w-56 truncate text-xs text-base-content/60" title={options_text(question.options)}>
+                      {options_text(question.options)}
+                    </p>
+                  </td>
+                  <td>
+                    <span :if={question.status == :archived} class="badge badge-soft badge-xs badge-warning">已归档</span>
+                    <span :if={question.status != :archived} class="badge badge-soft badge-xs badge-success">有效</span>
+                  </td>
+                  <td>
+                    <div class="flex justify-end gap-1">
+                      <button
+                        class="btn btn-ghost btn-xs"
+                        phx-click="open-edit"
+                        phx-value-id={question.id}
+                      >
+                        编辑
+                      </button>
+                      <button
+                        class="btn btn-ghost btn-xs text-error"
+                        phx-click="confirm-delete"
+                        phx-value-id={question.id}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div :if={@selected_bank_id} class="flex flex-wrap items-center justify-between gap-2">
+            <p class="text-xs text-base-content/60">
+              共 {length(@questions)} 题 · 第 {@question_page} / {total_pages(length(@questions))} 页
+            </p>
+            <div :if={total_pages(length(@questions)) > 1} class="join" role="navigation" aria-label="题目翻页">
+              <button
+                class="btn join-item btn-sm"
+                phx-click="goto-page"
+                phx-value-page={@question_page - 1}
+                disabled={@question_page <= 1}
+                aria-label="上一页"
+              >
+                «
+              </button>
+              <%= for p <- page_numbers(@question_page, total_pages(length(@questions))) do %>
+                <%= if p == :ellipsis do %>
+                  <span class="btn join-item btn-sm btn-disabled">…</span>
+                <% else %>
                   <button
-                    :if={question.status != :archived}
-                    class="btn btn-ghost btn-xs text-warning"
-                    phx-click="archive-question"
-                    phx-value-id={question.id}
+                    class={["btn join-item btn-sm", p == @question_page && "btn-active"]}
+                    phx-click="goto-page"
+                    phx-value-page={p}
                   >
-                    归档
+                    {p}
                   </button>
-                </div>
-              </div>
-              <p class="text-sm">{question.stem}</p>
-              <p class="text-xs text-base-content/60">选项：{options_text(question.options)}</p>
-              <p :if={question.explanation} class="rounded-box bg-base-200/30 p-2 text-xs text-base-content/80">
-                解析：{question.explanation}
-              </p>
+                <% end %>
+              <% end %>
+              <button
+                class="btn join-item btn-sm"
+                phx-click="goto-page"
+                phx-value-page={@question_page + 1}
+                disabled={@question_page >= total_pages(length(@questions))}
+                aria-label="下一页"
+              >
+                »
+              </button>
             </div>
           </div>
         </div>
@@ -126,7 +223,7 @@
     <div :if={@question_modal} class="modal modal-open" role="dialog" aria-modal="true">
       <div class="modal-box max-w-2xl">
         <div class="flex items-start justify-between gap-4">
-          <p class="text-lg font-medium">添加题目</p>
+          <p class="text-lg font-medium">{if @editing, do: "编辑题目", else: "添加题目"}</p>
           <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-question" aria-label="关闭">
             <.icon name="hero-x-mark" class="size-4" />
           </button>
@@ -135,7 +232,7 @@
           for={@question_form}
           id="create-question-form"
           phx-change="validate-question"
-          phx-submit="create-question"
+          phx-submit="submit-question"
           class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2"
         >
           <.input field={@question_form[:type]} type="select" label="题型" options={type_options()} required />
@@ -143,24 +240,126 @@
           <div class="md:col-span-2">
             <.input field={@question_form[:stem]} type="textarea" label="题干（支持 markdown）" rows="3" required />
           </div>
-          <div class="md:col-span-2">
+
+          <div :if={@question_type in ["single", "multi"]} class="md:col-span-2">
+            <div class="rounded-box border border-base-300 bg-base-200/30 p-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="text-sm font-medium">
+                  选项
+                  <span class="font-normal text-base-content/60">
+                   （{if @question_type == "single", do: "单选：只勾选一个正确答案", else: "多选：勾选所有正确答案"}）
+                  </span>
+                </p>
+                <button
+                  type="submit"
+                  name="op"
+                  value="add-option"
+                  class="btn btn-soft btn-xs"
+                  disabled={length(@question_options) >= 8}
+                >
+                  <.icon name="hero-plus" class="size-4" /> 添加选项
+                </button>
+              </div>
+
+              <div :if={@option_error} class="alert alert-soft alert-error mt-2 py-2">
+                <.icon name="hero-exclamation-triangle" class="size-4" />
+                <p class="text-xs">{@option_error}</p>
+              </div>
+
+              <ul class="mt-2 flex flex-col gap-2">
+                <li
+                  :for={{opt, idx} <- Enum.with_index(@question_options)}
+                  class="flex items-center gap-2 rounded-box border border-base-300 bg-base-100 p-2"
+                >
+                  <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-content">
+                    {option_letter(idx)}
+                  </span>
+                  <input
+                    type="text"
+                    id={"option-text-#{idx}"}
+                    name={"options[#{idx}][text]"}
+                    value={opt["text"]}
+                    placeholder={"选项 #{option_letter(idx)} 的内容"}
+                    autocomplete="off"
+                    class="input input-sm min-w-0 flex-1"
+                    aria-label={"选项 #{option_letter(idx)}"}
+                  />
+                  <label class="label cursor-pointer gap-1.5 text-xs whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      name={"options[#{idx}][correct]"}
+                      value="true"
+                      checked={opt["correct"]}
+                      class="checkbox checkbox-sm checkbox-primary"
+                    />
+                    正确答案
+                  </label>
+                  <button
+                    type="submit"
+                    name="op"
+                    value={"remove-#{idx}"}
+                    class="btn btn-ghost btn-xs shrink-0 text-error"
+                    disabled={length(@question_options) <= 2}
+                    aria-label={"删除选项 #{option_letter(idx)}"}
+                  >
+                    <.icon name="hero-trash" class="size-4" />
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div :if={@question_type == "judge"} class="md:col-span-2">
             <.input
-              field={@question_form[:options]}
-              type="textarea"
-              label="选项 JSON（[{label, text, correct}]）"
-              placeholder='[{"label":"A","text":"活血祛瘀","correct":true}]'
-              rows="4"
+              field={@question_form[:answer]}
+              type="select"
+              label="正确答案"
+              prompt="请选择"
+              options={[{"对（正确）", "对"}, {"错（错误）", "错"}]}
             />
           </div>
-          <.input field={@question_form[:answer]} type="text" label="正确答案" placeholder="A 或 A,B 或 对/错" />
-          <.input field={@question_form[:explanation]} type="textarea" label="解析" rows="2" />
+
+          <div :if={@question_type == "essay"} class="md:col-span-2">
+            <.input field={@question_form[:answer]} type="text" label="参考答案" placeholder="简答题的参考答案" />
+          </div>
+
+          <div class="md:col-span-2">
+            <.input field={@question_form[:explanation]} type="textarea" label="解析" placeholder="答案解析，学生答题后可见" rows="3" />
+          </div>
+
           <div class="modal-action md:col-span-2">
             <button type="button" class="btn btn-soft" phx-click="close-question">取消</button>
-            <.button type="submit" phx-disable-with="创建中..." class="btn-primary">创建</.button>
+            <.button
+              type="submit"
+              name="op"
+              value="save"
+              phx-disable-with={if @editing, do: "保存中...", else: "创建中..."}
+              class="btn-primary"
+            >
+              {if @editing, do: "保存", else: "创建"}
+            </.button>
           </div>
         </.form>
       </div>
       <div class="modal-backdrop" phx-click="close-question"></div>
+    </div>
+
+    <div :if={@deleting} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <p class="text-lg font-medium">删除这道题目？</p>
+        <p class="mt-2 line-clamp-3 text-sm text-base-content/60">{@deleting.stem}</p>
+        <div class="alert alert-soft alert-error mt-3">
+          <.icon name="hero-exclamation-triangle" class="size-5" />
+          <p class="text-sm">删除后不可恢复，已产生的作答记录不受影响。</p>
+        </div>
+        <div class="modal-action">
+          <button type="button" class="btn btn-soft" phx-click="close-delete">取消</button>
+          <button type="button" class="btn btn-error" phx-click="delete" id="confirm-delete-btn">
+            确认删除
+          </button>
+        </div>
+      </div>
+      <div class="modal-backdrop" phx-click="close-delete"></div>
     </div>
   </.teacher_shell>
 </Layouts.app>

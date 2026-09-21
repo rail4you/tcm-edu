@@ -21,7 +21,19 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "title",
+      "source": "provider",
+      "type": "text"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "api_key",
       "type": "text"
     },
     {
@@ -33,8 +45,32 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "body",
+      "source": "base_url",
       "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "model",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "true",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "is_active",
+      "type": "boolean"
     },
     {
       "allow_nil?": false,
@@ -67,8 +103,23 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "678C5D4401D6EA144C52DD9B07F9C1EC0316BAD45689A95B72D736D428A3E2D2",
-  "identities": [],
+  "hash": "EACC2CAC6D070E9CE041C29D3D6AC6E558201DC23FDD92F068069057C3C3D7E7",
+  "identities": [
+    {
+      "all_tenants?": false,
+      "base_filter": null,
+      "index_name": "api_key_configs_unique_provider_index",
+      "keys": [
+        {
+          "type": "atom",
+          "value": "provider"
+        }
+      ],
+      "name": "unique_provider",
+      "nils_distinct?": true,
+      "where": null
+    }
+  ],
   "multitenancy": {
     "attribute": null,
     "global": null,
@@ -76,5 +127,5 @@
   },
   "repo": "Elixir.TcmEdu.Repo",
   "schema": null,
-  "table": "posts"
+  "table": "api_key_configs"
 }
