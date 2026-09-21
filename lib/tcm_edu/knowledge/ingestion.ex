@@ -213,7 +213,7 @@ defmodule TcmEdu.Knowledge.Ingestion do
     media_kind = Map.fetch!(attrs, :media_kind)
 
     with {:ok, key} <- upload_media(content, filename),
-         {:ok, url} <- TcmEdu.Storage.OSS.signed_url(key) do
+         {:ok, url} <- safe_oss(fn -> TcmEdu.Storage.OSS.signed_url(key) end) do
       attrs =
         %{
           title: Map.get(attrs, :title) || Path.basename(filename),
@@ -224,7 +224,7 @@ defmodule TcmEdu.Knowledge.Ingestion do
           source_name: filename,
           content: "",
           asset_url: url,
-          thumbnail_url: thumbnail_url(url, media_kind)
+          thumbnail_url: thumbnail_signed(key, media_kind)
         }
 
       case TenantDoc.create_tenant_doc(attrs, actor: actor, tenant: tenant) do
@@ -276,24 +276,32 @@ defmodule TcmEdu.Knowledge.Ingestion do
   defp upload_media(bytes, filename) do
     key = "knowledge/#{System.unique_integer([:positive])}/#{sanitize_filename(filename)}"
 
-    case TcmEdu.Storage.OSS.upload_bytes(bytes, key) do
-      {:ok, url} -> {:ok, url}
-      {:error, reason} -> {:error, reason}
+    case safe_oss(fn -> TcmEdu.Storage.OSS.upload_bytes(bytes, key) end) do
+      {:ok, _url} -> {:ok, key}
+      error -> error
     end
   end
 
-  # 缩略图：图片用 OSS 图片处理 resize（无本地图片处理依赖）；视频暂无缩略图
-  defp thumbnail_url(_url, :video), do: nil
-  defp thumbnail_url(url, :image), do: append_image_process(url, "image/resize,w_300")
-  defp thumbnail_url(_url, _), do: nil
+  # OSS 凭证缺失时 OSS 模块会 raise（而非返回 {:error, _}）。这里捕获并转成
+  # {:error, {:oss, message}}，避免把 LiveView 进程打崩、给前端友好提示。
+  defp safe_oss(fun) do
+    fun.()
+  rescue
+    e in RuntimeError -> {:error, {:oss, Exception.message(e)}}
+  end
 
-  defp append_image_process(url, process) do
-    if String.contains?(url, "?") do
-      url <> "&x-oss-process=" <> process
-    else
-      url <> "?x-oss-process=" <> process
+  # 缩略图：图片用 OSS 图片处理 resize 的预签名 URL（处理参数参与签名）；
+  # 视频/文档暂无缩略图
+  defp thumbnail_signed(key, :image) do
+    case safe_oss(fn ->
+           TcmEdu.Storage.OSS.signed_url(key, sub_resources: "x-oss-process=image/resize,w_300")
+         end) do
+      {:ok, url} -> url
+      _ -> nil
     end
   end
+
+  defp thumbnail_signed(_key, _), do: nil
 
   defp sanitize_filename(filename) do
     filename

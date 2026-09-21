@@ -158,7 +158,7 @@ defmodule TcmEduWeb.TeacherComponents do
                 </details>
               </li>
               <li>
-                <details open={@current_page in [:ai_lesson, :ai_image, :ai_quiz, :ai_jobs, :ai_knowledge, :ai_chat]}>
+                <details open>
                   <summary>
                     <.icon name="hero-sparkles" class="size-4" />
                     <span>智能备课</span>
@@ -209,13 +209,23 @@ defmodule TcmEduWeb.TeacherComponents do
                         AI 问答
                       </.link>
                     </li>
+                  </ul>
+                </details>
+              </li>
+              <li>
+                <details open={@current_page == :ai_knowledge}>
+                  <summary>
+                    <.icon name="hero-bookmark" class="size-4" />
+                    <span>知识库</span>
+                  </summary>
+                  <ul>
                     <li>
                       <.link
                         navigate="/teacher/ai/knowledge"
                         class={["w-full", @current_page == :ai_knowledge && "menu-active"]}
                       >
                         <.icon name="hero-bookmark" class="size-4" />
-                        知识库
+                        我的知识库
                       </.link>
                     </li>
                   </ul>
@@ -313,6 +323,15 @@ defmodule TcmEduWeb.TeacherComponents do
                   data-tip="AI 问答"
                 >
                   <.icon name="hero-chat-bubble-left-right" class="size-4" />
+                </.link>
+              </li>
+              <li>
+                <.link
+                  navigate="/teacher/ai/knowledge"
+                  class={["tooltip tooltip-right w-full", @current_page == :ai_knowledge && "menu-active"]}
+                  data-tip="知识库"
+                >
+                  <.icon name="hero-bookmark" class="size-4" />
                 </.link>
               </li>
               <li>

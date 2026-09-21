@@ -165,6 +165,7 @@ defmodule TcmEduWeb.Router do
 
       live "/", AdminDashboardLive, :index
       live "/users", AdminUsersLive, :index
+      live "/knowledge", AdminKnowledgeLive, :index
     end
   end
 

@@ -1,0 +1,194 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.admin_shell current_admin={@current_admin} current_page={:knowledge} page_title="知识库">
+    <:page_actions>
+      <button class="btn btn-soft btn-sm" phx-click="refresh" type="button" id="refresh-docs-btn">
+        <.icon name="hero-arrow-path" class="size-4" /> 刷新
+      </button>
+    </:page_actions>
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-base-content/60">
+        {if @current_admin.role == "super_admin", do: "跨租户审计各机构知识库，只读视图", else: "本机构知识库概览（只读）"}
+      </p>
+      <div :if={@current_admin.role == "super_admin" and @tenants != []} class="flex items-center gap-2">
+        <span class="text-sm text-base-content/60">租户</span>
+        <select
+          class="select select-sm select-bordered"
+          phx-change="select-tenant"
+          name="tenant"
+          id="tenant-select"
+        >
+          <option :for={org <- @tenants} value={org.schema_name} selected={org.schema_name == @tenant}>
+            {org.name}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="card border border-base-300 bg-base-100">
+        <div class="card-body gap-1 p-4">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-base-content/60">资料源</p>
+            <.icon name="hero-archive-box" class="size-4 text-base-content/60" />
+          </div>
+          <p class="text-2xl font-semibold">{summary(group_by_source(@docs)).sources}</p>
+        </div>
+      </div>
+      <div class="card border border-base-300 bg-base-100">
+        <div class="card-body gap-1 p-4">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-base-content/60">已向量化</p>
+            <.icon name="hero-check-circle" class="size-4 text-success" />
+          </div>
+          <p class="text-2xl font-semibold">{summary(group_by_source(@docs)).embedded}</p>
+        </div>
+      </div>
+      <div class="card border border-base-300 bg-base-100">
+        <div class="card-body gap-1 p-4">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-base-content/60">处理中</p>
+            <.icon name="hero-arrow-path" class="size-4 text-warning" />
+          </div>
+          <p class="text-2xl font-semibold">{summary(group_by_source(@docs)).pending}</p>
+        </div>
+      </div>
+      <div class="card border border-base-300 bg-base-100">
+        <div class="card-body gap-1 p-4">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-base-content/60">失败</p>
+            <.icon name="hero-exclamation-triangle" class="size-4 text-error" />
+          </div>
+          <p class="text-2xl font-semibold">{summary(group_by_source(@docs)).failed}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border border-base-300 bg-base-100">
+      <div class="card-body gap-3 p-4 sm:p-6">
+        <p :if={group_by_source(@docs) == []} class="py-8 text-center text-sm text-base-content/60">
+          {if is_nil(@tenant), do: "请先在左侧创建租户", else: "该租户还没有上传知识库资料"}
+        </p>
+
+        <div class="overflow-x-auto">
+          <table class="table" id="knowledge-table">
+            <thead>
+              <tr>
+                <th>资料</th>
+                <th>文件名</th>
+                <th class="text-center">文档片</th>
+                <th class="text-center">已向量化</th>
+                <th class="text-center">处理中</th>
+                <th class="text-center">失败</th>
+                <th class="text-center">索引</th>
+                <th class="text-center">问答</th>
+                <th class="text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={{source_name, group} <- group_by_source(@docs)}>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="flex size-10 shrink-0 items-center justify-center rounded-box bg-base-200 text-base-content/60">
+                      <img
+                        :if={group.media_kind == :image and group.thumbnail_url}
+                        src={group.thumbnail_url}
+                        alt={group.title}
+                        loading="lazy"
+                        class="size-10 rounded-box object-cover"
+                      />
+                      <span :if={group.media_kind == :image and is_nil(group.thumbnail_url)}><.icon name="hero-photo" class="size-5" /></span>
+                      <span :if={group.media_kind == :video}><.icon name="hero-video-camera" class="size-5" /></span>
+                      <span :if={group.media_kind == :text}><.icon name="hero-document-text" class="size-5" /></span>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-medium">{group.title}</p>
+                      <div class="flex items-center gap-1">
+                        <span class="badge badge-soft badge-neutral badge-sm">{media_kind_label(group.media_kind)}</span>
+                        <span class="badge badge-soft badge-primary badge-sm">{doc_type_label(group.doc_type)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-sm text-base-content/60">{source_name}</td>
+                <td class="text-center">{group.total}</td>
+                <td class="text-center">
+                  <span class={["badge badge-sm", group.counts.embedded > 0 && "badge-soft badge-success", group.counts.embedded == 0 && "badge-ghost"]}>
+                    {group.counts.embedded}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span :if={group.counts.pending > 0} class="badge badge-soft badge-warning badge-sm">
+                    {group.counts.pending}
+                  </span>
+                  <span :if={group.counts.pending == 0}>—</span>
+                </td>
+                <td class="text-center">
+                  <span :if={group.counts.failed > 0} class="badge badge-soft badge-error badge-sm">
+                    {group.counts.failed}
+                  </span>
+                  <span :if={group.counts.failed == 0}>—</span>
+                </td>
+                <td class="text-center">
+                  <span class={["badge badge-sm", group.indexed && "badge-soft badge-success", !group.indexed && "badge-ghost"]}>
+                    {if group.indexed, do: "开", else: "关"}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class={["badge badge-sm", group.in_chat && "badge-soft badge-info", !group.in_chat && "badge-ghost"]}>
+                    {if group.in_chat, do: "开", else: "关"}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-xs"
+                    phx-click="open-preview"
+                    phx-value-source_name={source_name}
+                    id={"preview-#{source_name}"}
+                  >
+                    <.icon name="hero-eye" class="size-3.5" /> 预览
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </.admin_shell>
+
+  <div :if={@previewing} class="modal modal-open" role="dialog" aria-modal="true">
+    <div class="modal-box max-w-2xl">
+      <div class="flex items-center justify-between">
+        <p class="font-medium truncate">{@previewing.source_name}</p>
+        <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-preview" aria-label="关闭">
+          <.icon name="hero-x-mark" class="size-4" />
+        </button>
+      </div>
+      <img
+        :if={@previewing.kind == :image and @previewing.url}
+        src={@previewing.url}
+        alt={@previewing.source_name}
+        class="mt-4 max-h-96 w-full rounded-box object-contain"
+      />
+      <video
+        :if={@previewing.kind == :video and @previewing.url}
+        src={@previewing.url}
+        controls
+        class="mt-4 max-h-96 w-full rounded-box"
+      />
+      <pre
+        :if={@previewing.kind == :text and @previewing.text}
+        class="mt-4 max-h-96 overflow-y-auto whitespace-pre-wrap rounded-box bg-base-200/50 p-4 text-sm"
+      >{@previewing.text}</pre>
+      <p :if={@previewing.kind == :text and is_nil(@previewing.text)} class="mt-4 text-sm text-base-content/60">
+        该资源没有可预览的文本内容
+      </p>
+      <div class="modal-action">
+        <button type="button" class="btn btn-soft" phx-click="close-preview">关闭</button>
+      </div>
+    </div>
+    <div class="modal-backdrop" phx-click="close-preview"></div>
+  </div>
+</Layouts.app>

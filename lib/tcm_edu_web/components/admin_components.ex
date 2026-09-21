@@ -21,7 +21,7 @@ defmodule TcmEduWeb.AdminComponents do
 
   attr :current_page, :atom,
     required: true,
-    values: [:dashboard, :tenants, :users, :ai_dashboard, :ai_keys, :login]
+    values: [:dashboard, :tenants, :users, :knowledge, :ai_dashboard, :ai_keys, :login]
 
   attr :page_title, :string, default: "工作台"
 
@@ -248,7 +248,7 @@ defmodule TcmEduWeb.AdminComponents do
           </details>
         </li>
         <li>
-          <details open={@current_page == :users}>
+          <details open={@current_page in [:users, :knowledge]}>
             <summary>
               <.icon name="hero-users" class="size-4" />
               <span>本机构</span>
@@ -258,6 +258,15 @@ defmodule TcmEduWeb.AdminComponents do
                 <.link navigate="/admin/users" class={["w-full", @current_page == :users && "menu-active"]}>
                   <.icon name="hero-users" class="size-4" />
                   用户管理
+                </.link>
+              </li>
+              <li>
+                <.link
+                  navigate="/admin/knowledge"
+                  class={["w-full", @current_page == :knowledge && "menu-active"]}
+                >
+                  <.icon name="hero-bookmark" class="size-4" />
+                  知识库
                 </.link>
               </li>
             </ul>
@@ -319,6 +328,15 @@ defmodule TcmEduWeb.AdminComponents do
             data-tip="用户管理"
           >
             <.icon name="hero-users" class="size-4" />
+          </.link>
+        </li>
+        <li>
+          <.link
+            navigate="/admin/knowledge"
+            class={["tooltip tooltip-right w-full", @current_page == :knowledge && "menu-active"]}
+            data-tip="知识库"
+          >
+            <.icon name="hero-bookmark" class="size-4" />
           </.link>
         </li>
         <li :if={@current_admin.role == "super_admin"}>

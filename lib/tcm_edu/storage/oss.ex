@@ -121,7 +121,9 @@ defmodule TcmEdu.Storage.OSS do
   ## 参数
 
     * `key`  — 对象 key
-    * `opts` — `:bucket`、`:expires_in`（秒，默认 3600）
+    * `opts` — `:bucket`、`:expires_in`（秒，默认 3600）、
+      `:sub_resources`（子资源参数，如 `"x-oss-process=image/resize,w_300"`，
+      参与签名并拼到 query——OSS 图片处理等必须如此）
 
   ## 返回
 
@@ -134,9 +136,11 @@ defmodule TcmEdu.Storage.OSS do
     bucket = opts[:bucket] || bucket()
     expires_in = opts[:expires_in] || 3_600
     expires = DateTime.utc_now() |> DateTime.to_unix() |> Kernel.+(expires_in)
+    sub_resources = opts[:sub_resources]
 
     verb = "GET"
-    canonicalized_resource = "/#{bucket}/#{normalize_key(key)}"
+    sub_str = if sub_resources, do: "?" <> sub_resources, else: ""
+    canonicalized_resource = "/#{bucket}/#{canonical_key(key)}" <> sub_str
 
     # OSS v1 带 Expires 的签名：Date 行直接放置顶时间
     string_to_sign = "#{verb}\n\n\n#{expires}\n#{canonicalized_resource}"
@@ -146,11 +150,14 @@ defmodule TcmEdu.Storage.OSS do
       |> Base.encode64()
       |> URI.encode_www_form()
 
+    sub_query = if sub_resources, do: "&" <> sub_resources, else: ""
+
     url =
       "https://#{bucket}.#{endpoint()}/#{normalize_key(key)}" <>
         "?OSSAccessKeyId=#{access_key_id()}" <>
         "&Expires=#{expires}" <>
-        "&Signature=#{signature}"
+        "&Signature=#{signature}" <>
+        sub_query
 
     {:ok, url}
   end
@@ -271,7 +278,7 @@ defmodule TcmEdu.Storage.OSS do
     bucket = opts[:bucket] || bucket()
     content_type = opts[:content_type] || ""
     date = format_gmt_date(DateTime.utc_now())
-    canonicalized_resource = "/#{bucket}/#{normalize_key(key)}"
+    canonicalized_resource = "/#{bucket}/#{canonical_key(key)}"
 
     string_to_sign =
       "#{verb}\n#{content_md5}\n#{content_type}\n#{date}\n#{canonicalized_resource}"
@@ -319,7 +326,7 @@ defmodule TcmEdu.Storage.OSS do
     bucket = opts[:bucket] || bucket()
     content_type = opts[:content_type] || "application/octet-stream"
     date = format_gmt_date(DateTime.utc_now())
-    canonicalized_resource = "/#{bucket}/#{normalize_key(key)}"
+    canonicalized_resource = "/#{bucket}/#{canonical_key(key)}"
     string_to_sign = "PUT\n\n#{content_type}\n#{date}\n#{canonicalized_resource}"
 
     signature =
@@ -335,12 +342,22 @@ defmodule TcmEdu.Storage.OSS do
 
   # ─── 私有 ─────────────────────────────────────────────────
 
-  defp normalize_key(key) do
+  # OSS v1 签名的 canonicalized_resource 用「原始」key（trim 前后斜杠、去空段，
+  # 但**不** URL 编码）——OSS 对含中文/特殊字符的 key 期望原始 UTF-8 参与签名。
+  defp canonical_key(key) do
     key
     |> String.trim_leading("/")
     |> String.split("/", trim: false)
     |> Enum.reject(&(&1 == ""))
-    |> Enum.map(&URI.encode_www_form/1)
+    |> Enum.join("/")
+  end
+
+  # URL 里的 key：canonical_key 后按 RFC 3986 逐段编码（中文 → %E7…，空格 → %20）
+  defp normalize_key(key) do
+    key
+    |> canonical_key()
+    |> String.split("/")
+    |> Enum.map(fn seg -> URI.encode(seg, fn c -> URI.char_unreserved?(c) end) end)
     |> Enum.join("/")
   end
 

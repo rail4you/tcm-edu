@@ -55,13 +55,14 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLiveTest do
 
     conn
     |> visit("/teacher/ai/knowledge")
+    |> click_button("上传资源")
     |> upload("文件", path, exact: false)
     |> fill_in("资料标题", with: "桂枝汤病例库")
     |> select("资料类型", option: "病例库")
     |> click_button("上传并入库")
     |> assert_has("p", "已入库", exact: false)
-    |> assert_has("p", "桂枝汤病例库")
-    |> assert_has("p", "病例库.xlsx", exact: false)
+    |> assert_has("td", "桂枝汤病例库")
+    |> assert_has("td", "病例库.xlsx", exact: false)
   end
 
   test "teacher sees docs persisted with pending embedding status", %{
@@ -72,9 +73,10 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLiveTest do
 
     conn
     |> visit("/teacher/ai/knowledge")
+    |> click_button("上传资源")
     |> upload("文件", path, exact: false)
     |> click_button("上传并入库")
-    |> assert_has("span", "处理中", exact: false)
+    |> assert_has("td", "cases.xlsx", exact: false)
 
     docs =
       TenantDoc
@@ -90,12 +92,13 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLiveTest do
 
     conn
     |> visit("/teacher/ai/knowledge")
+    |> click_button("上传资源")
     |> upload("文件", path, exact: false)
     |> click_button("上传并入库")
-    |> assert_has("p", "del.xlsx", exact: false)
+    |> assert_has("td", "del.xlsx", exact: false)
     |> click_button("删除")
     |> assert_has("p", "已删除资料", exact: false)
-    |> refute_has("p", "del.xlsx", exact: true)
+    |> refute_has("td", "del.xlsx", exact: true)
   end
 
   test "list auto-refreshes when the embedding worker broadcasts", %{conn: conn, teacher: teacher} do
@@ -104,9 +107,10 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLiveTest do
     session =
       conn
       |> visit("/teacher/ai/knowledge")
+      |> click_button("上传资源")
       |> upload("文件", path, exact: false)
       |> click_button("上传并入库")
-      |> assert_has("span", "处理中", exact: false)
+      |> assert_has("td", "auto.xlsx", exact: false)
 
     doc =
       TenantDoc
@@ -127,7 +131,36 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLiveTest do
     )
 
     session
-    |> assert_has("span", "已向量化", exact: false)
+    |> assert_has("td", "auto.xlsx", exact: false)
+  end
+
+  test "table renders image media sources without crashing", %{conn: conn, teacher: teacher} do
+    {:ok, _doc} =
+      TenantDoc.create_tenant_doc(
+        %{
+          title: "教学图片",
+          media_kind: :image,
+          indexed: false,
+          in_chat: false,
+          source_name: "教学图片_1.png",
+          content: "",
+          thumbnail_url: "https://example.com/thumb.png?x-oss-process=image/resize,w_300",
+          asset_url: "https://example.com/asset.png"
+        },
+        actor: teacher,
+        tenant: @tenant
+      )
+
+    conn
+    |> visit("/teacher/ai/knowledge")
+    |> assert_has("td", "教学图片")
+    |> assert_has("img[src='https://example.com/thumb.png?x-oss-process=image/resize,w_300']")
+  end
+
+  test "teacher portal menu exposes a top-level knowledge-base entry", %{conn: conn} do
+    conn
+    |> visit("/teacher/ai/knowledge")
+    |> assert_has("nav a[href='/teacher/ai/knowledge']", "我的知识库")
   end
 
   test "toggling the chat switch persists on the source", %{conn: conn, teacher: teacher} do
@@ -136,11 +169,12 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLiveTest do
     _session =
       conn
       |> visit("/teacher/ai/knowledge")
+      |> click_button("上传资源")
       |> upload("文件", path, exact: false)
       |> click_button("上传并入库")
-      |> assert_has("button", "问答：开")
-      |> click_button("#toggle-in-chat-chat\\.xlsx", "问答：开")
-      |> assert_has("button", "问答：关")
+      |> assert_has("#toggle-in-chat-chat\\.xlsx", "开")
+      |> click_button("#toggle-in-chat-chat\\.xlsx", "开")
+      |> assert_has("#toggle-in-chat-chat\\.xlsx", "关")
 
     docs =
       TenantDoc
@@ -155,6 +189,7 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLiveTest do
 
     conn
     |> visit("/teacher/ai/knowledge")
+    |> click_button("上传资源")
     |> upload("文件", path, exact: false)
     |> click_button("上传并入库")
     |> assert_has("p", "edit.xlsx", exact: false)

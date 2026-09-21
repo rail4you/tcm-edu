@@ -5,184 +5,243 @@
     page_title="知识库"
     page_subtitle="上传教学大纲、病例库、图片/视频资源，AI 问答依据本校资料作答"
   >
-    <div class="grid items-start gap-6 xl:grid-cols-5">
-      <div class="card border border-base-300 bg-base-100 xl:col-span-2">
-        <div class="card-body gap-3 p-4 sm:p-6">
-          <p class="font-medium">上传资料</p>
-          <form
-            id="knowledge-upload-form"
-            phx-change="validate"
-            phx-submit="upload"
-            class="flex flex-col gap-3"
-          >
-            <label class="form-control w-full">
-              <span class="label-text mb-1 block text-sm">文件</span>
-              <.live_file_input
-                upload={@uploads.file}
-                class="file-input file-input-bordered w-full"
-              />
-              <p class="label">
-                文档（Word/Excel/PPT/PDF/ODT… ≤50MB）或图片/视频（自动缩略图预览）
-              </p>
-            </label>
-            <ul :for={entry <- @uploads.file.entries} class="flex flex-col gap-1">
-              <li class="flex items-center gap-2 text-sm">
-                <.icon name="hero-document" class="size-4 text-base-content/60" />
-                <span class="truncate">{entry.client_name}</span>
-              </li>
-            </ul>
-            <p :for={err <- upload_errors(@uploads.file)} class="text-xs text-error">
-              {upload_error_to_string(err)}
-            </p>
-            <div class="grid gap-3 sm:grid-cols-2">
-              <.input
-                field={@form[:title]}
-                type="text"
-                label="资料标题"
-                placeholder="如：2025 中医基础教学大纲"
-              />
-              <.input
-                field={@form[:doc_type]}
-                type="select"
-                label="资料类型"
-                options={[
-                  {"教学大纲", "syllabus"},
-                  {"病例库", "case_library"},
-                  {"教学手册", "handbook"},
-                  {"其他资料", "other"}
-                ]}
-              />
-            </div>
-            <p class="label">标题可选，默认用文件名</p>
-            <.button type="submit" phx-disable-with="入库中..." class="btn-primary mt-2 w-full" id="upload-doc-btn">
-              <.icon name="hero-arrow-up-tray" class="size-4" /> 上传并入库
-            </.button>
-          </form>
-          <p class="label">
-            文档自动分片并生成向量；图片/视频作为资源保存，可手动开启「参与索引 / 参与问答」。
-          </p>
+    <:page_actions>
+      <button class="btn btn-primary btn-sm" phx-click="open-upload" type="button" id="open-upload-btn">
+        <.icon name="hero-arrow-up-tray" class="size-4" /> 上传资源
+      </button>
+    </:page_actions>
+
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="card border border-base-300 bg-base-100">
+        <div class="card-body gap-1 p-4">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-base-content/60">资料源</p>
+            <.icon name="hero-archive-box" class="size-4 text-base-content/60" />
+          </div>
+          <p class="text-2xl font-semibold">{kb_summary(@docs).sources}</p>
         </div>
       </div>
-
-      <div class="card border border-base-300 bg-base-100 xl:col-span-3">
-        <div class="card-body gap-3 p-4 sm:p-6">
+      <div class="card border border-base-300 bg-base-100">
+        <div class="card-body gap-1 p-4">
           <div class="flex items-center justify-between">
-            <p class="font-medium">已上传资料</p>
-            <button class="btn btn-ghost btn-sm" phx-click="refresh" type="button" id="refresh-docs-btn">
-              <.icon name="hero-arrow-path" class="size-4" /> 刷新状态
-            </button>
+            <p class="text-sm text-base-content/60">已向量化</p>
+            <.icon name="hero-check-circle" class="size-4 text-success" />
           </div>
+          <p class="text-2xl font-semibold">{kb_summary(@docs).embedded}</p>
+        </div>
+      </div>
+      <div class="card border border-base-300 bg-base-100">
+        <div class="card-body gap-1 p-4">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-base-content/60">处理中</p>
+            <.icon name="hero-arrow-path" class="size-4 text-warning" />
+          </div>
+          <p class="text-2xl font-semibold">{kb_summary(@docs).pending}</p>
+        </div>
+      </div>
+      <div class="card border border-base-300 bg-base-100">
+        <div class="card-body gap-1 p-4">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-base-content/60">失败</p>
+            <.icon name="hero-exclamation-triangle" class="size-4 text-error" />
+          </div>
+          <p class="text-2xl font-semibold">{kb_summary(@docs).failed}</p>
+        </div>
+      </div>
+    </div>
 
-          <p :if={@docs == []} class="py-8 text-center text-sm text-base-content/60">
-            还没有上传资料，先在左侧上传教学大纲、病例库或图片/视频
-          </p>
+    <div class="card border border-base-300 bg-base-100">
+      <div class="card-body gap-3 p-4 sm:p-6">
+        <div class="flex items-center justify-between">
+          <p class="font-medium">资源列表</p>
+          <button class="btn btn-ghost btn-sm" phx-click="refresh" type="button" id="refresh-docs-btn">
+            <.icon name="hero-arrow-path" class="size-4" /> 刷新状态
+          </button>
+        </div>
 
-          <div :for={{source_name, group} <- group_by_source(@docs)} class="flex flex-col gap-2">
-            <div class="flex items-start gap-3 rounded-box border border-base-300 bg-base-100 p-3">
-              <img
-                :if={group.media_kind == :image and group.thumbnail_url}
-                src={group.thumbnail_url}
-                alt={group.title}
-                loading="lazy"
-                class="size-14 shrink-0 rounded-box object-cover"
-              />
-              <div
-                :if={group.media_kind == :image and not group.thumbnail_url}
-                class="flex size-14 shrink-0 items-center justify-center rounded-box bg-base-200 text-base-content/50"
-              >
-                <.icon name="hero-photo" class="size-6" />
-              </div>
-              <div
-                :if={group.media_kind == :video}
-                class="flex size-14 shrink-0 items-center justify-center rounded-box bg-base-200 text-base-content/50"
-              >
-                <.icon name="hero-video-camera" class="size-6" />
-              </div>
+        <p :if={@docs == []} class="py-8 text-center text-sm text-base-content/60">
+          还没有上传资料，点击右上角「上传资源」添加教学大纲、病例库或图片/视频
+        </p>
 
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="badge badge-soft badge-neutral">{media_kind_label(group.media_kind)}</span>
-                  <span class="badge badge-soft badge-primary">{doc_type_label(group.doc_type)}</span>
-                  <p class="truncate text-sm font-medium">{group.title}</p>
-                </div>
-                <p class="mt-0.5 truncate text-xs text-base-content/60">{source_name}</p>
-                <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-base-content/60">
-                  <span :if={group.media_kind == :text and group.counts.embedded > 0} class="badge badge-soft badge-success">
-                    {group.counts.embedded} 已向量化
+        <div :if={@docs != []} class="overflow-x-auto">
+          <table class="table" id="knowledge-table">
+            <thead>
+              <tr>
+                <th>资料</th>
+                <th>文件名</th>
+                <th class="text-center">文档片</th>
+                <th class="text-center">已向量化</th>
+                <th class="text-center">处理中</th>
+                <th class="text-center">索引</th>
+                <th class="text-center">问答</th>
+                <th class="text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={{source_name, group} <- group_by_source(@docs)}>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="flex size-10 shrink-0 items-center justify-center rounded-box bg-base-200 text-base-content/60">
+                      <img
+                        :if={group.media_kind == :image and group.thumbnail_url}
+                        src={group.thumbnail_url}
+                        alt={group.title}
+                        loading="lazy"
+                        class="size-10 rounded-box object-cover"
+                      />
+                      <span :if={group.media_kind == :image and is_nil(group.thumbnail_url)}>
+                        <.icon name="hero-photo" class="size-5" />
+                      </span>
+                      <span :if={group.media_kind == :video}><.icon name="hero-video-camera" class="size-5" /></span>
+                      <span :if={group.media_kind == :text}><.icon name="hero-document-text" class="size-5" /></span>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-medium">{group.title}</p>
+                      <div class="flex items-center gap-1">
+                        <span class="badge badge-soft badge-neutral badge-sm">{media_kind_label(group.media_kind)}</span>
+                        <span class="badge badge-soft badge-primary badge-sm">{doc_type_label(group.doc_type)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-sm text-base-content/60">{source_name}</td>
+                <td class="text-center">{group.total}</td>
+                <td class="text-center">
+                  <span class={["badge badge-sm", group.counts.embedded > 0 && "badge-soft badge-success", group.counts.embedded == 0 && "badge-ghost"]}>
+                    {group.counts.embedded}
                   </span>
-                  <span :if={group.media_kind == :text and group.counts.pending > 0} class="badge badge-soft badge-warning">
-                    {group.counts.pending} 处理中
+                </td>
+                <td class="text-center">
+                  <span :if={group.counts.pending > 0} class="badge badge-soft badge-warning badge-sm">
+                    {group.counts.pending}
                   </span>
-                  <span :if={group.media_kind == :text and group.counts.failed > 0} class="badge badge-soft badge-error">
-                    {group.counts.failed} 失败
-                  </span>
-                  <span :if={group.media_kind == :text}>共 {group.total} 个片段</span>
-                </div>
-                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span :if={group.counts.pending == 0}>—</span>
+                </td>
+                <td class="text-center">
                   <button
                     type="button"
                     phx-click="toggle-indexed"
                     phx-value-source_name={source_name}
-                    class={[
-                      "btn btn-xs",
-                      group.indexed && "btn-soft btn-success",
-                      !group.indexed && "btn-ghost"
-                    ]}
+                    class={["btn btn-xs", group.indexed && "btn-soft btn-success", !group.indexed && "btn-ghost"]}
                     id={"toggle-indexed-#{source_name}"}
                   >
-                    <.icon name={group.indexed && "hero-check-circle" || "hero-x-circle"} class="size-3.5" />
-                    索引：{if group.indexed, do: "开", else: "关"}
+                    {if group.indexed, do: "开", else: "关"}
                   </button>
+                </td>
+                <td class="text-center">
                   <button
                     type="button"
                     phx-click="toggle-in-chat"
                     phx-value-source_name={source_name}
-                    class={[
-                      "btn btn-xs",
-                      group.in_chat && "btn-soft btn-info",
-                      !group.in_chat && "btn-ghost"
-                    ]}
+                    class={["btn btn-xs", group.in_chat && "btn-soft btn-info", !group.in_chat && "btn-ghost"]}
                     id={"toggle-in-chat-#{source_name}"}
                   >
-                    <.icon name={group.in_chat && "hero-chat-bubble-oval-left-ellipsis" || "hero-no-symbol"} class="size-3.5" />
-                    问答：{if group.in_chat, do: "开", else: "关"}
+                    {if group.in_chat, do: "开", else: "关"}
                   </button>
-                  <button
-                    type="button"
-                    class="btn btn-ghost btn-xs"
-                    phx-click="open-preview"
-                    phx-value-source_name={source_name}
-                    id={"preview-#{source_name}"}
-                  >
-                    <.icon name="hero-eye" class="size-3.5" /> 预览
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-ghost btn-xs"
-                    phx-click="open-edit"
-                    phx-value-source_name={source_name}
-                    id={"edit-#{source_name}"}
-                  >
-                    <.icon name="hero-pencil-square" class="size-3.5" /> 编辑
-                  </button>
-                  <button
-                    class="btn btn-ghost btn-xs text-error"
-                    type="button"
-                    phx-click="delete-source"
-                    phx-value-source_name={source_name}
-                    data-confirm={"确定删除资料《#{source_name}》？删除后 AI 将不再引用该资料"}
-                    id={"delete-source-#{source_name}"}
-                  >
-                    <.icon name="hero-trash" class="size-3.5" /> 删除
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+                </td>
+                <td class="text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-xs"
+                      phx-click="open-preview"
+                      phx-value-source_name={source_name}
+                      id={"preview-#{source_name}"}
+                    >
+                      <.icon name="hero-eye" class="size-3.5" /> 预览
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-xs"
+                      phx-click="open-edit"
+                      phx-value-source_name={source_name}
+                      id={"edit-#{source_name}"}
+                    >
+                      <.icon name="hero-pencil-square" class="size-3.5" /> 编辑
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-xs text-error"
+                      type="button"
+                      phx-click="delete-source"
+                      phx-value-source_name={source_name}
+                      data-confirm={"确定删除资料《#{source_name}》？删除后 AI 将不再引用该资料"}
+                      id={"delete-source-#{source_name}"}
+                    >
+                      <.icon name="hero-trash" class="size-3.5" /> 删除
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   </.teacher_shell>
+
+  <div :if={@upload_modal} class="modal modal-open" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="flex items-center justify-between">
+        <p class="font-medium">上传资源</p>
+        <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-upload" aria-label="关闭">
+          <.icon name="hero-x-mark" class="size-4" />
+        </button>
+      </div>
+      <form
+        id="knowledge-upload-form"
+        phx-change="validate"
+        phx-submit="upload"
+        class="mt-4 flex flex-col gap-3"
+      >
+        <label class="form-control w-full">
+          <span class="label-text mb-1 block text-sm">文件</span>
+          <.live_file_input
+            upload={@uploads.file}
+            class="file-input file-input-bordered w-full"
+          />
+          <p class="label">
+            文档（Word/Excel/PPT/PDF/ODT… ≤50MB）或图片/视频（自动缩略图预览）
+          </p>
+        </label>
+        <ul :for={entry <- @uploads.file.entries} class="flex flex-col gap-1">
+          <li class="flex items-center gap-2 text-sm">
+            <.icon name="hero-document" class="size-4 text-base-content/60" />
+            <span class="truncate">{entry.client_name}</span>
+          </li>
+        </ul>
+        <p :for={err <- upload_errors(@uploads.file)} class="text-xs text-error">
+          {upload_error_to_string(err)}
+        </p>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <.input
+            field={@form[:title]}
+            type="text"
+            label="资料标题"
+            placeholder="如：2025 中医基础教学大纲"
+          />
+          <.input
+            field={@form[:doc_type]}
+            type="select"
+            label="资料类型"
+            options={[
+              {"教学大纲", "syllabus"},
+              {"病例库", "case_library"},
+              {"教学手册", "handbook"},
+              {"其他资料", "other"}
+            ]}
+          />
+        </div>
+        <p class="label">标题可选，默认用文件名；文档自动分片并生成向量</p>
+        <div class="modal-action">
+          <button type="button" class="btn btn-soft" phx-click="close-upload">取消</button>
+          <.button type="submit" phx-disable-with="入库中..." class="btn-primary" id="upload-doc-btn">
+            <.icon name="hero-arrow-up-tray" class="size-4" /> 上传并入库
+          </.button>
+        </div>
+      </form>
+    </div>
+    <div class="modal-backdrop" phx-click="close-upload"></div>
+  </div>
 
   <div :if={@editing} class="modal modal-open" role="dialog" aria-modal="true">
     <div class="modal-box">
@@ -244,7 +303,7 @@
         :if={@previewing.kind == :text and @previewing.text}
         class="mt-4 max-h-96 overflow-y-auto whitespace-pre-wrap rounded-box bg-base-200/50 p-4 text-sm"
       >{@previewing.text}</pre>
-      <p :if={@previewing.kind == :text and not @previewing.text} class="mt-4 text-sm text-base-content/60">
+      <p :if={@previewing.kind == :text and is_nil(@previewing.text)} class="mt-4 text-sm text-base-content/60">
         该资源没有可预览的文本内容
       </p>
       <div class="modal-action">

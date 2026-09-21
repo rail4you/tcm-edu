@@ -33,6 +33,7 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLive do
      |> assign(:page_subtitle, "上传教学大纲、病例库、图片/视频资源，AI 问答依据本校资料作答")
      |> assign(:docs, list_docs(teacher))
      |> assign(:form, doc_form(%{}))
+     |> assign(:upload_modal, false)
      |> assign(:editing, nil)
      |> assign(:previewing, nil)
      |> allow_upload(:file,
@@ -52,6 +53,14 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLive do
   @impl true
   def handle_event("validate", %{"doc" => params}, socket) do
     {:noreply, assign(socket, :form, doc_form(params))}
+  end
+
+  def handle_event("open-upload", _params, socket) do
+    {:noreply, assign(socket, :upload_modal, true)}
+  end
+
+  def handle_event("close-upload", _params, socket) do
+    {:noreply, assign(socket, :upload_modal, false) |> reset_upload()}
   end
 
   # 上传分流：媒体（图片/视频）→ ingest_media；文档 → ingest
@@ -96,6 +105,7 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLive do
          socket
          |> put_flash(:info, "已入库 #{length(docs)} 个片段，正在生成向量…")
          |> assign(:form, doc_form(%{}))
+         |> assign(:upload_modal, false)
          |> assign(:docs, list_docs(teacher))}
 
       [{:media, doc}] ->
@@ -103,6 +113,7 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLive do
          socket
          |> put_flash(:info, "已上传媒体资源《#{doc.title}》")
          |> assign(:form, doc_form(%{}))
+         |> assign(:upload_modal, false)
          |> assign(:docs, list_docs(teacher))}
 
       [{:error, reason}] ->
@@ -252,6 +263,17 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLive do
     |> Enum.find_value(fn {name, group} -> if name == source_name, do: group, else: nil end)
   end
 
+  defp kb_summary(docs) do
+    grouped = group_by_source(docs)
+
+    %{
+      sources: length(grouped),
+      embedded: grouped |> Enum.flat_map(fn {_, g} -> [g.counts.embedded] end) |> Enum.sum(),
+      pending: grouped |> Enum.flat_map(fn {_, g} -> [g.counts.pending] end) |> Enum.sum(),
+      failed: grouped |> Enum.flat_map(fn {_, g} -> [g.counts.failed] end) |> Enum.sum()
+    }
+  end
+
   # 按 source_name 分组，携带该源第一个片段的元信息
   defp group_by_source(docs) do
     docs
@@ -353,6 +375,16 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLive do
   defp empty_to_nil(""), do: nil
   defp empty_to_nil(value) when is_binary(value), do: String.trim(value)
 
+  defp reset_upload(socket) do
+    Enum.each(socket.assigns.uploads.file.entries, fn entry ->
+      cancel_upload(socket, :file, entry.ref)
+    end)
+
+    socket
+  rescue
+    _ -> socket
+  end
+
   defp upload_error_to_string(:too_large), do: "文件超过大小限制"
   defp upload_error_to_string(:too_many_files), do: "一次只能上传一个文件"
   defp upload_error_to_string(:not_accepted), do: "不支持的文件类型"
@@ -361,6 +393,7 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLive do
   defp format_reason(:empty), do: "文档内容为空"
   defp format_reason(:too_large), do: "文件超过大小限制"
   defp format_reason({:unsupported_format, ext}), do: "不支持的格式 #{ext}"
+  defp format_reason({:oss, message}), do: "上传失败：#{message}"
   defp format_reason(reason) when is_binary(reason), do: reason
   defp format_reason(reason), do: inspect(reason)
 end
