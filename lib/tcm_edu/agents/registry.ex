@@ -37,6 +37,7 @@ defmodule TcmEdu.Agents.Registry do
   def config(agent_name) when is_binary(agent_name) do
     case agent_name do
       "chat_agent" -> chat_agent()
+      "qa_agent" -> qa_agent()
       "counter_agent" -> counter_agent()
       "quiz_agent" -> quiz_agent()
       "bg_task_agent" -> bg_task_agent()
@@ -47,7 +48,8 @@ defmodule TcmEdu.Agents.Registry do
   end
 
   @spec names() :: [String.t()]
-  def names, do: ~w(chat_agent counter_agent quiz_agent bg_task_agent ping_agent pong_agent)
+  def names,
+    do: ~w(chat_agent qa_agent counter_agent quiz_agent bg_task_agent ping_agent pong_agent)
 
   @spec fallback() :: config()
   def fallback, do: chat_agent()
@@ -69,6 +71,17 @@ defmodule TcmEdu.Agents.Registry do
         start_long_task: LongTaskAction
       },
       max_iterations: 5
+    }
+  end
+
+  # 最普通的纯问答：无工具，经 Jido.AI `:qwen` 走 Qwen API。
+  # 给 `AiChatLive` / `QaChat` 用的声明式配置（实际调用走 `Jido.AI.ask/2`）。
+  defp qa_agent do
+    %{
+      model: :qwen,
+      system_prompt: TcmEdu.AI.QaChat.system_prompt(),
+      tools: %{},
+      max_iterations: 1
     }
   end
 

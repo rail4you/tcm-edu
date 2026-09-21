@@ -6,7 +6,7 @@
     page_subtitle="输入主题，AI 生成结构化教案，可一键存为课程草稿"
   >
     <div class="grid items-start gap-6 xl:grid-cols-5">
-      <fieldset class="fieldset rounded-box bg-base-100 p-4 shadow-sm sm:p-6 xl:col-span-2">
+      <fieldset class="fieldset rounded-box border border-base-300 bg-base-100 p-4 sm:p-6 xl:col-span-2">
         <legend class="fieldset-legend px-2 text-sm font-medium">备课需求</legend>
         <.form
           for={@form}
@@ -31,7 +31,7 @@
         <p class="label">生成约需十几秒，请耐心等待；需要配置大模型 Key 才能使用</p>
       </fieldset>
 
-      <div class="card bg-base-100 shadow-sm xl:col-span-3">
+      <div class="card border border-base-300 bg-base-100 xl:col-span-3">
         <div class="card-body gap-3 p-4 sm:p-6">
           <div class="flex items-center justify-between gap-2">
             <p class="font-medium">生成结果</p>

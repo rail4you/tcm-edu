@@ -33,6 +33,7 @@ defmodule TcmEduWeb.StudentComponents do
               <.mobile_link navigate="/my-learning" label="我的学习" />
               <.mobile_link navigate="/posts" label="交流" />
               <.mobile_link navigate="/chat" label="AI 问答" />
+              <.mobile_link navigate="/ai-chat" label="AI 聊天" />
             </ul>
           </div>
           <.link navigate="/" class="flex items-center gap-2">
@@ -48,6 +49,7 @@ defmodule TcmEduWeb.StudentComponents do
           <.nav_link navigate="/my-learning" label="我的学习" active={@current_page in [:my_learning, :mistakes]} />
           <.nav_link navigate="/posts" label="交流" active={@current_page in [:posts, :post_new]} />
           <.nav_link navigate="/chat" label="AI 问答" active={@current_page == :chat} />
+          <.nav_link navigate="/ai-chat" label="AI 聊天" active={@current_page == :ai_chat} />
         </nav>
         <div class="navbar-end gap-2">
           <div :if={@current_student}>
@@ -106,6 +108,7 @@ defmodule TcmEduWeb.StudentComponents do
             <.link navigate="/courses" class="hover:text-base-content">课程</.link>
             <.link navigate="/posts" class="hover:text-base-content">交流</.link>
             <.link navigate="/chat" class="hover:text-base-content">AI 问答</.link>
+            <.link navigate="/ai-chat" class="hover:text-base-content">AI 聊天</.link>
           </div>
         </div>
       </footer>

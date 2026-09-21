@@ -43,16 +43,26 @@ defmodule TcmEdu.Chat.ChatSession do
   end
 
   actions do
-    defaults([:read])
+    defaults([:read, :destroy])
 
     create :create do
       primary?(true)
       accept([:user_id, :agent_name, :title])
     end
+
+    update :rename do
+      primary?(false)
+      accept([:title])
+      validate(string_length(:title, min: 1, max: 100))
+    end
   end
 
   policies do
     policy action_type(:read) do
+      authorize_if(expr(user_id == ^actor(:id)))
+    end
+
+    policy action_type([:update, :destroy]) do
       authorize_if(expr(user_id == ^actor(:id)))
     end
 

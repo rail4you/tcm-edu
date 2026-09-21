@@ -158,7 +158,7 @@ defmodule TcmEduWeb.TeacherComponents do
                 </details>
               </li>
               <li>
-                <details open={@current_page in [:ai_lesson, :ai_image]}>
+                <details open={@current_page in [:ai_lesson, :ai_image, :ai_chat]}>
                   <summary>
                     <.icon name="hero-sparkles" class="size-4" />
                     <span>智能备课</span>
@@ -180,6 +180,15 @@ defmodule TcmEduWeb.TeacherComponents do
                       >
                         <.icon name="hero-photo" class="size-4" />
                         AI 配图
+                      </.link>
+                    </li>
+                    <li>
+                      <.link
+                        navigate="/teacher/ai/chat"
+                        class={["w-full", @current_page == :ai_chat && "menu-active"]}
+                      >
+                        <.icon name="hero-chat-bubble-left-right" class="size-4" />
+                        AI 问答
                       </.link>
                     </li>
                   </ul>
@@ -250,6 +259,15 @@ defmodule TcmEduWeb.TeacherComponents do
                   data-tip="AI 配图"
                 >
                   <.icon name="hero-photo" class="size-4" />
+                </.link>
+              </li>
+              <li>
+                <.link
+                  navigate="/teacher/ai/chat"
+                  class={["tooltip tooltip-right w-full", @current_page == :ai_chat && "menu-active"]}
+                  data-tip="AI 问答"
+                >
+                  <.icon name="hero-chat-bubble-left-right" class="size-4" />
                 </.link>
               </li>
               <li>

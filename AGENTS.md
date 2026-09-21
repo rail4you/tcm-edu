@@ -45,8 +45,11 @@ This is a web application written using the Phoenix web framework.
 - If you override the default input classes (`<.input class="myclass px-2 py-1 rounded-lg">)`) class with your own values, no default classes are inherited, so your
 custom classes must fully style the input
 
+### UI containers (daisyUI)
 
-<!-- usage-rules-start -->
+- Content cards/panels use a **bordered contour, never shadow**: `rounded-box border border-base-300 bg-base-100` (e.g. `fieldset`, `card`, chat sidebars and chat windows). **Never** put `border` and `shadow-*` on the same element.
+- Split card interiors with subtle dividers: `border-b border-base-300` (header) / `border-t border-base-300` (footer); round inner edge blocks with `rounded-t-box` / `rounded-b-box` so they don't poke outside the card.
+- Chat bubbles are hand-built flex rows (`rounded-2xl`, user `bg-primary text-primary-content`, assistant `bg-base-200`) — do NOT use daisyUI `.chat-bubble` (its `::before` mask tail + zeroed corner can't be cleanly removed). Reference: `TcmEduWeb.AiChatLive`.
 <!-- usage_rules-start -->
 ## usage_rules usage
 _A config-driven dev tool for Elixir projects to manage AGENTS.md files and agent skills from dependencies_

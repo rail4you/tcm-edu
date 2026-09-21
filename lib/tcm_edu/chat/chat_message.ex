@@ -47,6 +47,12 @@ defmodule TcmEdu.Chat.ChatMessage do
       primary?(true)
       accept([:session_id, :role, :content])
     end
+
+    read :for_session do
+      argument(:session_id, :string, allow_nil?: false)
+      filter(expr(session_id == ^arg(:session_id)))
+      prepare(build(sort: [inserted_at: :asc]))
+    end
   end
 
   policies do
