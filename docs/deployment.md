@@ -67,10 +67,23 @@ PHX_HOST=111.229.72.15          # 对外主机名，check_origin 用它匹配浏
 DATABASE_URL=postgres://postgres:****@postgres:5432/tcm_edu
 POOL_SIZE=10
 TZ=Asia/Shanghai
+
+# 文件存储（阿里云 OSS，AshStorage 上传必需）
+OSS_ACCESS_KEY_ID=<阿里云 RAM AccessKey ID>
+OSS_ACCESS_KEY_SECRET=<阿里云 RAM AccessKey Secret>
+OSS_BUCKET=xingningshu              # 可选，默认 xingningshu
+OSS_ENDPOINT=oss-cn-beijing.aliyuncs.com  # 可选
+OSS_REGION=cn-beijing               # 可选
 ```
 
 > ⚠️ `PHX_HOST` 是「公网访问主机名」，**不是**容器绑定 IP（`0.0.0.0`）。
 > 若填 `0.0.0.0`，LiveView WebSocket 会因 `check_origin` 不匹配被拒（403）。
+>
+> ⚠️ **OSS 凭证必填**：课程封面 / AI 图片等所有上传都走 OSS。缺
+> `OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET` 时上传会 raise
+> `OSS_ACCESS_KEY_SECRET 未配置`（表现为「预览可见但提交后没保存」）。
+> 在阿里云 RAM 创建子账号并授权 OSS 读写，把 key 填进 `.env`；`deploy.sh`
+> 会把 `OSS_*` 变量注入容器。
 
 ---
 
@@ -231,6 +244,7 @@ ssh tcm-edu 'docker ps --filter name=tcm-edu'
 | `bin/migrate` 显示 "Migrations already up" 但表没建 | 迁移目录路径问题：release 里必须能解析到 `/app/lib/tcm_edu-<ver>/priv/repo/tenant_migrations`（已修复为 `Application.app_dir/2`）。 |
 | 容器启动报 `port 4000 already in use` | 上一个容器未停，先 `docker rm -f tcm-edu`。 |
 | 登录失败重定向回 `/login` | 密码不对（用户被外部创建、非 seed 默认密码）。可重置密码哈希。 |
+| 上传封面能看到预览，但提交后没保存 / 容器日志 `OSS_ACCESS_KEY_SECRET 未配置` | 容器缺 OSS 凭证：检查 `.env` 是否有 `OSS_ACCESS_KEY_ID`/`OSS_ACCESS_KEY_SECRET` 且 `deploy.sh` 已注入（`docker exec tcm-edu env | grep OSS_`）。§3。 |
 | 公网直连 4000 不可达 | 正常：4000 仅绑定回环，nginx 反代 80。 |
 
 ---

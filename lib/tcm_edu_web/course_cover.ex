@@ -62,6 +62,11 @@ defmodule TcmEduWeb.CourseCover do
       [] ->
         :no_entry
     end
+  rescue
+    # OSS 未配置凭证或网络异常时 attach 会直接 raise（见
+    # TcmEdu.Storage.OSS.raise_missing/1）。兜底成友好错误而不是让 LiveView 崩溃。
+    error ->
+      {:error, format_reason(error)}
   end
 
   @doc "移除课程封面（删除关联、blob 记录与 OSS 文件）。"

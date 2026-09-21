@@ -148,6 +148,11 @@ docker run -d \
   -e TOKEN_SIGNING_SECRET="${TOKEN_SIGNING_SECRET}" \
   -e TZ=${TZ:-Asia/Shanghai} \
   -e LANG=C.UTF-8 \
+  -e OSS_ACCESS_KEY_ID="${OSS_ACCESS_KEY_ID}" \
+  -e OSS_ACCESS_KEY_SECRET="${OSS_ACCESS_KEY_SECRET}" \
+  -e OSS_BUCKET="${OSS_BUCKET}" \
+  -e OSS_ENDPOINT="${OSS_ENDPOINT}" \
+  -e OSS_REGION="${OSS_REGION}" \
   ${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/tcm-edu:latest}
 
 echo '>>> 清理旧镜像...'
@@ -194,6 +199,11 @@ docker run --rm \
   -e SECRET_KEY_BASE="${SECRET_KEY_BASE}" \
   -e TOKEN_SIGNING_SECRET="${TOKEN_SIGNING_SECRET}" \
   -e TZ=${TZ:-Asia/Shanghai} \
+  -e OSS_ACCESS_KEY_ID="${OSS_ACCESS_KEY_ID}" \
+  -e OSS_ACCESS_KEY_SECRET="${OSS_ACCESS_KEY_SECRET}" \
+  -e OSS_BUCKET="${OSS_BUCKET}" \
+  -e OSS_ENDPOINT="${OSS_ENDPOINT}" \
+  -e OSS_REGION="${OSS_REGION}" \
   ${IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/tcm-edu:latest} \
   /app/bin/migrate
 REMOTE_MIGRATE
