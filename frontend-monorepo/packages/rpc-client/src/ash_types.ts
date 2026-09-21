@@ -165,12 +165,11 @@ export type ChapterAttributesOnlySchema = {
 // Course Schema
 export type CourseResourceSchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "title" | "subtitle" | "description" | "coverImageUrl" | "tags" | "level" | "status" | "priceCents" | "publishedAt" | "teacherId" | "categoryId" | "lessonCount" | "durationSeconds" | "studentCount";
+  __primitiveFields: "id" | "title" | "subtitle" | "description" | "tags" | "level" | "status" | "priceCents" | "publishedAt" | "teacherId" | "categoryId" | "lessonCount" | "chapterCount" | "durationSeconds" | "studentCount" | "coverImageUrl";
   id: UUID;
   title: string;
   subtitle: string | null;
   description: string | null;
-  coverImageUrl: string | null;
   tags: Array<string> | null;
   level: "advanced" | "beginner" | "intermediate" | null;
   status: "archived" | "draft" | "published" | null;
@@ -179,8 +178,10 @@ export type CourseResourceSchema = {
   teacherId: UUID;
   categoryId: UUID | null;
   lessonCount: number | null;
+  chapterCount: number | null;
   durationSeconds: Decimal | null;
   studentCount: number | null;
+  coverImageUrl: string | null;
   teacher: { __type: "Relationship"; __resource: UserResourceSchema; };
   category: { __type: "Relationship"; __resource: CourseCategoryResourceSchema | null; };
   chapters: { __type: "Relationship"; __array: true; __resource: ChapterResourceSchema; };
@@ -190,12 +191,11 @@ export type CourseResourceSchema = {
 
 export type CourseAttributesOnlySchema = {
   __type: "Resource";
-  __primitiveFields: "id" | "title" | "subtitle" | "description" | "coverImageUrl" | "tags" | "level" | "status" | "priceCents" | "publishedAt" | "teacherId" | "categoryId";
+  __primitiveFields: "id" | "title" | "subtitle" | "description" | "tags" | "level" | "status" | "priceCents" | "publishedAt" | "teacherId" | "categoryId";
   id: UUID;
   title: string;
   subtitle: string | null;
   description: string | null;
-  coverImageUrl: string | null;
   tags: Array<string> | null;
   level: "advanced" | "beginner" | "intermediate" | null;
   status: "archived" | "draft" | "published" | null;
@@ -324,6 +324,38 @@ export type ProgressAttributesOnlySchema = {
 };
 
 
+// Notification Schema
+export type NotificationResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "actorId" | "type" | "title" | "body" | "payload" | "readAt" | "recipientId" | "isRead";
+  id: UUID;
+  actorId: UUID | null;
+  type: "ai_lesson" | "course_published" | "enrollment" | "progress" | "quiz_graded" | "system" | null;
+  title: string;
+  body: string | null;
+  payload: Record<string, any> | null;
+  readAt: UtcDateTime | null;
+  recipientId: UUID;
+  isRead: boolean | null;
+  recipient: { __type: "Relationship"; __resource: UserResourceSchema; };
+};
+
+
+
+export type NotificationAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "actorId" | "type" | "title" | "body" | "payload" | "readAt" | "recipientId";
+  id: UUID;
+  actorId: UUID | null;
+  type: "ai_lesson" | "course_published" | "enrollment" | "progress" | "quiz_graded" | "system" | null;
+  title: string;
+  body: string | null;
+  payload: Record<string, any> | null;
+  readAt: UtcDateTime | null;
+  recipientId: UUID;
+};
+
+
 // Post Schema
 export type PostResourceSchema = {
   __type: "Resource";
@@ -348,6 +380,170 @@ export type PostAttributesOnlySchema = {
   body: string | null;
   insertedAt: UtcDateTimeUsec;
   updatedAt: UtcDateTimeUsec;
+};
+
+
+// Attempt Schema
+export type AttemptResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "answer" | "isCorrect" | "score" | "source" | "durationSeconds" | "aiExplanation" | "aiExplainedAt" | "userId" | "questionId";
+  id: UUID;
+  answer: string | null;
+  isCorrect: boolean | null;
+  score: Decimal | null;
+  source: "exam" | "homework" | "practice" | null;
+  durationSeconds: number | null;
+  aiExplanation: string | null;
+  aiExplainedAt: UtcDateTime | null;
+  userId: UUID;
+  questionId: UUID;
+  user: { __type: "Relationship"; __resource: UserResourceSchema; };
+  question: { __type: "Relationship"; __resource: QuestionResourceSchema; };
+};
+
+
+
+export type AttemptAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "answer" | "isCorrect" | "score" | "source" | "durationSeconds" | "aiExplanation" | "aiExplainedAt" | "userId" | "questionId";
+  id: UUID;
+  answer: string | null;
+  isCorrect: boolean | null;
+  score: Decimal | null;
+  source: "exam" | "homework" | "practice" | null;
+  durationSeconds: number | null;
+  aiExplanation: string | null;
+  aiExplainedAt: UtcDateTime | null;
+  userId: UUID;
+  questionId: UUID;
+};
+
+
+// Question Schema
+export type QuestionResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "type" | "difficulty" | "stem" | "options" | "answer" | "explanation" | "mediaUrl" | "tags" | "knowledgePoints" | "status" | "bankId" | "createdById";
+  id: UUID;
+  type: "essay" | "judge" | "multi" | "single";
+  difficulty: number | null;
+  stem: string;
+  options: Array<Record<string, any>> | null;
+  answer: string | null;
+  explanation: string | null;
+  mediaUrl: string | null;
+  tags: Array<string> | null;
+  knowledgePoints: Array<string> | null;
+  status: "active" | "archived" | null;
+  bankId: UUID;
+  createdById: UUID | null;
+  bank: { __type: "Relationship"; __resource: QuestionBankResourceSchema; };
+  createdBy: { __type: "Relationship"; __resource: UserResourceSchema | null; };
+};
+
+
+
+export type QuestionAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "type" | "difficulty" | "stem" | "options" | "answer" | "explanation" | "mediaUrl" | "tags" | "knowledgePoints" | "status" | "bankId" | "createdById";
+  id: UUID;
+  type: "essay" | "judge" | "multi" | "single";
+  difficulty: number | null;
+  stem: string;
+  options: Array<Record<string, any>> | null;
+  answer: string | null;
+  explanation: string | null;
+  mediaUrl: string | null;
+  tags: Array<string> | null;
+  knowledgePoints: Array<string> | null;
+  status: "active" | "archived" | null;
+  bankId: UUID;
+  createdById: UUID | null;
+};
+
+
+// QuestionBank Schema
+export type QuestionBankResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "name" | "description" | "subject" | "isPublic" | "visibleAfterEnrollment" | "questionCount";
+  id: UUID;
+  name: string;
+  description: string | null;
+  subject: "anatomy" | "clinical" | "nursing" | "other" | "pathology" | "pharmacology" | "physiology" | "public_health" | "traditional_chinese_medicine" | "western_medicine" | null;
+  isPublic: boolean | null;
+  visibleAfterEnrollment: boolean | null;
+  questionCount: number | null;
+  questions: { __type: "Relationship"; __array: true; __resource: QuestionResourceSchema; };
+};
+
+
+
+export type QuestionBankAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "name" | "description" | "subject" | "isPublic" | "visibleAfterEnrollment";
+  id: UUID;
+  name: string;
+  description: string | null;
+  subject: "anatomy" | "clinical" | "nursing" | "other" | "pathology" | "pharmacology" | "physiology" | "public_health" | "traditional_chinese_medicine" | "western_medicine" | null;
+  isPublic: boolean | null;
+  visibleAfterEnrollment: boolean | null;
+};
+
+
+// ApiKeyConfig Schema
+export type ApiKeyConfigResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "provider" | "baseUrl" | "model" | "isActive";
+  id: UUID;
+  provider: "dashscope" | "deepseek" | "qwen";
+  baseUrl: string | null;
+  model: string | null;
+  isActive: boolean | null;
+};
+
+
+
+export type ApiKeyConfigAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "provider" | "baseUrl" | "model" | "isActive";
+  id: UUID;
+  provider: "dashscope" | "deepseek" | "qwen";
+  baseUrl: string | null;
+  model: string | null;
+  isActive: boolean | null;
+};
+
+
+// AuditLog Schema
+export type AuditLogResourceSchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "tenant" | "actorId" | "action" | "resourceType" | "resourceId" | "changes" | "ip" | "userAgent" | "success";
+  id: UUID;
+  tenant: string | null;
+  actorId: UUID | null;
+  action: string;
+  resourceType: string | null;
+  resourceId: UUID | null;
+  changes: Record<string, any> | null;
+  ip: string | null;
+  userAgent: string | null;
+  success: boolean | null;
+};
+
+
+
+export type AuditLogAttributesOnlySchema = {
+  __type: "Resource";
+  __primitiveFields: "id" | "tenant" | "actorId" | "action" | "resourceType" | "resourceId" | "changes" | "ip" | "userAgent" | "success";
+  id: UUID;
+  tenant: string | null;
+  actorId: UUID | null;
+  action: string;
+  resourceType: string | null;
+  resourceId: UUID | null;
+  changes: Record<string, any> | null;
+  ip: string | null;
+  userAgent: string | null;
+  success: boolean | null;
 };
 
 
@@ -806,13 +1002,6 @@ export type CourseFilterInput = {
     isNil?: boolean;
   };
 
-  coverImageUrl?: {
-    eq?: string;
-    notEq?: string;
-    in?: Array<string>;
-    isNil?: boolean;
-  };
-
   tags?: {
     eq?: Array<string>;
     notEq?: Array<string>;
@@ -880,6 +1069,17 @@ export type CourseFilterInput = {
     isNil?: boolean;
   };
 
+  chapterCount?: {
+    eq?: number;
+    notEq?: number;
+    greaterThan?: number;
+    greaterThanOrEqual?: number;
+    lessThan?: number;
+    lessThanOrEqual?: number;
+    in?: Array<number>;
+    isNil?: boolean;
+  };
+
   durationSeconds?: {
     eq?: Decimal;
     notEq?: Decimal;
@@ -899,6 +1099,13 @@ export type CourseFilterInput = {
     lessThan?: number;
     lessThanOrEqual?: number;
     in?: Array<number>;
+    isNil?: boolean;
+  };
+
+  coverImageUrl?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
     isNil?: boolean;
   };
 
@@ -1170,6 +1377,78 @@ export type ProgressFilterInput = {
   lesson?: LessonFilterInput;
 
 };
+export type NotificationFilterInput = {
+  and?: Array<NotificationFilterInput>;
+  or?: Array<NotificationFilterInput>;
+  not?: Array<NotificationFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  actorId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+    isNil?: boolean;
+  };
+
+  type?: {
+    eq?: "ai_lesson" | "course_published" | "enrollment" | "progress" | "quiz_graded" | "system";
+    notEq?: "ai_lesson" | "course_published" | "enrollment" | "progress" | "quiz_graded" | "system";
+    in?: Array<"ai_lesson" | "course_published" | "enrollment" | "progress" | "quiz_graded" | "system">;
+    isNil?: boolean;
+  };
+
+  title?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+  };
+
+  body?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  payload?: {
+    eq?: Record<string, any>;
+    notEq?: Record<string, any>;
+    in?: Array<Record<string, any>>;
+    isNil?: boolean;
+  };
+
+  readAt?: {
+    eq?: UtcDateTime;
+    notEq?: UtcDateTime;
+    greaterThan?: UtcDateTime;
+    greaterThanOrEqual?: UtcDateTime;
+    lessThan?: UtcDateTime;
+    lessThanOrEqual?: UtcDateTime;
+    in?: Array<UtcDateTime>;
+    isNil?: boolean;
+  };
+
+  recipientId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  isRead?: {
+    eq?: boolean;
+    notEq?: boolean;
+    isNil?: boolean;
+  };
+
+
+  recipient?: UserFilterInput;
+
+};
 export type PostFilterInput = {
   and?: Array<PostFilterInput>;
   or?: Array<PostFilterInput>;
@@ -1232,6 +1511,370 @@ export type PostFilterInput = {
     eq?: Array<string>;
     notEq?: Array<string>;
     in?: Array<Array<string>>;
+    isNil?: boolean;
+  };
+
+
+
+};
+export type AttemptFilterInput = {
+  and?: Array<AttemptFilterInput>;
+  or?: Array<AttemptFilterInput>;
+  not?: Array<AttemptFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  answer?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  isCorrect?: {
+    eq?: boolean;
+    notEq?: boolean;
+    isNil?: boolean;
+  };
+
+  score?: {
+    eq?: Decimal;
+    notEq?: Decimal;
+    greaterThan?: Decimal;
+    greaterThanOrEqual?: Decimal;
+    lessThan?: Decimal;
+    lessThanOrEqual?: Decimal;
+    in?: Array<Decimal>;
+    isNil?: boolean;
+  };
+
+  source?: {
+    eq?: "exam" | "homework" | "practice";
+    notEq?: "exam" | "homework" | "practice";
+    in?: Array<"exam" | "homework" | "practice">;
+    isNil?: boolean;
+  };
+
+  durationSeconds?: {
+    eq?: number;
+    notEq?: number;
+    greaterThan?: number;
+    greaterThanOrEqual?: number;
+    lessThan?: number;
+    lessThanOrEqual?: number;
+    in?: Array<number>;
+    isNil?: boolean;
+  };
+
+  aiExplanation?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  aiExplainedAt?: {
+    eq?: UtcDateTime;
+    notEq?: UtcDateTime;
+    greaterThan?: UtcDateTime;
+    greaterThanOrEqual?: UtcDateTime;
+    lessThan?: UtcDateTime;
+    lessThanOrEqual?: UtcDateTime;
+    in?: Array<UtcDateTime>;
+    isNil?: boolean;
+  };
+
+  userId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  questionId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+
+  user?: UserFilterInput;
+
+  question?: QuestionFilterInput;
+
+};
+export type QuestionFilterInput = {
+  and?: Array<QuestionFilterInput>;
+  or?: Array<QuestionFilterInput>;
+  not?: Array<QuestionFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  type?: {
+    eq?: "essay" | "judge" | "multi" | "single";
+    notEq?: "essay" | "judge" | "multi" | "single";
+    in?: Array<"essay" | "judge" | "multi" | "single">;
+  };
+
+  difficulty?: {
+    eq?: number;
+    notEq?: number;
+    greaterThan?: number;
+    greaterThanOrEqual?: number;
+    lessThan?: number;
+    lessThanOrEqual?: number;
+    in?: Array<number>;
+    isNil?: boolean;
+  };
+
+  stem?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+  };
+
+  options?: {
+    eq?: Array<Record<string, any>>;
+    notEq?: Array<Record<string, any>>;
+    in?: Array<Array<Record<string, any>>>;
+    isNil?: boolean;
+  };
+
+  answer?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  explanation?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  mediaUrl?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  tags?: {
+    eq?: Array<string>;
+    notEq?: Array<string>;
+    in?: Array<Array<string>>;
+    isNil?: boolean;
+  };
+
+  knowledgePoints?: {
+    eq?: Array<string>;
+    notEq?: Array<string>;
+    in?: Array<Array<string>>;
+    isNil?: boolean;
+  };
+
+  status?: {
+    eq?: "active" | "archived";
+    notEq?: "active" | "archived";
+    in?: Array<"active" | "archived">;
+    isNil?: boolean;
+  };
+
+  bankId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  createdById?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+    isNil?: boolean;
+  };
+
+
+  bank?: QuestionBankFilterInput;
+
+  createdBy?: UserFilterInput;
+
+};
+export type QuestionBankFilterInput = {
+  and?: Array<QuestionBankFilterInput>;
+  or?: Array<QuestionBankFilterInput>;
+  not?: Array<QuestionBankFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  name?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+  };
+
+  description?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  subject?: {
+    eq?: "anatomy" | "clinical" | "nursing" | "other" | "pathology" | "pharmacology" | "physiology" | "public_health" | "traditional_chinese_medicine" | "western_medicine";
+    notEq?: "anatomy" | "clinical" | "nursing" | "other" | "pathology" | "pharmacology" | "physiology" | "public_health" | "traditional_chinese_medicine" | "western_medicine";
+    in?: Array<"anatomy" | "clinical" | "nursing" | "other" | "pathology" | "pharmacology" | "physiology" | "public_health" | "traditional_chinese_medicine" | "western_medicine">;
+    isNil?: boolean;
+  };
+
+  isPublic?: {
+    eq?: boolean;
+    notEq?: boolean;
+    isNil?: boolean;
+  };
+
+  visibleAfterEnrollment?: {
+    eq?: boolean;
+    notEq?: boolean;
+    isNil?: boolean;
+  };
+
+  questionCount?: {
+    eq?: number;
+    notEq?: number;
+    greaterThan?: number;
+    greaterThanOrEqual?: number;
+    lessThan?: number;
+    lessThanOrEqual?: number;
+    in?: Array<number>;
+    isNil?: boolean;
+  };
+
+
+  questions?: QuestionFilterInput;
+
+};
+export type ApiKeyConfigFilterInput = {
+  and?: Array<ApiKeyConfigFilterInput>;
+  or?: Array<ApiKeyConfigFilterInput>;
+  not?: Array<ApiKeyConfigFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  provider?: {
+    eq?: "dashscope" | "deepseek" | "qwen";
+    notEq?: "dashscope" | "deepseek" | "qwen";
+    in?: Array<"dashscope" | "deepseek" | "qwen">;
+  };
+
+  baseUrl?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  model?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  isActive?: {
+    eq?: boolean;
+    notEq?: boolean;
+    isNil?: boolean;
+  };
+
+
+
+};
+export type AuditLogFilterInput = {
+  and?: Array<AuditLogFilterInput>;
+  or?: Array<AuditLogFilterInput>;
+  not?: Array<AuditLogFilterInput>;
+
+  id?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+  };
+
+  tenant?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  actorId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+    isNil?: boolean;
+  };
+
+  action?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+  };
+
+  resourceType?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  resourceId?: {
+    eq?: UUID;
+    notEq?: UUID;
+    in?: Array<UUID>;
+    isNil?: boolean;
+  };
+
+  changes?: {
+    eq?: Record<string, any>;
+    notEq?: Record<string, any>;
+    in?: Array<Record<string, any>>;
+    isNil?: boolean;
+  };
+
+  ip?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  userAgent?: {
+    eq?: string;
+    notEq?: string;
+    in?: Array<string>;
+    isNil?: boolean;
+  };
+
+  success?: {
+    eq?: boolean;
+    notEq?: boolean;
     isNil?: boolean;
   };
 
@@ -1424,7 +2067,7 @@ export type ChatTaskFilterField = (typeof chatTaskFilterFields)[number];
 export const chapterFilterFields = ["id", "title", "sortOrder", "courseId", "course", "lessons"] as const;
 export type ChapterFilterField = (typeof chapterFilterFields)[number];
 
-export const courseFilterFields = ["id", "title", "subtitle", "description", "coverImageUrl", "tags", "level", "status", "priceCents", "publishedAt", "teacherId", "categoryId", "lessonCount", "durationSeconds", "studentCount", "teacher", "category", "chapters"] as const;
+export const courseFilterFields = ["id", "title", "subtitle", "description", "tags", "level", "status", "priceCents", "publishedAt", "teacherId", "categoryId", "lessonCount", "chapterCount", "durationSeconds", "studentCount", "coverImageUrl", "teacher", "category", "chapters", "coverImage"] as const;
 export type CourseFilterField = (typeof courseFilterFields)[number];
 
 export const courseCategoryFilterFields = ["id", "name", "slug", "icon", "sortOrder"] as const;
@@ -1439,8 +2082,26 @@ export type EnrollmentFilterField = (typeof enrollmentFilterFields)[number];
 export const progressFilterFields = ["id", "status", "progressPct", "lastPositionSeconds", "completedAt", "enrollmentId", "lessonId", "enrollment", "lesson"] as const;
 export type ProgressFilterField = (typeof progressFilterFields)[number];
 
+export const notificationFilterFields = ["id", "actorId", "type", "title", "body", "payload", "readAt", "recipientId", "isRead", "recipient"] as const;
+export type NotificationFilterField = (typeof notificationFilterFields)[number];
+
 export const postFilterFields = ["id", "title", "body", "insertedAt", "updatedAt", "coverImageUrl", "attachmentsUrls", "attachmentsThumbnailUrls", "coverImage", "attachments"] as const;
 export type PostFilterField = (typeof postFilterFields)[number];
+
+export const attemptFilterFields = ["id", "answer", "isCorrect", "score", "source", "durationSeconds", "aiExplanation", "aiExplainedAt", "userId", "questionId", "user", "question"] as const;
+export type AttemptFilterField = (typeof attemptFilterFields)[number];
+
+export const questionFilterFields = ["id", "type", "difficulty", "stem", "options", "answer", "explanation", "mediaUrl", "tags", "knowledgePoints", "status", "bankId", "createdById", "bank", "createdBy"] as const;
+export type QuestionFilterField = (typeof questionFilterFields)[number];
+
+export const questionBankFilterFields = ["id", "name", "description", "subject", "isPublic", "visibleAfterEnrollment", "questionCount", "questions"] as const;
+export type QuestionBankFilterField = (typeof questionBankFilterFields)[number];
+
+export const apiKeyConfigFilterFields = ["id", "provider", "baseUrl", "model", "isActive"] as const;
+export type ApiKeyConfigFilterField = (typeof apiKeyConfigFilterFields)[number];
+
+export const auditLogFilterFields = ["id", "tenant", "actorId", "action", "resourceType", "resourceId", "changes", "ip", "userAgent", "success"] as const;
+export type AuditLogFilterField = (typeof auditLogFilterFields)[number];
 
 export const organizationFilterFields = ["id", "name", "slug", "schemaName", "contactEmail", "contactPhone", "description", "logoUrl", "status", "plan", "expiresAt"] as const;
 export type OrganizationFilterField = (typeof organizationFilterFields)[number];
@@ -1467,7 +2128,7 @@ export type ChatTaskSortField = (typeof chatTaskSortFields)[number];
 export const chapterSortFields = ["id", "title", "sortOrder", "courseId"] as const;
 export type ChapterSortField = (typeof chapterSortFields)[number];
 
-export const courseSortFields = ["id", "title", "subtitle", "description", "coverImageUrl", "tags", "level", "status", "priceCents", "publishedAt", "teacherId", "categoryId", "lessonCount", "durationSeconds", "studentCount"] as const;
+export const courseSortFields = ["id", "title", "subtitle", "description", "tags", "level", "status", "priceCents", "publishedAt", "teacherId", "categoryId", "lessonCount", "chapterCount", "durationSeconds", "studentCount", "coverImageUrl"] as const;
 export type CourseSortField = (typeof courseSortFields)[number];
 
 export const courseCategorySortFields = ["id", "name", "slug", "icon", "sortOrder"] as const;
@@ -1482,8 +2143,26 @@ export type EnrollmentSortField = (typeof enrollmentSortFields)[number];
 export const progressSortFields = ["id", "status", "progressPct", "lastPositionSeconds", "completedAt", "enrollmentId", "lessonId"] as const;
 export type ProgressSortField = (typeof progressSortFields)[number];
 
+export const notificationSortFields = ["id", "actorId", "type", "title", "body", "payload", "readAt", "recipientId", "isRead"] as const;
+export type NotificationSortField = (typeof notificationSortFields)[number];
+
 export const postSortFields = ["id", "title", "body", "insertedAt", "updatedAt", "coverImageUrl", "attachmentsUrls", "attachmentsThumbnailUrls"] as const;
 export type PostSortField = (typeof postSortFields)[number];
+
+export const attemptSortFields = ["id", "answer", "isCorrect", "score", "source", "durationSeconds", "aiExplanation", "aiExplainedAt", "userId", "questionId"] as const;
+export type AttemptSortField = (typeof attemptSortFields)[number];
+
+export const questionSortFields = ["id", "type", "difficulty", "stem", "options", "answer", "explanation", "mediaUrl", "tags", "knowledgePoints", "status", "bankId", "createdById"] as const;
+export type QuestionSortField = (typeof questionSortFields)[number];
+
+export const questionBankSortFields = ["id", "name", "description", "subject", "isPublic", "visibleAfterEnrollment", "questionCount"] as const;
+export type QuestionBankSortField = (typeof questionBankSortFields)[number];
+
+export const apiKeyConfigSortFields = ["id", "provider", "baseUrl", "model", "isActive"] as const;
+export type ApiKeyConfigSortField = (typeof apiKeyConfigSortFields)[number];
+
+export const auditLogSortFields = ["id", "tenant", "actorId", "action", "resourceType", "resourceId", "changes", "ip", "userAgent", "success"] as const;
+export type AuditLogSortField = (typeof auditLogSortFields)[number];
 
 export const organizationSortFields = ["id", "name", "slug", "schemaName", "contactEmail", "contactPhone", "description", "logoUrl", "status", "plan", "expiresAt"] as const;
 export type OrganizationSortField = (typeof organizationSortFields)[number];

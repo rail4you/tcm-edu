@@ -25,71 +25,72 @@ defmodule TcmEdu.System.SuperAdmin do
   require Logger
 
   postgres do
-    table "super_admins"
-    repo TcmEdu.Repo
+    table("super_admins")
+    repo(TcmEdu.Repo)
   end
 
   typescript do
-    type_name "SuperAdmin"
+    type_name("SuperAdmin")
   end
 
   attributes do
-    uuid_primary_key :id
+    uuid_primary_key(:id)
 
     attribute :email, :ci_string do
-      allow_nil? false
-      public? true
+      allow_nil?(false)
+      public?(true)
     end
 
     attribute :name, :string do
-      public? true
+      public?(true)
     end
 
     attribute :hashed_password, :string do
-      allow_nil? false
-      sensitive? true
+      allow_nil?(false)
+      sensitive?(true)
     end
 
     attribute :last_login_at, :utc_datetime do
-      public? true
+      public?(true)
     end
 
-    create_timestamp :inserted_at
-    update_timestamp :updated_at
+    create_timestamp(:inserted_at)
+    update_timestamp(:updated_at)
   end
 
   identities do
-    identity :unique_email, [:email]
+    identity(:unique_email, [:email])
   end
 
   code_interface do
-    define :register_super_admin, action: :register
-    define :super_admin_sign_in, action: :sign_in_with_password
-    define :list_super_admins, action: :read
-    define :get_super_admin, action: :read, get_by: [:id]
-    define :get_super_admin_by_email, action: :read, get_by: [:email]
-    define :delete_super_admin, action: :destroy
+    define(:register_super_admin, action: :register)
+    define(:super_admin_sign_in, action: :sign_in_with_password)
+    define(:list_super_admins, action: :read)
+    define(:get_super_admin, action: :read, get_by: [:id])
+    define(:get_super_admin_by_email, action: :read, get_by: [:email])
+    define(:delete_super_admin, action: :destroy)
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults([:read, :destroy])
 
     create :register do
-      description """
+      description("""
       通过 RPC 注册超管。
 
       仅在部署初期通过 `mix tcm_edu.seed_super_admin` 或控制台调用，
       业务 UI 上不暴露注册入口（避免超管账号被滥建）。
-      """
+      """)
 
-      accept [:email, :name]
+      accept([:email, :name])
+
       argument :password, :string do
-        allow_nil? false
-        sensitive? true
-        constraints min_length: 6
+        allow_nil?(false)
+        sensitive?(true)
+        constraints(min_length: 6)
       end
 
-      validate fn changeset, _context ->
+      validate(fn changeset, _context ->
         password = Ash.Changeset.get_argument(changeset, :password)
 
         if is_binary(password) and byte_size(password) >= 6 do
@@ -97,27 +98,29 @@ defmodule TcmEdu.System.SuperAdmin do
         else
           {:error, field: :password, message: "must be at least 6 characters"}
         end
-      end
+      end)
 
-      change fn changeset, _context ->
-        password = Ash.Changeset.get_argument(changeset, :password)
-        hashed = Bcrypt.hash_pwd_salt(password)
-        Ash.Changeset.force_change_attribute(changeset, :hashed_password, hashed)
-      end,
-      only_when_valid?: true
+      change(
+        fn changeset, _context ->
+          password = Ash.Changeset.get_argument(changeset, :password)
+          hashed = Bcrypt.hash_pwd_salt(password)
+          Ash.Changeset.force_change_attribute(changeset, :hashed_password, hashed)
+        end,
+        only_when_valid?: true
+      )
     end
 
     action :sign_in_with_password, :map do
       argument :email, :string do
-        allow_nil? false
+        allow_nil?(false)
       end
 
       argument :password, :string do
-        allow_nil? false
-        sensitive? true
+        allow_nil?(false)
+        sensitive?(true)
       end
 
-      run fn input, _context ->
+      run(fn input, _context ->
         # NOTE: `__MODULE__` inside the action run block is the auto-generated
         # action module, not the resource. Use the fully-qualified resource name.
         require Ash.Query
@@ -154,32 +157,32 @@ defmodule TcmEdu.System.SuperAdmin do
           {:error, reason} ->
             {:error, reason}
         end
-      end
+      end)
     end
 
     update :touch_last_login do
-      accept []
-      require_atomic? false
-      change set_attribute(:last_login_at, &DateTime.utc_now/0)
+      accept([])
+      require_atomic?(false)
+      change(set_attribute(:last_login_at, &DateTime.utc_now/0))
     end
   end
 
   policies do
     # 默认全开：超管资源后续需要 self-bypass 策略再收紧
     policy action_type(:read) do
-      authorize_if always()
+      authorize_if(always())
     end
 
     policy action_type(:create) do
-      authorize_if always()
+      authorize_if(always())
     end
 
     policy action_type(:update) do
-      authorize_if always()
+      authorize_if(always())
     end
 
     policy action_type(:destroy) do
-      authorize_if always()
+      authorize_if(always())
     end
   end
 end

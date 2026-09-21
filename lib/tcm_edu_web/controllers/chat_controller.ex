@@ -50,32 +50,38 @@ defmodule TcmEduWeb.ChatController do
 
     # Send tool calls from trace
     trace = result[:trace] || []
+
     tool_events =
       Enum.filter(trace, fn e -> e.kind in [:tool_started, :tool_completed] end)
 
     for event <- tool_events do
       case event.kind do
         :tool_started ->
-          data = Jason.encode!(%{
-            type: "tool-call",
-            toolCallId: event.tool_call_id || "",
-            toolName: event.tool_name || "",
-            args: event.data[:arguments] || event.data
-          })
+          data =
+            Jason.encode!(%{
+              type: "tool-call",
+              toolCallId: event.tool_call_id || "",
+              toolName: event.tool_name || "",
+              args: event.data[:arguments] || event.data
+            })
+
           _ = Plug.Conn.chunk(conn, "8:#{data}\n")
 
         :tool_completed ->
           maybe_enqueue_long_task(event, agent_name, sid, user_id)
 
-          data = Jason.encode!(%{
-            type: "tool-result",
-            toolCallId: event.tool_call_id || "",
-            toolName: event.tool_name || "",
-            result: format_tool_output(event.data)
-          })
+          data =
+            Jason.encode!(%{
+              type: "tool-result",
+              toolCallId: event.tool_call_id || "",
+              toolName: event.tool_name || "",
+              result: format_tool_output(event.data)
+            })
+
           _ = Plug.Conn.chunk(conn, "8:#{data}\n")
 
-        _ -> :ok
+        _ ->
+          :ok
       end
     end
 
@@ -103,10 +109,12 @@ defmodule TcmEduWeb.ChatController do
   # When the `start_long_task` tool completes, queue an Oban job so the work
   # happens off the request thread. The tool returns a `task_id` already, so we
   # reuse it when constructing the worker args.
-  defp maybe_enqueue_long_task(%{kind: :tool_completed, tool_name: "start_long_task"} = event,
-                              agent_name,
-                              session_id,
-                              user_id) do
+  defp maybe_enqueue_long_task(
+         %{kind: :tool_completed, tool_name: "start_long_task"} = event,
+         agent_name,
+         session_id,
+         user_id
+       ) do
     result = extract_tool_result(event.data)
     task_id = result[:task_id]
     task_name = result[:task_name]
@@ -166,11 +174,15 @@ defmodule TcmEduWeb.ChatController do
     end
   end
 
-  defp maybe_enqueue_long_task(_event, _agent_name, _session_id, _user_id) do
+  defp maybe_enqueue_long_task(event, _agent_name, _session_id, _user_id) do
     require Logger
-    kind = if is_map(_event), do: Map.get(_event, :kind) || Map.get(_event, :tool_name), else: nil
-    tool_name = if is_map(_event), do: Map.get(_event, :tool_name), else: nil
-    Logger.info("DBG: maybe_enqueue_long_task FELL THROUGH kind=#{inspect(kind)} tool_name=#{inspect(tool_name)}")
+    kind = if is_map(event), do: Map.get(event, :kind) || Map.get(event, :tool_name), else: nil
+    tool_name = if is_map(event), do: Map.get(event, :tool_name), else: nil
+
+    Logger.info(
+      "DBG: maybe_enqueue_long_task FELL THROUGH kind=#{inspect(kind)} tool_name=#{inspect(tool_name)}"
+    )
+
     :ok
   end
 
@@ -202,7 +214,10 @@ defmodule TcmEduWeb.ChatController do
     msgs
     |> Enum.filter(&(Map.get(&1, "role") == "user"))
     |> List.last()
-    |> case do nil -> ""; m -> m["content"] || "" end
+    |> case do
+      nil -> ""
+      m -> m["content"] || ""
+    end
   end
 
   defp format_tool_output(%{result: {:ok, data, _}}), do: inspect(data)

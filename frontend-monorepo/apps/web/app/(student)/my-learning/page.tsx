@@ -118,6 +118,21 @@ export default function MyLearningPage() {
       <h1 className="font-song text-2xl font-bold text-ink-900 md:text-3xl">我的学习</h1>
       <p className="mt-1 text-sm text-ink-600">继续上次的进度，见证你的成长</p>
 
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Link
+          href="/my-learning/mistakes"
+          className="inline-flex items-center gap-2 rounded-lg border border-rice-200 bg-white px-4 py-2 text-sm text-ink-800 transition hover:border-cinnabar-300 hover:bg-cinnabar-50"
+        >
+          错题本（含 AI 解析）
+        </Link>
+        <Link
+          href="/notifications"
+          className="inline-flex items-center gap-2 rounded-lg border border-rice-200 bg-white px-4 py-2 text-sm text-ink-800 transition hover:border-cinnabar-300 hover:bg-cinnabar-50"
+        >
+          通知中心
+        </Link>
+      </div>
+
       {loading ? (
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (

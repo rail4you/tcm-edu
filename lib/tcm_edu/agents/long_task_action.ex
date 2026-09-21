@@ -23,9 +23,15 @@ defmodule TcmEdu.Agents.LongTaskAction do
     schema:
       Zoi.object(%{
         task_name:
-          Zoi.string(description: "Short human-readable label for the task, used in the notification banner."),
+          Zoi.string(
+            description:
+              "Short human-readable label for the task, used in the notification banner."
+          ),
         duration_ms:
-          Zoi.integer(description: "How long the simulated work should take in milliseconds (default 15000).")
+          Zoi.integer(
+            description:
+              "How long the simulated work should take in milliseconds (default 15000)."
+          )
           |> Zoi.default(15_000)
       })
 

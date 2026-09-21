@@ -93,8 +93,8 @@
                       <span class="badge badge-soft badge-xs badge-ghost">{course.lesson_count || 0}</span>
                     </td>
                     <td class="text-right">
-                      <.link navigate={"/teacher/courses/#{course.id}/edit"} class="btn btn-ghost btn-sm">
-                        编辑
+                      <.link navigate="/teacher/courses" class="btn btn-ghost btn-sm">
+                        管理
                       </.link>
                     </td>
                   </tr>
@@ -213,12 +213,7 @@
               min="0"
               step="0.01"
             />
-            <.input
-              field={@create_form[:cover_image_url]}
-              type="text"
-              label="封面图片 URL"
-              placeholder="可选，或去 AI 配图"
-            />
+            <p class="label self-end pb-3">封面可在创建后于课程编辑页上传</p>
           </div>
           <.input
             field={@create_form[:description]}

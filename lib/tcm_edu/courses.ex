@@ -12,38 +12,38 @@ defmodule TcmEdu.Courses do
 
   typescript_rpc do
     resource TcmEdu.Courses.CourseCategory do
-      rpc_action :list_categories, :read
-      rpc_action :create_category, :create
-      rpc_action :update_category, :update
-      rpc_action :delete_category, :destroy
+      rpc_action(:list_categories, :read)
+      rpc_action(:create_category, :create)
+      rpc_action(:update_category, :update)
+      rpc_action(:delete_category, :destroy)
     end
 
     resource TcmEdu.Courses.Course do
-      rpc_action :list_courses, :read
-      rpc_action :list_published_courses, :list_published
-      rpc_action :list_teacher_courses, :list_by_teacher
-      rpc_action :list_category_courses, :list_by_category
-      rpc_action :get_course, :read, get_by: [:id]
-      rpc_action :list_popular_courses, :list_popular
-      rpc_action :create_course, :create_course
-      rpc_action :update_course, :update
-      rpc_action :publish_course, :publish
-      rpc_action :archive_course, :archive
-      rpc_action :delete_course, :destroy
+      rpc_action(:list_courses, :read)
+      rpc_action(:list_published_courses, :list_published)
+      rpc_action(:list_teacher_courses, :list_by_teacher)
+      rpc_action(:list_category_courses, :list_by_category)
+      rpc_action(:get_course, :read, get_by: [:id])
+      rpc_action(:list_popular_courses, :list_popular)
+      rpc_action(:create_course, :create_course)
+      rpc_action(:update_course, :update)
+      rpc_action(:publish_course, :publish)
+      rpc_action(:archive_course, :archive)
+      rpc_action(:delete_course, :destroy)
     end
 
     resource TcmEdu.Courses.Chapter do
-      rpc_action :list_chapters, :read
-      rpc_action :create_chapter, :create
-      rpc_action :update_chapter, :update
-      rpc_action :delete_chapter, :destroy
+      rpc_action(:list_chapters, :read)
+      rpc_action(:create_chapter, :create)
+      rpc_action(:update_chapter, :update)
+      rpc_action(:delete_chapter, :destroy)
     end
 
     resource TcmEdu.Courses.Lesson do
-      rpc_action :list_lessons, :read
-      rpc_action :create_lesson, :create
-      rpc_action :update_lesson, :update
-      rpc_action :delete_lesson, :destroy
+      rpc_action(:list_lessons, :read)
+      rpc_action(:create_lesson, :create)
+      rpc_action(:update_lesson, :update)
+      rpc_action(:delete_lesson, :destroy)
     end
   end
 

@@ -50,7 +50,9 @@ defmodule TcmEdu.TenantProvisioning do
   """
   @spec all_tenant_schemas() :: [String.t()]
   def all_tenant_schemas do
-    case Repo.query("SELECT nspname FROM pg_namespace WHERE nspname LIKE 'tenant_%' ORDER BY nspname") do
+    case Repo.query(
+           "SELECT nspname FROM pg_namespace WHERE nspname LIKE 'tenant_%' ORDER BY nspname"
+         ) do
       {:ok, %{rows: rows}} -> Enum.map(rows, fn [n] -> n end)
       {:error, reason} -> raise "Failed to list tenant schemas: #{inspect(reason)}"
     end
@@ -109,8 +111,11 @@ defmodule TcmEdu.TenantProvisioning do
       Ecto.Migrator.run(repo, path, :up, all: true, prefix: schema_name)
     end)
     |> case do
-      {:ok, _, _} -> :ok
-      {:error, reason} -> {:error, "Tenant migrations failed for #{schema_name}: #{inspect(reason)}"}
+      {:ok, _, _} ->
+        :ok
+
+      {:error, reason} ->
+        {:error, "Tenant migrations failed for #{schema_name}: #{inspect(reason)}"}
     end
   end
 

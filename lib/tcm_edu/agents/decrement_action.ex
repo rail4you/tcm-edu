@@ -2,9 +2,10 @@ defmodule TcmEdu.Agents.DecrementAction do
   use Jido.Action,
     name: "decrement",
     description: "Decrements the counter by a specified amount",
-    schema: Zoi.object(%{
-      by: Zoi.integer() |> Zoi.default(1)
-    })
+    schema:
+      Zoi.object(%{
+        by: Zoi.integer() |> Zoi.default(1)
+      })
 
   @impl true
   def run(params, context) do

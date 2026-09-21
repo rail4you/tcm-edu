@@ -12,15 +12,15 @@ defmodule TcmEdu.Enrollment do
 
   typescript_rpc do
     resource TcmEdu.Enrollment.Enrollment do
-      rpc_action :my_enrollments, :my_enrollments
-      rpc_action :enroll_in_course, :enroll
-      rpc_action :cancel_enrollment, :cancel
-      rpc_action :complete_enrollment, :mark_completed
+      rpc_action(:my_enrollments, :my_enrollments)
+      rpc_action(:enroll_in_course, :enroll)
+      rpc_action(:cancel_enrollment, :cancel)
+      rpc_action(:complete_enrollment, :mark_completed)
     end
 
     resource TcmEdu.Enrollment.Progress do
-      rpc_action :upsert_progress, :upsert_progress
-      rpc_action :update_progress, :update
+      rpc_action(:upsert_progress, :upsert_progress)
+      rpc_action(:update_progress, :update)
     end
   end
 

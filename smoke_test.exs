@@ -25,8 +25,8 @@ session_id = "test-session-#{System.unique_integer([:positive])}"
   })
   |> Oban.insert()
 
-IO.puts "Inserted Oban job id=#{job.id}, task_id=#{task_id}"
-IO.puts "Sleeping 4s to let worker run (2s mock + admin)..."
+IO.puts("Inserted Oban job id=#{job.id}, task_id=#{task_id}")
+IO.puts("Sleeping 4s to let worker run (2s mock + admin)...")
 
 Process.sleep(4_000)
 
@@ -38,15 +38,25 @@ case TcmEdu.Repo.query!(
      ).rows do
   [[tid, status, started_at, completed_at, result]] ->
     IO.puts("=== ChatTask row ===")
-    IO.inspect(%{task_id: tid, status: status, started_at: started_at, completed_at: completed_at, result: result}, label: "task")
+
+    IO.inspect(
+      %{
+        task_id: tid,
+        status: status,
+        started_at: started_at,
+        completed_at: completed_at,
+        result: result
+      },
+      label: "task"
+    )
 
   [] ->
-    IO.puts "No ChatTask row found for #{task_id}"
+    IO.puts("No ChatTask row found for #{task_id}")
 end
 
 # Inspect Oban job state
 job2 = Oban.Repo.get!(Oban.Job, job.id)
-IO.puts "=== Final Oban job state ==="
+IO.puts("=== Final Oban job state ===")
 IO.inspect(job2.state, label: "state")
 IO.inspect(job2.completed_at, label: "completed_at")
 
@@ -59,5 +69,5 @@ msgs =
   |> Ash.Query.sort(inserted_at: :asc)
   |> Ash.read!()
 
-IO.puts "=== Chat messages in this session ==="
+IO.puts("=== Chat messages in this session ===")
 for m <- msgs, do: IO.inspect(m, label: "msg")

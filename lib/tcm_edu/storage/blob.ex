@@ -12,14 +12,14 @@ defmodule TcmEdu.Storage.Blob do
     extensions: [AshStorage.BlobResource]
 
   postgres do
-    table "storage_blobs"
-    repo TcmEdu.Repo
+    table("storage_blobs")
+    repo(TcmEdu.Repo)
   end
 
   blob do
   end
 
   attributes do
-    uuid_primary_key :id
+    uuid_primary_key(:id)
   end
 end

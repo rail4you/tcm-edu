@@ -95,6 +95,7 @@ defmodule TcmEdu.Chat.ChatTask do
 
     create :create do
       primary?(true)
+
       accept([
         :task_id,
         :user_id,

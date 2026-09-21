@@ -30,7 +30,10 @@ defmodule Mix.Tasks.TcmEdu.SeedSuperAdmin do
     name = kv_opts[:name] || System.get_env("TCM_EDU_SUPER_ADMIN_NAME") || "Root Admin"
 
     if is_nil(password) or password == "" do
-      Mix.shell().error("Password is required: pass PASSWORD=... or set TCM_EDU_SUPER_ADMIN_PASSWORD")
+      Mix.shell().error(
+        "Password is required: pass PASSWORD=... or set TCM_EDU_SUPER_ADMIN_PASSWORD"
+      )
+
       exit({:shutdown, 1})
     end
 
@@ -40,6 +43,7 @@ defmodule Mix.Tasks.TcmEdu.SeedSuperAdmin do
     end
 
     require Ash.Query
+
     case SuperAdmin |> Ash.Query.filter(email == ^email) |> Ash.read(authorize?: false) do
       {:ok, [%SuperAdmin{} = existing]} ->
         Mix.shell().info("✓ SuperAdmin #{email} already exists (id=#{existing.id})")

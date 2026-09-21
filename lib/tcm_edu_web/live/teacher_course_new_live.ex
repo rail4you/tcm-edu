@@ -1,7 +1,7 @@
 defmodule TcmEduWeb.TeacherCourseNewLive do
   @moduledoc """
   New course at `/teacher/courses/new`. Sectioned fieldset form; on
-  success navigates to the edit page for chapters and lessons.
+  success navigates back to the course list.
   """
 
   use TcmEduWeb, :live_view
@@ -10,6 +10,7 @@ defmodule TcmEduWeb.TeacherCourseNewLive do
 
   alias TcmEdu.Courses.Course
   alias TcmEdu.Courses.CourseCategory
+  alias TcmEduWeb.CourseCover
 
   on_mount {TcmEduWeb.TeacherAuth, :ensure_teacher}
 
@@ -22,14 +23,19 @@ defmodule TcmEduWeb.TeacherCourseNewLive do
     {:ok,
      socket
      |> assign(:page_title, "创建课程")
-     |> assign(:page_subtitle, "先填基本信息，创建后继续添加章节与课时")
+     |> assign(:page_subtitle, "先填基本信息，可顺手上传封面")
      |> assign(:categories, list_categories(teacher))
-     |> assign(:form, course_form(%{}))}
+     |> assign(:form, course_form(%{}))
+     |> CourseCover.allow_cover_upload()}
   end
 
   @impl true
   def handle_event("validate", %{"course" => params}, socket) do
     {:noreply, assign(socket, :form, course_form(params))}
+  end
+
+  def handle_event("cancel-cover", %{"ref" => ref}, socket) do
+    {:noreply, Phoenix.LiveView.cancel_upload(socket, :cover, ref)}
   end
 
   def handle_event("save", %{"course" => params}, socket) do
@@ -41,7 +47,6 @@ defmodule TcmEduWeb.TeacherCourseNewLive do
         title: get_string(changeset, :title),
         subtitle: get_optional(changeset, :subtitle),
         description: get_optional(changeset, :description),
-        cover_image_url: get_optional(changeset, :cover_image_url),
         level: get_atom(changeset, :level, :beginner),
         price_cents: get_price_cents(changeset),
         teacher_id: teacher.id,
@@ -50,10 +55,23 @@ defmodule TcmEduWeb.TeacherCourseNewLive do
 
       case Course.create_course(attrs, actor: teacher.actor, tenant: teacher.tenant) do
         {:ok, course} ->
-          {:noreply,
-           socket
-           |> put_flash(:info, "课程已创建，继续添加章节与课时")
-           |> push_navigate(to: "/teacher/courses/#{course.id}/edit")}
+          socket =
+            case CourseCover.consume_cover(socket, course, teacher) do
+              {:ok, _url} ->
+                put_flash(socket, :info, "课程已创建，封面已上传")
+
+              {:error, message} ->
+                put_flash(
+                  socket,
+                  :info,
+                  "课程已创建，但封面上传失败（#{message}），可在课程列表编辑中重试"
+                )
+
+              :no_entry ->
+                put_flash(socket, :info, "课程已创建")
+            end
+
+          {:noreply, push_navigate(socket, to: "/teacher/courses")}
 
         {:error, error} ->
           {:noreply, put_flash(socket, :error, ash_message(error))}
@@ -83,7 +101,6 @@ defmodule TcmEduWeb.TeacherCourseNewLive do
       title: :string,
       subtitle: :string,
       description: :string,
-      cover_image_url: :string,
       level: :string,
       price_yuan: :float,
       category_id: :string

@@ -60,22 +60,22 @@ defmodule TcmEdu.Accounts.User do
 
     attribute :bio, :string do
       public?(true)
-      description "教师/管理员个人简介"
+      description("教师/管理员个人简介")
     end
 
     attribute :job_title, :string do
       public?(true)
-      description "教师职称（教授、副教授、讲师…）"
+      description("教师职称（教授、副教授、讲师…）")
     end
 
     attribute :school, :string do
       public?(true)
-      description "所属学校/机构"
+      description("所属学校/机构")
     end
 
     attribute :major, :string do
       public?(true)
-      description "学生专业"
+      description("学生专业")
     end
 
     attribute :hashed_password, :string do
@@ -151,7 +151,7 @@ defmodule TcmEdu.Accounts.User do
 
     read :list_admins do
       description("List tenant admins in the current tenant (super_admin)")
-      filter expr(role == :tenant_admin)
+      filter(expr(role == :tenant_admin))
     end
 
     read :list_teacher_profiles do
@@ -160,12 +160,12 @@ defmodule TcmEdu.Accounts.User do
     end
 
     create :register_with_role do
-      description """
+      description("""
       Admin 创建租户内用户。
 
         * 由 tenant_admin 调用（在自己的租户内）或 super_admin 调用
         * 角色必须 ∈ `[:tenant_admin, :teacher, :student]`
-      """
+      """)
 
       accept([:email, :name, :phone, :avatar_url, :role, :status])
 
@@ -175,7 +175,7 @@ defmodule TcmEdu.Accounts.User do
         constraints(min_length: 6)
       end
 
-      validate fn changeset, _context ->
+      validate(fn changeset, _context ->
         password = Ash.Changeset.get_argument(changeset, :password)
 
         if is_binary(password) and byte_size(password) >= 6 do
@@ -183,54 +183,65 @@ defmodule TcmEdu.Accounts.User do
         else
           {:error, field: :password, message: "must be at least 6 characters"}
         end
-      end
+      end)
 
       change(set_context(%{strategy_name: :password}))
       change(AshAuthentication.Strategy.Password.HashPasswordChange, only_when_valid?: true)
     end
 
     update :update_profile do
-      description "用户更新自己的资料（不能改 role/status/hashed_password）"
+      description("用户更新自己的资料（不能改 role/status/hashed_password）")
       require_atomic?(false)
       accept([:name, :avatar_url, :phone, :bio, :job_title, :school, :major])
     end
 
     update :update_role do
-      description "Admin 改用户角色"
+      description("Admin 改用户角色")
       require_atomic?(false)
       accept([])
+
       argument :role, :atom do
         allow_nil?(false)
         constraints(one_of: [:tenant_admin, :teacher, :student])
       end
+
       change(set_attribute(:role, arg(:role)))
     end
 
     update :update_status do
-      description "Admin 启停用用户"
+      description("Admin 启停用用户")
       require_atomic?(false)
       accept([])
+
       argument :status, :atom do
         allow_nil?(false)
         constraints(one_of: [:active, :disabled])
       end
+
       change(set_attribute(:status, arg(:status)))
     end
 
     update :change_password do
-      description "用户改自己的密码（需提供当前密码）"
+      description("用户改自己的密码（需提供当前密码）")
       require_atomic?(false)
       accept([])
-      argument :current_password, :string, sensitive?: true, allow_nil?: false
-      argument :password, :string,
+      argument(:current_password, :string, sensitive?: true, allow_nil?: false)
+
+      argument(:password, :string,
         sensitive?: true,
         allow_nil?: false,
         constraints: [min_length: 6]
-      argument :password_confirmation, :string, sensitive?: true, allow_nil?: false
+      )
 
-      validate confirm(:password, :password_confirmation)
-      validate {AshAuthentication.Strategy.Password.PasswordValidation,
-                strategy_name: :password, password_argument: :current_password}
+      argument(:password_confirmation, :string, sensitive?: true, allow_nil?: false)
+
+      validate(confirm(:password, :password_confirmation))
+
+      validate(
+        {AshAuthentication.Strategy.Password.PasswordValidation,
+         strategy_name: :password, password_argument: :current_password}
+      )
+
       change({AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password})
     end
   end
@@ -252,87 +263,88 @@ defmodule TcmEdu.Accounts.User do
     # SuperAdmin 跨租户管理：actor 是 SuperAdmin struct 时全放行。
     # Map.fetch(struct, :__struct__) 可取到模块名，故此 check 可用。
     bypass actor_attribute_equals(:__struct__, TcmEdu.System.SuperAdmin) do
-      authorize_if always()
+      authorize_if(always())
     end
 
     # get_by_subject 被 AshAuthentication 用来从 JWT subject 反查用户，需公开
     policy action(:get_by_subject) do
-      authorize_if always()
+      authorize_if(always())
     end
 
     # 公开自助注册已关闭：学生/教师/管理员均无注册入口，账户由
     # 超管（分配管理员）与管理员（分配教师/学生）在管理端创建。
     policy action(:register_with_password) do
-      forbid_if always()
+      forbid_if(always())
     end
 
     # 列表类：仅 tenant_admin / teacher 可列；student 调 list 会被拒绝。
     # 注意：policy 条件列表是 AND 语义，不能把多个 action 写进同一个 policy，
     # 必须每个 action 独立一个 policy 块。
     policy action(:list_users) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
-      authorize_if actor_attribute_equals(:role, :teacher)
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
+      authorize_if(actor_attribute_equals(:role, :teacher))
     end
 
     policy action(:list_students) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
-      authorize_if actor_attribute_equals(:role, :teacher)
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
+      authorize_if(actor_attribute_equals(:role, :teacher))
     end
 
     policy action(:list_teachers) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
-      authorize_if actor_attribute_equals(:role, :teacher)
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
+      authorize_if(actor_attribute_equals(:role, :teacher))
     end
 
     policy action(:list_admins) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
     end
 
     # 公开名师录：任何人可读（含匿名；仅返回公开资料字段，由前端按需选字段）
     policy action(:list_teacher_profiles) do
-      authorize_if always()
+      authorize_if(always())
     end
 
     # 单条读取：admin / teacher 可读任意；student 只能读自己（filter 收敛到单条）
     policy action(:read) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
-      authorize_if actor_attribute_equals(:role, :teacher)
-      authorize_if expr(id == ^actor(:id))
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
+      authorize_if(actor_attribute_equals(:role, :teacher))
+      authorize_if(expr(id == ^actor(:id)))
     end
 
     # 通用 :update 仅 admin 可用；普通用户必须走 update_profile / change_password，
     # 防止 student 通过默认 update 改自己的 role / status。
     policy action(:update) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
     end
 
     # 自助资料 / 密码：本人或 admin
     policy action(:update_profile) do
-      authorize_if expr(id == ^actor(:id))
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
+      authorize_if(expr(id == ^actor(:id)))
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
     end
 
     policy action(:change_password) do
-      authorize_if expr(id == ^actor(:id))
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
+      authorize_if(expr(id == ^actor(:id)))
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
     end
 
     # tenant_admin 创建 / 改角色 / 启停 / 删除本租户用户
     policy action(:register_with_role) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
     end
 
     policy action(:update_role) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
     end
 
     policy action(:update_status) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
     end
 
     policy action(:destroy) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
     end
+
     # 未匹配任何 policy 的动作 Ash 默认拒绝，无需显式 deny。
   end
 

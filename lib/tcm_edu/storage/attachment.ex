@@ -12,20 +12,20 @@ defmodule TcmEdu.Storage.Attachment do
     extensions: [AshStorage.AttachmentResource]
 
   postgres do
-    table "storage_attachments"
-    repo TcmEdu.Repo
+    table("storage_attachments")
+    repo(TcmEdu.Repo)
 
     references do
-      reference :post, on_delete: :nilify
+      reference(:post, on_delete: :nilify)
     end
   end
 
   attachment do
-    blob_resource TcmEdu.Storage.Blob
-    belongs_to_resource :post, TcmEdu.Post
+    blob_resource(TcmEdu.Storage.Blob)
+    belongs_to_resource(:post, TcmEdu.Post)
   end
 
   attributes do
-    uuid_primary_key :id
+    uuid_primary_key(:id)
   end
 end

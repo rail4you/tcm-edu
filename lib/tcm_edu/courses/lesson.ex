@@ -21,75 +21,75 @@ defmodule TcmEdu.Courses.Lesson do
   end
 
   postgres do
-    table "lessons"
-    repo TcmEdu.Repo
+    table("lessons")
+    repo(TcmEdu.Repo)
   end
 
   typescript do
-    type_name "Lesson"
+    type_name("Lesson")
   end
 
   attributes do
-    uuid_primary_key :id
+    uuid_primary_key(:id)
 
     attribute :title, :string do
-      allow_nil? false
-      public? true
+      allow_nil?(false)
+      public?(true)
     end
 
     attribute :content_type, :atom do
-      default :video
-      constraints one_of: [:video, :article, :pdf]
-      public? true
+      default(:video)
+      constraints(one_of: [:video, :article, :pdf])
+      public?(true)
     end
 
     attribute :content_url, :string do
-      public? true
+      public?(true)
     end
 
     attribute :content_text, :string do
-      public? true
+      public?(true)
     end
 
     attribute :duration_seconds, :integer do
-      default 0
-      public? true
+      default(0)
+      public?(true)
     end
 
     attribute :sort_order, :integer do
-      default 0
-      public? true
+      default(0)
+      public?(true)
     end
 
     attribute :is_free_preview, :boolean do
-      default false
-      public? true
+      default(false)
+      public?(true)
     end
 
-    create_timestamp :inserted_at
-    update_timestamp :updated_at
+    create_timestamp(:inserted_at)
+    update_timestamp(:updated_at)
   end
 
   relationships do
     belongs_to :chapter, TcmEdu.Courses.Chapter do
-      allow_nil? false
+      allow_nil?(false)
       # public?: true → chapter_id 可读可过滤（编辑页按章节加载课时）
-      public? true
+      public?(true)
     end
   end
 
   code_interface do
-    define :list_lessons, action: :read
-    define :create_lesson, action: :create
-    define :update_lesson, action: :update
-    define :delete_lesson, action: :destroy
+    define(:list_lessons, action: :read)
+    define(:create_lesson, action: :create)
+    define(:update_lesson, action: :update)
+    define(:delete_lesson, action: :destroy)
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults([:read, :destroy])
 
     create :create do
-      accept [
+      accept([
         :title,
         :content_type,
         :content_url,
@@ -98,13 +98,13 @@ defmodule TcmEdu.Courses.Lesson do
         :sort_order,
         :is_free_preview,
         :chapter_id
-      ]
+      ])
     end
 
     update :update do
-      require_atomic? false
+      require_atomic?(false)
 
-      accept [
+      accept([
         :title,
         :content_type,
         :content_url,
@@ -112,40 +112,40 @@ defmodule TcmEdu.Courses.Lesson do
         :duration_seconds,
         :sort_order,
         :is_free_preview
-      ]
+      ])
     end
   end
 
   policies do
     bypass AshAuthentication.Checks.AshAuthenticationInteraction do
-      authorize_if always()
+      authorize_if(always())
     end
 
     bypass actor_attribute_equals(:__struct__, TcmEdu.System.SuperAdmin) do
-      authorize_if always()
+      authorize_if(always())
     end
 
     policy action(:read) do
-      authorize_if expr(is_free_preview == true)
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
-      authorize_if actor_attribute_equals(:role, :teacher)
+      authorize_if(expr(is_free_preview == true))
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
+      authorize_if(actor_attribute_equals(:role, :teacher))
       # Phase 6：登录即可读非免费课时；Phase 7 收紧为仅已选课学生
-      authorize_if actor_present()
+      authorize_if(actor_present())
     end
 
     policy action(:create) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
-      authorize_if actor_attribute_equals(:role, :teacher)
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
+      authorize_if(actor_attribute_equals(:role, :teacher))
     end
 
     policy action(:update) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
-      authorize_if expr(chapter.course.teacher_id == ^actor(:id))
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
+      authorize_if(expr(chapter.course.teacher_id == ^actor(:id)))
     end
 
     policy action(:destroy) do
-      authorize_if actor_attribute_equals(:role, :tenant_admin)
-      authorize_if expr(chapter.course.teacher_id == ^actor(:id))
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
+      authorize_if(expr(chapter.course.teacher_id == ^actor(:id)))
     end
   end
 end

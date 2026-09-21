@@ -6,10 +6,11 @@ defmodule TcmEdu.Agents.MultiplyAction do
   use Jido.Action,
     name: "multiply",
     description: "Multiplies two numbers together",
-    schema: Zoi.object(%{
-      a: Zoi.float(),
-      b: Zoi.float()
-    })
+    schema:
+      Zoi.object(%{
+        a: Zoi.float(),
+        b: Zoi.float()
+      })
 
   @impl true
   def run(%{a: a, b: b}, _context) do

@@ -29,11 +29,11 @@ defmodule TcmEdu.Repo.TenantMigrations.FixQuestionOptions do
   use Ecto.Migration
 
   def up do
-    execute("ALTER TABLE #{prefix()}.questions ALTER COLUMN options DROP DEFAULT")
-    execute("ALTER TABLE #{prefix()}.questions ADD COLUMN options_arr jsonb[]")
+    execute("ALTER TABLE \"#{prefix()}\".questions ALTER COLUMN options DROP DEFAULT")
+    execute("ALTER TABLE \"#{prefix()}\".questions ADD COLUMN options_arr jsonb[]")
 
     execute("""
-    UPDATE #{prefix()}.questions
+    UPDATE \"#{prefix()}\".questions
     SET options_arr = COALESCE(
       (SELECT array_agg(e) FROM jsonb_array_elements(
         CASE WHEN jsonb_typeof(options) = 'array' THEN options ELSE '[]' END
@@ -42,21 +42,21 @@ defmodule TcmEdu.Repo.TenantMigrations.FixQuestionOptions do
     )
     """)
 
-    execute("ALTER TABLE #{prefix()}.questions DROP COLUMN options")
-    execute("ALTER TABLE #{prefix()}.questions RENAME COLUMN options_arr TO options")
-    execute("ALTER TABLE #{prefix()}.questions ALTER COLUMN options SET DEFAULT '{}'")
-    execute("ALTER TABLE #{prefix()}.questions ALTER COLUMN options SET NOT NULL")
+    execute("ALTER TABLE \"#{prefix()}\".questions DROP COLUMN options")
+    execute("ALTER TABLE \"#{prefix()}\".questions RENAME COLUMN options_arr TO options")
+    execute("ALTER TABLE \"#{prefix()}\".questions ALTER COLUMN options SET DEFAULT '{}'")
+    execute("ALTER TABLE \"#{prefix()}\".questions ALTER COLUMN options SET NOT NULL")
   end
 
   def down do
-    execute("ALTER TABLE #{prefix()}.questions ALTER COLUMN options DROP DEFAULT")
-    execute("ALTER TABLE #{prefix()}.questions ADD COLUMN options_json jsonb")
+    execute("ALTER TABLE \"#{prefix()}\".questions ALTER COLUMN options DROP DEFAULT")
+    execute("ALTER TABLE \"#{prefix()}\".questions ADD COLUMN options_json jsonb")
 
-    execute("UPDATE #{prefix()}.questions SET options_json = to_jsonb(options)")
+    execute("UPDATE \"#{prefix()}\".questions SET options_json = to_jsonb(options)")
 
-    execute("ALTER TABLE #{prefix()}.questions DROP COLUMN options")
-    execute("ALTER TABLE #{prefix()}.questions RENAME COLUMN options_json TO options")
-    execute("ALTER TABLE #{prefix()}.questions ALTER COLUMN options SET DEFAULT '[]'")
-    execute("ALTER TABLE #{prefix()}.questions ALTER COLUMN options SET NOT NULL")
+    execute("ALTER TABLE \"#{prefix()}\".questions DROP COLUMN options")
+    execute("ALTER TABLE \"#{prefix()}\".questions RENAME COLUMN options_json TO options")
+    execute("ALTER TABLE \"#{prefix()}\".questions ALTER COLUMN options SET DEFAULT '[]'")
+    execute("ALTER TABLE \"#{prefix()}\".questions ALTER COLUMN options SET NOT NULL")
   end
 end

@@ -31,104 +31,104 @@ defmodule TcmEdu.System.Organization do
   require Logger
 
   postgres do
-    table "organizations"
-    repo TcmEdu.Repo
+    table("organizations")
+    repo(TcmEdu.Repo)
 
     # AshPostgres 用这个块在创建 Organization 时自动 CREATE SCHEMA 并跑
     # tenant 迁移。template 的 `:slug` 来自下面的 attribute。
     manage_tenant do
-      template ["tenant_", :slug]
+      template(["tenant_", :slug])
     end
   end
 
   typescript do
-    type_name "Organization"
+    type_name("Organization")
   end
 
   attributes do
-    uuid_primary_key :id
+    uuid_primary_key(:id)
 
     attribute :name, :string do
-      allow_nil? false
-      public? true
+      allow_nil?(false)
+      public?(true)
     end
 
     attribute :slug, :string do
-      allow_nil? false
-      public? true
-      description "URL-safe 短标识，作为 schema 名后缀（tenant_<slug>）"
-      constraints match: ~r/^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/
+      allow_nil?(false)
+      public?(true)
+      description("URL-safe 短标识，作为 schema 名后缀（tenant_<slug>）")
+      constraints(match: ~r/^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/)
     end
 
     attribute :schema_name, :string do
-      public? true
-      description "由 create 钩子自动计算，格式 'tenant_<slug>'"
+      public?(true)
+      description("由 create 钩子自动计算，格式 'tenant_<slug>'")
     end
 
     attribute :contact_email, :string do
-      public? true
+      public?(true)
     end
 
     attribute :contact_phone, :string do
-      public? true
+      public?(true)
     end
 
     attribute :description, :string do
-      public? true
+      public?(true)
     end
 
     attribute :logo_url, :string do
-      public? true
+      public?(true)
     end
 
     attribute :status, :atom do
-      default :active
-      constraints one_of: [:active, :suspended, :archived]
-      public? true
+      default(:active)
+      constraints(one_of: [:active, :suspended, :archived])
+      public?(true)
     end
 
     attribute :plan, :atom do
-      default :free
-      constraints one_of: [:free, :pro, :enterprise]
-      public? true
+      default(:free)
+      constraints(one_of: [:free, :pro, :enterprise])
+      public?(true)
     end
 
     attribute :expires_at, :utc_datetime do
-      public? true
+      public?(true)
     end
 
-    create_timestamp :inserted_at
-    update_timestamp :updated_at
+    create_timestamp(:inserted_at)
+    update_timestamp(:updated_at)
   end
 
   identities do
-    identity :unique_slug, [:slug]
+    identity(:unique_slug, [:slug])
   end
 
   code_interface do
-    define :create_organization, action: :create_with_schema
-    define :list_organizations, action: :read
-    define :get_organization, action: :read, get_by: [:id]
-    define :get_organization_by_slug, action: :read, get_by: [:slug]
-    define :update_organization, action: :update
-    define :archive_organization, action: :archive
-    define :suspend_organization, action: :suspend
-    define :activate_organization, action: :activate
-    define :delete_organization, action: :destroy
+    define(:create_organization, action: :create_with_schema)
+    define(:list_organizations, action: :read)
+    define(:get_organization, action: :read, get_by: [:id])
+    define(:get_organization_by_slug, action: :read, get_by: [:slug])
+    define(:update_organization, action: :update)
+    define(:archive_organization, action: :archive)
+    define(:suspend_organization, action: :suspend)
+    define(:activate_organization, action: :activate)
+    define(:delete_organization, action: :destroy)
   end
 
   actions do
-    defaults [:read, :update]
+    defaults([:read, :update])
 
     update :update_details do
-      description "管理端编辑租户资料（不含 slug / schema_name，创建后不可改）。"
-      accept [:name, :contact_email, :contact_phone, :description, :logo_url, :plan, :expires_at]
+      description("管理端编辑租户资料（不含 slug / schema_name，创建后不可改）。")
+      accept([:name, :contact_email, :contact_phone, :description, :logo_url, :plan, :expires_at])
     end
 
     create :create_with_schema do
-      primary? true
+      primary?(true)
 
-      description """
+      description("""
       创建组织，并在同一事务内 CREATE SCHEMA + 跑租户迁移 + 写入 schema_name。
 
       行为：
@@ -138,9 +138,9 @@ defmodule TcmEdu.System.Organization do
            - 在该 schema 上跑 `priv/repo/tenant_migrations/*.exs`
            - 创建初始 tenant_admin 用户（Phase 3 启用）
         3. 任何一步失败 → 整体回滚
-      """
+      """)
 
-      accept [
+      accept([
         :name,
         :slug,
         :contact_email,
@@ -149,86 +149,94 @@ defmodule TcmEdu.System.Organization do
         :logo_url,
         :plan,
         :expires_at
-      ]
+      ])
 
-      change fn changeset, _context ->
+      change(fn changeset, _context ->
         slug = Ash.Changeset.get_attribute(changeset, :slug)
+
         if slug do
           Ash.Changeset.change_attribute(changeset, :schema_name, "tenant_" <> slug)
         else
           changeset
         end
-      end
-
-      change after_action(fn _changeset, organization, _context ->
-        case TcmEdu.TenantProvisioning.provision_tenant(organization) do
-          :ok ->
-            {:ok, organization}
-
-          {:error, reason} = error ->
-            Logger.error("TenantProvisioning failed for #{organization.slug}: #{inspect(reason)}")
-            error
-        end
       end)
+
+      change(
+        after_action(fn _changeset, organization, _context ->
+          case TcmEdu.TenantProvisioning.provision_tenant(organization) do
+            :ok ->
+              {:ok, organization}
+
+            {:error, reason} = error ->
+              Logger.error(
+                "TenantProvisioning failed for #{organization.slug}: #{inspect(reason)}"
+              )
+
+              error
+          end
+        end)
+      )
     end
 
     update :archive do
-      description "软删除（保留 schema，仅修改状态）"
-      accept []
-      change set_attribute(:status, :archived)
+      description("软删除（保留 schema，仅修改状态）")
+      accept([])
+      change(set_attribute(:status, :archived))
     end
 
     update :suspend do
-      description "暂停租户（用户无法登录，但数据保留）"
-      accept []
-      change set_attribute(:status, :suspended)
+      description("暂停租户（用户无法登录，但数据保留）")
+      accept([])
+      change(set_attribute(:status, :suspended))
     end
 
     update :activate do
-      description "恢复 active 状态"
-      accept []
-      change set_attribute(:status, :active)
+      description("恢复 active 状态")
+      accept([])
+      change(set_attribute(:status, :active))
     end
 
     destroy :destroy do
-      primary? true
+      primary?(true)
 
-      description """
+      description("""
       硬删除：删除 record 并 `DROP SCHEMA <schema_name> CASCADE`。
 
       **DESTRUCTIVE**：会删除该租户下所有用户、课程等数据。
       生产环境务必加二次确认。
-      """
-      require_atomic? false
+      """)
 
-      change fn changeset, _context ->
+      require_atomic?(false)
+
+      change(fn changeset, _context ->
         schema_name = changeset.data.schema_name
 
         if is_binary(schema_name) and schema_name != "" do
           Logger.warning("Dropping tenant schema: #{schema_name}")
+
           # 注意：schema 名用双引号包裹，slugs 里的连字符才能被识别为标识符
           TcmEdu.Repo.query("DROP SCHEMA IF EXISTS \"#{schema_name}\" CASCADE")
         end
 
         changeset
-      end
+      end)
     end
   end
 
   policies do
     # SuperAdmin 跨租户运营：actor 是 SuperAdmin struct 时全放行
     bypass actor_attribute_equals(:__struct__, TcmEdu.System.SuperAdmin) do
-      authorize_if always()
+      authorize_if(always())
     end
 
     # 租户列表对登录用户可见（名称/slug 非敏感；管理端租户选择器需要）
     policy action_type(:read) do
-      authorize_if actor_present()
+      authorize_if(actor_present())
     end
 
     # 创建 / 改资料 / 状态流转 / 删除仅超管
     policy action_type([:create, :update, :destroy]) do
-      authorize_if actor_attribute_equals(:__struct__, TcmEdu.System.SuperAdmin)
+      authorize_if(actor_attribute_equals(:__struct__, TcmEdu.System.SuperAdmin))
     end
   end
 end

@@ -25,7 +25,8 @@ defmodule TcmEduWeb.AuthToken do
   alias Joken.Signer
 
   @alg "HS256"
-  @default_lifetime_seconds 60 * 60 * 24  # 24 小时
+  # 24 小时
+  @default_lifetime_seconds 60 * 60 * 24
 
   @doc """
   生成 JWT。
@@ -43,6 +44,7 @@ defmodule TcmEduWeb.AuthToken do
   @spec generate(String.t(), map()) :: {:ok, String.t(), map()} | {:error, term()}
   def generate(subject_id, claims) when is_binary(subject_id) and is_map(claims) do
     now = System.system_time(:second)
+
     payload =
       claims
       |> Map.put("sub", "user?id=#{subject_id}")

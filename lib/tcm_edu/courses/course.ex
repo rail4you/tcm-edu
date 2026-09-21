@@ -11,8 +11,9 @@ defmodule TcmEdu.Courses.Course do
   use Ash.Resource,
     domain: TcmEdu.Courses,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshTypescript.Resource],
-    authorizers: [Ash.Policy.Authorizer]
+    extensions: [AshStorage, AshTypescript.Resource],
+    authorizers: [Ash.Policy.Authorizer],
+    otp_app: :tcm_edu
 
   require Ash.Query
 
@@ -23,6 +24,19 @@ defmodule TcmEdu.Courses.Course do
   postgres do
     table("courses")
     repo(TcmEdu.Repo)
+  end
+
+  storage do
+    # 课程封面走项目 OSS（`xingningshu` bucket，key 按租户名前缀隔离）；
+    # 测试环境经 app config 覆盖为 `AshStorage.Service.Test`。
+    service({TcmEdu.Storage.OSS.Service, []})
+
+    blob_resource(TcmEdu.Storage.Blob)
+    attachment_resource(TcmEdu.Storage.CourseAttachment)
+
+    # 自动生成 `cover_image` 关系与 `cover_image_url` calculation；
+    # 替换掉原来的 `cover_image_url` 字符串字段。
+    has_one_attached(:cover_image)
   end
 
   typescript do
@@ -42,10 +56,6 @@ defmodule TcmEdu.Courses.Course do
     end
 
     attribute :description, :string do
-      public?(true)
-    end
-
-    attribute :cover_image_url, :string do
       public?(true)
     end
 
@@ -174,7 +184,6 @@ defmodule TcmEdu.Courses.Course do
         :title,
         :subtitle,
         :description,
-        :cover_image_url,
         :tags,
         :level,
         :price_cents,
@@ -212,7 +221,6 @@ defmodule TcmEdu.Courses.Course do
         :title,
         :subtitle,
         :description,
-        :cover_image_url,
         :tags,
         :level,
         :price_cents,
@@ -273,6 +281,12 @@ defmodule TcmEdu.Courses.Course do
     end
 
     policy action(:update) do
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
+      authorize_if(relates_to_actor_via(:teacher))
+    end
+
+    # AshStorage 生成的封面操作（attach/detach/purge）与 :update 同权
+    policy action([:attach_cover_image, :detach_cover_image, :purge_cover_image]) do
       authorize_if(actor_attribute_equals(:role, :tenant_admin))
       authorize_if(relates_to_actor_via(:teacher))
     end

@@ -16,6 +16,7 @@ defmodule TcmEduWeb.TeacherQuizLive do
 
   alias TcmEdu.Quiz.Question
   alias TcmEdu.Quiz.QuestionBank
+  alias TcmEduWeb.QuizImport
 
   on_mount {TcmEduWeb.TeacherAuth, :ensure_teacher}
 
@@ -40,6 +41,13 @@ defmodule TcmEduWeb.TeacherQuizLive do
      |> assign(:question_page, 1)
      |> assign(:editing, nil)
      |> assign(:deleting, nil)
+     |> assign(:import_modal, false)
+     |> assign(:import_result, nil)
+     |> allow_upload(:import_file,
+       accept: ~w(.xlsx),
+       max_entries: 1,
+       max_file_size: 10_000_000
+     )
      |> load_banks()}
   end
 
@@ -178,6 +186,68 @@ defmodule TcmEduWeb.TeacherQuizLive do
     end
   end
 
+  def handle_event("open-import", _params, socket) do
+    if socket.assigns.selected_bank_id do
+      {:noreply, assign(socket, import_modal: true, import_result: nil)}
+    else
+      {:noreply, put_flash(socket, :error, "请先选择一个题库")}
+    end
+  end
+
+  def handle_event("close-import", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(import_modal: false, import_result: nil)
+     |> load_banks()
+     |> load_questions()}
+  end
+
+  def handle_event("validate-import", _params, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :import_file, ref)}
+  end
+
+  def handle_event("import", _params, socket) do
+    teacher = socket.assigns.current_teacher
+    bank_id = socket.assigns.selected_bank_id
+
+    # NOTE: 上传文件只落在 LiveView 临时目录做中转，这里直接解析，
+    # 不做任何持久化保存；consume 返回后临时文件由 LiveView 自动清理。
+    consumed =
+      consume_uploaded_entries(socket, :import_file, fn %{path: path}, entry ->
+        cond do
+          not String.ends_with?(String.downcase(entry.client_name), ".xlsx") ->
+            {:ok, {:file_error, "只支持 .xlsx 文件"}}
+
+          true ->
+            case QuizImport.import_file(path) do
+              {:ok, rows, errors} -> {:ok, {:rows, rows, errors}}
+              {:error, message} -> {:ok, {:file_error, message}}
+            end
+        end
+      end)
+
+    case consumed do
+      [] ->
+        {:noreply, put_flash(socket, :error, "请先选择要导入的 xlsx 文件")}
+
+      [{:file_error, message}] ->
+        {:noreply, assign(socket, :import_result, %{created: 0, failed: [{"—", message}]})}
+
+      [{:rows, rows, errors}] ->
+        {created, failed} = create_imported_questions(rows, errors, bank_id, teacher)
+
+        {:noreply,
+         socket
+         |> assign(:import_result, %{created: created, failed: failed})
+         |> load_banks()
+         |> load_questions()}
+    end
+  end
+
   def handle_event("validate-question", %{"question" => params} = all, socket) do
     options =
       case parse_option_params(all["options"]) do
@@ -232,6 +302,32 @@ defmodule TcmEduWeb.TeacherQuizLive do
         save_question(socket, qparams, options)
     end
   end
+
+  defp create_imported_questions(rows, errors, bank_id, teacher) do
+    Enum.reduce(rows, {0, errors}, fn {row_number, attrs}, {created, failed} ->
+      case Question.create_question(Map.put(attrs, :bank_id, bank_id),
+             actor: teacher.actor,
+             tenant: teacher.tenant
+           ) do
+        {:ok, _} ->
+          {created + 1, failed}
+
+        {:error, error} ->
+          {created, failed ++ [{row_number, "创建失败：#{ash_short_message(error)}"}]}
+      end
+    end)
+  end
+
+  defp ash_short_message(error) do
+    error |> Exception.message() |> String.split("\n") |> hd() |> String.trim()
+  rescue
+    _ -> "未知错误"
+  end
+
+  defp upload_error_to_string(:too_large), do: "文件太大（最大 10MB）"
+  defp upload_error_to_string(:too_many_files), do: "一次只能上传 1 个文件"
+  defp upload_error_to_string(:not_accepted), do: "只支持 .xlsx 文件"
+  defp upload_error_to_string(_), do: "文件上传失败"
 
   defp save_question(socket, qparams, options) do
     changeset = question_changeset(qparams)

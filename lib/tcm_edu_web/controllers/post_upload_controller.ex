@@ -40,7 +40,11 @@ defmodule TcmEduWeb.PostUploadController do
               case AshStorage.Info.attachment(TcmEdu.Post, attachment_name_atom) do
                 {:ok, att} ->
                   is_one = att.type == :one
-                  url_calc = if is_one, do: :"#{attachment_name_atom}_url", else: :"#{attachment_name_atom}_urls"
+
+                  url_calc =
+                    if is_one,
+                      do: :"#{attachment_name_atom}_url",
+                      else: :"#{attachment_name_atom}_urls"
 
                   loaded =
                     Ash.load!(record, [url_calc], actor: :any, authorize?: false)

@@ -16,6 +16,7 @@
  * 不再使用 Antd（让登录页与学生端视觉一致，用 Tailwind 自研色板）。
  */
 
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -56,6 +57,14 @@ const TABS: TabConfig[] = [
 const ADMIN_KIND: "super" | "tenant" = "super"; // 默认显示超管登录
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   const router = useRouter();
   const params = useSearchParams();
   const {

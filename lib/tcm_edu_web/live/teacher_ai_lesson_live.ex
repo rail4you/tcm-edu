@@ -82,8 +82,8 @@ defmodule TcmEduWeb.TeacherAILessonLive do
       {:ok, course} ->
         {:noreply,
          socket
-         |> put_flash(:info, "已存为课程草稿，继续添加章节与课时")
-         |> push_navigate(to: "/teacher/courses/#{course.id}/edit")}
+         |> put_flash(:info, "已存为课程草稿《#{course.title}》")
+         |> push_navigate(to: "/teacher/courses")}
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, ash_message(error))}

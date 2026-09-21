@@ -20,17 +20,17 @@ defmodule TcmEdu.Accounts do
 
   typescript_rpc do
     resource TcmEdu.Accounts.User do
-      rpc_action :list_users, :list_users
-      rpc_action :list_students, :list_students
-      rpc_action :list_teachers, :list_teachers
-      rpc_action :list_teacher_profiles, :list_teacher_profiles
-      rpc_action :list_admins, :list_admins
-      rpc_action :register_with_role, :register_with_role
-      rpc_action :update_profile, :update_profile
-      rpc_action :delete_user, :destroy
-      rpc_action :update_user_role, :update_role
-      rpc_action :update_user_status, :update_status
-      rpc_action :change_user_password, :change_password
+      rpc_action(:list_users, :list_users)
+      rpc_action(:list_students, :list_students)
+      rpc_action(:list_teachers, :list_teachers)
+      rpc_action(:list_teacher_profiles, :list_teacher_profiles)
+      rpc_action(:list_admins, :list_admins)
+      rpc_action(:register_with_role, :register_with_role)
+      rpc_action(:update_profile, :update_profile)
+      rpc_action(:delete_user, :destroy)
+      rpc_action(:update_user_role, :update_role)
+      rpc_action(:update_user_status, :update_status)
+      rpc_action(:change_user_password, :change_password)
     end
   end
 

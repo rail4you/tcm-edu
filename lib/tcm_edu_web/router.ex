@@ -10,7 +10,16 @@ defmodule TcmEduWeb.Router do
     plug TcmEduWeb.Plugs.SetTenantForSignIn
 
     plug CORSPlug,
-      origin: ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "http://localhost:3002", "http://127.0.0.1:3002", "http://localhost:3003", "http://127.0.0.1:3003"],
+      origin: [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
+        "http://localhost:3003",
+        "http://127.0.0.1:3003"
+      ],
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       credentials: true
   end
@@ -22,7 +31,16 @@ defmodule TcmEduWeb.Router do
     plug TcmEduWeb.Plugs.SetTenantForSignIn
 
     plug CORSPlug,
-      origin: ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "http://localhost:3002", "http://127.0.0.1:3002", "http://localhost:3003", "http://127.0.0.1:3003"],
+      origin: [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
+        "http://localhost:3003",
+        "http://127.0.0.1:3003"
+      ],
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       credentials: true
 
@@ -34,7 +52,16 @@ defmodule TcmEduWeb.Router do
     plug :accepts, ["json"]
 
     plug CORSPlug,
-      origin: ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "http://localhost:3002", "http://127.0.0.1:3002", "http://localhost:3003", "http://127.0.0.1:3003"],
+      origin: [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
+        "http://localhost:3003",
+        "http://127.0.0.1:3003"
+      ],
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       credentials: true
 
@@ -108,6 +135,23 @@ defmodule TcmEduWeb.Router do
     post "/posts/:post_id/upload/:attachment_name", PostUploadController, :upload
   end
 
+  # ── AI endpoints (lesson plan / image / mistake explain) ────────
+  scope "/api/ai", TcmEduWeb do
+    pipe_through :api_auth
+
+    post "/lesson_plan", AIController, :lesson_plan
+    post "/image", AIController, :image
+    post "/mistake_explain", AIController, :mistake_explain
+  end
+
+  # ── Course static page ─────────────────────────────────────────────
+  scope "/", TcmEduWeb do
+    pipe_through :browser
+
+    get "/course", FallbackController, :course
+    get "/course/*path", FallbackController, :course
+  end
+
   # ── Unified login (single entrance for all portals) ─────────────
   # The trigger-action form on LoginLive POSTs here; legacy per-portal
   # login URLs redirect here as well.
@@ -142,6 +186,13 @@ defmodule TcmEduWeb.Router do
     end
   end
 
+  # ── Teacher file download (session auth checked in controller) ───
+  scope "/teacher", TcmEduWeb do
+    pipe_through :browser
+
+    get "/quiz/template", QuizTemplateController, :template
+  end
+
   # ── Teacher portal (LiveView + daisyUI, session auth) ─────────────
   live_session :teacher,
     on_mount: [{TcmEduWeb.TeacherAuth, :ensure_teacher}] do
@@ -151,7 +202,6 @@ defmodule TcmEduWeb.Router do
       live "/", TeacherDashboardLive, :index
       live "/courses", TeacherCoursesLive, :index
       live "/courses/new", TeacherCourseNewLive, :index
-      live "/courses/:id/edit", TeacherCourseEditLive, :index
       live "/students", TeacherStudentsLive, :index
       live "/quiz", TeacherQuizLive, :index
       live "/ai/lesson-plan", TeacherAILessonLive, :index
@@ -186,15 +236,7 @@ defmodule TcmEduWeb.Router do
     end
   end
 
-  # ── Course static page ─────────────────────────────────────────────
-  scope "/", TcmEduWeb do
-    pipe_through :browser
-
-    get "/course", FallbackController, :course
-    get "/course/*path", FallbackController, :course
-  end
-
-  # ── DB inspector ───────────────────────────────────────────────────
+  # ── SPA pages ─────────────────────────────────────────────────────
   scope "/", TcmEduWeb do
     pipe_through :browser
 

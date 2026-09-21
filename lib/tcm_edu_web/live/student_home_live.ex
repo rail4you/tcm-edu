@@ -165,7 +165,7 @@ defmodule TcmEduWeb.StudentHomeLive do
   defp list_popular do
     Course
     |> Ash.Query.for_read(:list_popular, %{}, tenant: @tenant, authorize?: false)
-    |> Ash.Query.load([:lesson_count, :student_count])
+    |> Ash.Query.load([:cover_image_url, :lesson_count, :student_count])
     |> Ash.read!()
   rescue
     _ -> []

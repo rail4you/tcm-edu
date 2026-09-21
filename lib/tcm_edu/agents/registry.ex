@@ -89,7 +89,8 @@ defmodule TcmEdu.Agents.Registry do
   defp quiz_agent do
     %{
       model: :fast,
-      system_prompt: "You generate quiz questions. Use markdown. If tool fails, explain the error.",
+      system_prompt:
+        "You generate quiz questions. Use markdown. If tool fails, explain the error.",
       tools: %{generate_quiz: QuizGeneratorAction},
       max_iterations: 5
     }

@@ -25,7 +25,9 @@ defmodule TcmEdu.Courses.CourseTest do
 
   describe "course creation" do
     setup do
-      {:ok, teacher: create_user!("crs-teacher", :teacher), student: create_user!("crs-student", :student)}
+      {:ok,
+       teacher: create_user!("crs-teacher", :teacher),
+       student: create_user!("crs-student", :student)}
     end
 
     test "teacher can create a draft course", %{teacher: teacher} do
@@ -198,7 +200,9 @@ defmodule TcmEdu.Courses.CourseTest do
       {:ok, course} = create_course!(teacher_a, "Own #{uniq()}")
       {:ok, chapter} = create_chapter!(course, "Ch1")
       {:ok, lesson} = create_lesson!(chapter, "L1")
-      {:ok, teacher_a: teacher_a, teacher_b: teacher_b, admin: admin, chapter: chapter, lesson: lesson}
+
+      {:ok,
+       teacher_a: teacher_a, teacher_b: teacher_b, admin: admin, chapter: chapter, lesson: lesson}
     end
 
     test "teacher B cannot update teacher A's chapter", %{teacher_b: teacher_b, chapter: chapter} do

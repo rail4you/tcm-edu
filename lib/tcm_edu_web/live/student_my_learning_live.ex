@@ -77,7 +77,7 @@ defmodule TcmEduWeb.StudentMyLearningLive do
           actor: student.actor,
           tenant: student.tenant
         )
-        |> Ash.Query.load([:course, :progress_records])
+        |> Ash.Query.load(course: [:cover_image_url], progress_records: [])
         |> Ash.read!()
         |> Enum.filter(&(&1.status == :active))
         |> Enum.filter(& &1.course)

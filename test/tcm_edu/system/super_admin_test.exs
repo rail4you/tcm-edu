@@ -32,7 +32,8 @@ defmodule TcmEdu.System.SuperAdminTest do
       assert admin.name == @valid_attrs.name
       assert is_binary(admin.hashed_password)
       assert admin.hashed_password != @valid_attrs.password
-      assert String.starts_with?(admin.hashed_password, "$2")  # bcrypt prefix
+      # bcrypt prefix
+      assert String.starts_with?(admin.hashed_password, "$2")
     end
 
     test "rejects password shorter than 6 chars" do
@@ -42,9 +43,9 @@ defmodule TcmEdu.System.SuperAdminTest do
                |> Ash.create(authorize?: false)
 
       assert Enum.any?(errors, fn
-        %{field: :password} -> true
-        _ -> false
-      end)
+               %{field: :password} -> true
+               _ -> false
+             end)
     end
   end
 
@@ -53,6 +54,7 @@ defmodule TcmEdu.System.SuperAdminTest do
       # Register a fresh admin for the test (uses different email to avoid
       # conflict with the production-seeded admin@example.com)
       attrs = %{email: "test-signin@example.com", name: "Test", password: "password123"}
+
       assert {:ok, %SuperAdmin{} = admin} =
                SuperAdmin
                |> Ash.Changeset.for_action(:register, attrs)

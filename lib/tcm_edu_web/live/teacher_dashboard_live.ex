@@ -62,7 +62,6 @@ defmodule TcmEduWeb.TeacherDashboardLive do
         title: get.(:title) |> to_string() |> String.trim(),
         subtitle: get_optional(changeset, :subtitle),
         description: get_optional(changeset, :description),
-        cover_image_url: get_optional(changeset, :cover_image_url),
         level: get_atom(changeset, :level, :beginner),
         price_cents: get_price_cents(changeset),
         teacher_id: teacher.id,
@@ -126,7 +125,7 @@ defmodule TcmEduWeb.TeacherDashboardLive do
       actor: teacher.actor,
       tenant: teacher.tenant
     )
-    |> Ash.Query.load([:lesson_count])
+    |> Ash.Query.load([:cover_image_url, :lesson_count])
     |> Ash.read!()
     |> Enum.sort_by(& &1.updated_at, {:desc, DateTime})
   rescue
@@ -153,7 +152,6 @@ defmodule TcmEduWeb.TeacherDashboardLive do
       title: :string,
       subtitle: :string,
       description: :string,
-      cover_image_url: :string,
       level: :string,
       price_yuan: :float,
       category_id: :string

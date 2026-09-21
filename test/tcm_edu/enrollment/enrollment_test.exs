@@ -177,7 +177,9 @@ defmodule TcmEdu.Enrollment.EnrollmentTest do
       admin = create_user!("cc-admin", :tenant_admin)
       {:ok, course} = create_published_course!(teacher, "CC #{uniq()}")
       {:ok, enrollment} = enroll!(student, course)
-      {:ok, teacher: teacher, student: student, other: other, admin: admin, enrollment: enrollment}
+
+      {:ok,
+       teacher: teacher, student: student, other: other, admin: admin, enrollment: enrollment}
     end
 
     test "student can cancel their own enrollment", %{student: student, enrollment: enrollment} do
@@ -201,7 +203,10 @@ defmodule TcmEdu.Enrollment.EnrollmentTest do
                |> Ash.update(actor: admin, tenant: @tenant)
     end
 
-    test "mark_completed sets status and completed_at", %{student: student, enrollment: enrollment} do
+    test "mark_completed sets status and completed_at", %{
+      student: student,
+      enrollment: enrollment
+    } do
       assert {:ok, %Enrollment{status: :completed} = done} =
                enrollment
                |> Ash.Changeset.for_update(:mark_completed, %{})
@@ -254,7 +259,11 @@ defmodule TcmEdu.Enrollment.EnrollmentTest do
       assert p1.id == p2.id
     end
 
-    test "reaching 100 auto-completes", %{student: student, enrollment: enrollment, lesson: lesson} do
+    test "reaching 100 auto-completes", %{
+      student: student,
+      enrollment: enrollment,
+      lesson: lesson
+    } do
       assert {:ok, %Progress{status: :completed} = done} =
                Progress
                |> Ash.Changeset.for_action(:upsert_progress, %{

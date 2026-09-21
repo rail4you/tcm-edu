@@ -29,8 +29,7 @@ defmodule TcmEdu.Agents.CallAgentAction do
               "Name of the target agent. One of: pong_agent, ping_agent, chat_agent, " <>
                 "bg_task_agent, counter_agent, quiz_agent."
           ),
-        message:
-          Zoi.string(description: "Message to send to the target agent.")
+        message: Zoi.string(description: "Message to send to the target agent.")
       })
 
   require Logger

@@ -7,7 +7,7 @@ import { z } from "zod";
 
 export const changeUserPasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  password: z.string().min(8),
+  password: z.string().min(6),
   passwordConfirmation: z.string().min(1),
 });
 
@@ -18,7 +18,7 @@ export const registerWithRoleSchema = z.object({
   avatarUrl: z.string().nullable().optional(),
   role: z.enum(["student", "teacher", "tenant_admin"]).optional(),
   status: z.enum(["active", "disabled"]).optional(),
-  password: z.string().min(8),
+  password: z.string().min(6),
 });
 
 export const updateProfileSchema = z.object({
@@ -70,7 +70,6 @@ export const createCourseSchema = z.object({
   title: z.string().min(1),
   subtitle: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
-  coverImageUrl: z.string().nullable().optional(),
   tags: z.array(z.string()).nullable().optional(),
   level: z.enum(["advanced", "beginner", "intermediate"]).nullable().optional(),
   priceCents: z.number().int().nullable().optional(),
@@ -90,7 +89,6 @@ export const updateCourseSchema = z.object({
   title: z.string().min(1).optional(),
   subtitle: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
-  coverImageUrl: z.string().nullable().optional(),
   tags: z.array(z.string()).nullable().optional(),
   level: z.enum(["advanced", "beginner", "intermediate"]).nullable().optional(),
   priceCents: z.number().int().nullable().optional(),
@@ -144,6 +142,15 @@ export const upsertProgressSchema = z.object({
   lastPositionSeconds: z.number().int().nullable().optional(),
 });
 
+export const createNotificationSchema = z.object({
+  recipientId: z.uuid(),
+  actorId: z.uuid().nullable().optional(),
+  type: z.enum(["ai_lesson", "course_published", "enrollment", "progress", "quiz_graded", "system"]).nullable().optional(),
+  title: z.string().min(1),
+  body: z.string().nullable().optional(),
+  payload: z.record(z.string(), z.any()).nullable().optional(),
+});
+
 export const createPostSchema = z.object({
   title: z.string().min(1).max(200),
   body: z.string().max(10000).nullable().optional(),
@@ -152,6 +159,85 @@ export const createPostSchema = z.object({
 export const updatePostSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   body: z.string().max(10000).nullable().optional(),
+});
+
+export const submitAttemptSchema = z.object({
+  questionId: z.uuid(),
+  answer: z.string().nullable().optional(),
+  score: z.string().nullable().optional(),
+  source: z.enum(["exam", "homework", "practice"]).nullable().optional(),
+  durationSeconds: z.number().int().nullable().optional(),
+});
+
+export const createQuestionSchema = z.object({
+  type: z.enum(["essay", "judge", "multi", "single"]).optional(),
+  difficulty: z.number().int().min(1).max(5).nullable().optional(),
+  stem: z.string().min(1),
+  options: z.array(z.record(z.string(), z.any())).nullable().optional(),
+  answer: z.string().nullable().optional(),
+  explanation: z.string().nullable().optional(),
+  mediaUrl: z.string().nullable().optional(),
+  tags: z.array(z.string()).nullable().optional(),
+  knowledgePoints: z.array(z.string()).nullable().optional(),
+  bankId: z.uuid(),
+});
+
+export const listQuestionsByBankSchema = z.object({
+  bankId: z.uuid(),
+});
+
+export const updateQuestionSchema = z.object({
+  type: z.enum(["essay", "judge", "multi", "single"]).optional(),
+  difficulty: z.number().int().min(1).max(5).nullable().optional(),
+  stem: z.string().min(1).optional(),
+  options: z.array(z.record(z.string(), z.any())).nullable().optional(),
+  answer: z.string().nullable().optional(),
+  explanation: z.string().nullable().optional(),
+  mediaUrl: z.string().nullable().optional(),
+  tags: z.array(z.string()).nullable().optional(),
+  knowledgePoints: z.array(z.string()).nullable().optional(),
+});
+
+export const createQuestionBankSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().nullable().optional(),
+  subject: z.enum(["anatomy", "clinical", "nursing", "other", "pathology", "pharmacology", "physiology", "public_health", "traditional_chinese_medicine", "western_medicine"]).nullable().optional(),
+  isPublic: z.boolean().nullable().optional(),
+  visibleAfterEnrollment: z.boolean().nullable().optional(),
+});
+
+export const updateQuestionBankSchema = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+  subject: z.enum(["anatomy", "clinical", "nursing", "other", "pathology", "pharmacology", "physiology", "public_health", "traditional_chinese_medicine", "western_medicine"]).nullable().optional(),
+  isPublic: z.boolean().nullable().optional(),
+  visibleAfterEnrollment: z.boolean().nullable().optional(),
+});
+
+export const setApiKeyConfigSchema = z.object({
+  provider: z.enum(["dashscope", "deepseek", "qwen"]),
+  apiKey: z.string().min(1),
+  baseUrl: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  isActive: z.boolean().nullable().optional(),
+});
+
+export const listFilteredAuditLogsSchema = z.object({
+  tenant: z.string().nullable().optional(),
+  action: z.string().nullable().optional(),
+  actorId: z.uuid().nullable().optional(),
+});
+
+export const recordAuditLogSchema = z.object({
+  tenant: z.string().nullable().optional(),
+  actorId: z.uuid().nullable().optional(),
+  action: z.string().min(1),
+  resourceType: z.string().nullable().optional(),
+  resourceId: z.uuid().nullable().optional(),
+  changes: z.record(z.string(), z.any()).nullable().optional(),
+  ip: z.string().nullable().optional(),
+  userAgent: z.string().nullable().optional(),
+  success: z.boolean().nullable().optional(),
 });
 
 export const createOrganizationSchema = z.object({
@@ -178,7 +264,7 @@ export const updateOrganizationSchema = z.object({
 export const registerSuperAdminSchema = z.object({
   email: z.string().min(1),
   name: z.string().nullable().optional(),
-  password: z.string().min(8),
+  password: z.string().min(6),
 });
 
 export const superAdminSignInSchema = z.object({

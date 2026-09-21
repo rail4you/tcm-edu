@@ -101,7 +101,7 @@ defmodule TcmEduWeb.TeacherPortalTest do
       assert html =~ "new-course-form"
     end
 
-    test "creating a course navigates to its edit page", %{conn: conn, teacher: teacher} do
+    test "creating a course navigates back to the list", %{conn: conn, teacher: teacher} do
       conn = teacher_session(conn, teacher)
       {:ok, view, _html} = live(conn, ~p"/teacher/courses/new")
 
@@ -110,17 +110,7 @@ defmodule TcmEduWeb.TeacherPortalTest do
                  "course" => %{"title" => "经络腧穴学", "level" => "beginner", "price_yuan" => "0"}
                })
 
-      assert to =~ "/teacher/courses/"
-      assert to =~ "/edit"
-    end
-
-    test "edit page renders chapters section", %{conn: conn, teacher: teacher} do
-      course = create_course(teacher)
-      conn = teacher_session(conn, teacher)
-      {:ok, _view, html} = live(conn, ~p"/teacher/courses/#{course.id}/edit")
-
-      assert html =~ "基本信息"
-      assert html =~ "章节与课时"
+      assert to == "/teacher/courses"
     end
 
     test "students page renders the roster", %{conn: conn, teacher: teacher} do

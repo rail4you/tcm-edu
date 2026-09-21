@@ -104,6 +104,12 @@ defmodule TcmEdu.MixProject do
       {:cors_plug, "~> 3.0"},
       # LiveView test helper (parses rendered HTML for assertions).
       {:lazy_html, ">= 0.1.0", only: :test},
+      # Unified feature/e2e tests for LiveView + static pages.
+      {:phoenix_test, "~> 0.12", only: :test},
+      # xlsx template generation (teacher quiz import).
+      {:elixlsx, "~> 0.6"},
+      # xlsx parsing (teacher quiz import).
+      {:xlsxir, "~> 1.6"},
       # Agent framework
       {:jido, "~> 2.0"},
       {:jido_ai, "~> 2.0"},

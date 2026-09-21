@@ -1,12 +1,13 @@
 defmodule TcmEduWeb.TeacherQuizTest do
   @moduledoc """
-  Covers the LiveView question bank page (`/teacher/quiz`): banks as a
-  selectable list, questions as a paginated table (10 per page) with
-  edit/delete operations.
+  End-to-end coverage for the question bank page (`/teacher/quiz`) using
+  PhoenixTest: banks as a selectable list, questions as a paginated table
+  (10 per page) with edit/delete operations.
   """
+
   use TcmEduWeb.LiveViewCase
 
-  import Phoenix.LiveViewTest
+  import PhoenixTest
 
   alias TcmEdu.Accounts.User
   alias TcmEdu.Quiz.Question
@@ -14,24 +15,14 @@ defmodule TcmEduWeb.TeacherQuizTest do
 
   @tenant "tenant_default"
 
-  defp teacher_session(conn, teacher) do
-    Plug.Test.init_test_session(conn, %{
-      "teacher_id" => teacher.id,
-      "teacher_role" => "teacher",
-      "teacher_tenant" => @tenant,
-      "teacher_email" => to_string(teacher.email),
-      "teacher_name" => "Table Teacher"
-    })
-  end
-
   setup %{conn: conn} do
     teacher =
       User
       |> Ash.Changeset.for_create(
         :register_with_role,
         %{
-          email: "quiz-table-#{System.unique_integer([:positive])}@example.com",
-          name: "Table Teacher",
+          email: "quiz-e2e-#{System.unique_integer([:positive])}@example.com",
+          name: "Quiz E2E",
           password: "password123",
           role: :teacher
         },
@@ -44,19 +35,37 @@ defmodule TcmEduWeb.TeacherQuizTest do
       QuestionBank
       |> Ash.Changeset.for_create(
         :create,
-        %{name: "表格题库", subject: :traditional_chinese_medicine},
+        %{
+          name: "E2E题库#{System.unique_integer([:positive])}",
+          subject: :traditional_chinese_medicine
+        },
         actor: teacher,
         tenant: @tenant
       )
       |> Ash.create!()
 
-    for i <- 1..12 do
+    conn =
+      conn
+      |> Plug.Test.init_test_session(%{
+        "teacher_id" => teacher.id,
+        "teacher_role" => "teacher",
+        "teacher_tenant" => @tenant,
+        "teacher_email" => to_string(teacher.email),
+        "teacher_name" => "Quiz E2E"
+      })
+      |> PhoenixTest.put_endpoint(TcmEduWeb.Endpoint)
+
+    {:ok, conn: conn, teacher: teacher, bank: bank}
+  end
+
+  defp create_questions(teacher, bank, count) do
+    for i <- 1..count//1 do
       Question.create_question!(
         %{
           bank_id: bank.id,
           type: :single,
           difficulty: 3,
-          stem: "题干#{i}",
+          stem: "E2E题干#{i}",
           options: [
             %{label: "A", text: "甲", correct: true},
             %{label: "B", text: "乙", correct: false}
@@ -66,69 +75,56 @@ defmodule TcmEduWeb.TeacherQuizTest do
         tenant: @tenant
       )
     end
-
-    {:ok, conn: teacher_session(conn, teacher), teacher: teacher, bank: bank}
   end
 
-  test "questions render as paginated table with edit/delete", %{
-    conn: conn,
-    bank: bank
-  } do
-    {:ok, view, _} = live(conn, ~p"/teacher/quiz")
-    render_click(view, "select-bank", %{"id" => bank.id})
-    assigns = :sys.get_state(view.pid).socket.assigns
-    assert length(assigns.questions) == 12
-    assert assigns.question_page == 1
-
-    html = render(view)
-    assert html =~ "共 12 题"
-    assert html =~ "第 1 / 2 页"
-    # page 1 shows 10 rows
-    assert length(Regex.scan(~r/id="question-/, html)) == 10
-
-    # goto page 2 shows remaining 2
-    html2 = render_click(view, "goto-page", %{"page" => "2"})
-    assert html2 =~ "第 2 / 2 页"
-    assert length(Regex.scan(~r/id="question-/, html2)) == 2
-    assert html2 =~ "编辑"
-    assert html2 =~ "删除"
+  defp list_questions(teacher, bank) do
+    Question
+    |> Ash.Query.for_read(:list_by_bank, %{bank_id: bank.id}, actor: teacher, tenant: @tenant)
+    |> Ash.read!()
   end
 
-  test "edit updates stem", %{conn: conn, bank: bank} do
-    {:ok, view, _} = live(conn, ~p"/teacher/quiz")
-    render_click(view, "select-bank", %{"id" => bank.id})
-    [first | _] = :sys.get_state(view.pid).socket.assigns.questions
+  test "questions render as paginated table", %{conn: conn, teacher: teacher, bank: bank} do
+    create_questions(teacher, bank, 12)
 
-    render_click(view, "open-edit", %{"id" => first.id})
-
-    html =
-      render_submit(view, "submit-question", %{
-        "question" => %{
-          "type" => "single",
-          "difficulty" => "4",
-          "stem" => "修改后的题干",
-          "explanation" => ""
-        },
-        "options" => %{
-          "0" => %{"text" => "甲", "correct" => "true"},
-          "1" => %{"text" => "乙"}
-        },
-        "op" => "save"
-      })
-
-    assert html =~ "题目已更新"
-    assert html =~ "修改后的题干"
+    conn
+    |> visit("/teacher/quiz")
+    |> click_button(bank.name)
+    |> assert_has("p", "共 12 题")
+    |> assert_has("p", "第 1 / 2 页")
+    |> assert_has("tr[id^='question-']", count: 10)
+    |> click_button("下一页")
+    |> assert_has("p", "第 2 / 2 页")
+    |> assert_has("tr[id^='question-']", count: 2)
   end
 
-  test "delete removes question", %{conn: conn, bank: bank} do
-    {:ok, view, _} = live(conn, ~p"/teacher/quiz")
-    render_click(view, "select-bank", %{"id" => bank.id})
-    [first | _] = :sys.get_state(view.pid).socket.assigns.questions
+  test "edit updates stem and options", %{conn: conn, teacher: teacher, bank: bank} do
+    create_questions(teacher, bank, 1)
+    [question] = list_questions(teacher, bank)
 
-    render_click(view, "confirm-delete", %{"id" => first.id})
-    html = render_click(view, "delete", %{})
-    assert html =~ "题目已删除"
-    assert html =~ "共 11 题"
-    refute html =~ first.stem
+    conn
+    |> visit("/teacher/quiz")
+    |> click_button(bank.name)
+    |> click_button("#edit-question-#{question.id}", "编辑")
+    |> fill_in("题干", with: "修改后的题干", exact: false)
+    |> fill_in("#option-text-0", "选项", with: "甲改", exact: false)
+    |> uncheck("input[name='options[0][correct]']", "正确答案")
+    |> check("input[name='options[1][correct]']", "正确答案")
+    |> click_button("保存")
+    |> assert_has("p", "题目已更新")
+    |> assert_has("td", "修改后的题干")
+    |> assert_has("td", "甲改", exact: false)
+  end
+
+  test "delete removes the question", %{conn: conn, teacher: teacher, bank: bank} do
+    create_questions(teacher, bank, 1)
+    [question] = list_questions(teacher, bank)
+
+    conn
+    |> visit("/teacher/quiz")
+    |> click_button(bank.name)
+    |> click_button("#delete-question-#{question.id}", "删除")
+    |> click_button("确认删除")
+    |> assert_has("p", "题目已删除")
+    |> assert_has("p", "共 0 题")
   end
 end

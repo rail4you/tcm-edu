@@ -118,14 +118,20 @@ defmodule TcmEdu.Agents.QuizGeneratorAction do
       end)
       |> Map.update(:correct_answer, 0, fn a ->
         cond do
-          is_integer(a) -> a
-          is_float(a) -> trunc(a)
+          is_integer(a) ->
+            a
+
+          is_float(a) ->
+            trunc(a)
+
           is_binary(a) ->
             case Integer.parse(String.trim(a)) do
               {n, _} -> n
               :error -> String.upcase(a) |> index_from_letter()
             end
-          true -> a
+
+          true ->
+            a
         end
       end)
       |> Map.update(:question, "", fn q -> to_string(q) end)

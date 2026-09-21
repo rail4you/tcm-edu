@@ -14,8 +14,10 @@ defmodule TcmEdu.Storage.Analyzers.VideoInfo do
   @impl true
   def analyze(path, _opts) do
     case System.cmd("ffprobe", [
-           "-v", "quiet",
-           "-print_format", "json",
+           "-v",
+           "quiet",
+           "-print_format",
+           "json",
            "-show_format",
            "-show_streams",
            path

@@ -6,9 +6,10 @@ defmodule TcmEdu.Agents.IncrementAction do
   use Jido.Action,
     name: "increment",
     description: "Increments the counter by a specified amount",
-    schema: Zoi.object(%{
-      by: Zoi.integer() |> Zoi.default(1)
-    })
+    schema:
+      Zoi.object(%{
+        by: Zoi.integer() |> Zoi.default(1)
+      })
 
   @impl true
   def run(params, context) do

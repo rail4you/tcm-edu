@@ -27,13 +27,14 @@ config :logger, level: :warning
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 
-# Oban — disable job execution in test mode so insert/perform do not run
-config :tcm_edu, Oban, testing: :manual
+# Oban — disable job execution in test mode so insert/perform do not run.
+# Explicit repo so Oban.Testing.assert_enqueued can query jobs.
+config :tcm_edu, Oban, repo: TcmEdu.Repo, testing: :manual
 
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
 
 # Use in-memory test service for file storage in tests
-config :tcm_edu, TcmEdu.Post,
-  storage: [service: {AshStorage.Service.Test, []}]
+config :tcm_edu, TcmEdu.Post, storage: [service: {AshStorage.Service.Test, []}]
+config :tcm_edu, TcmEdu.Courses.Course, storage: [service: {AshStorage.Service.Test, []}]

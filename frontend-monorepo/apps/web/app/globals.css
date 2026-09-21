@@ -23,9 +23,8 @@
   --color-ink-600: #6b6259;
   --color-ink-400: #a39a8d;
 
-  --font-song: var(--font-song), "Noto Serif SC", "Songti SC", serif;
-  --font-sans: var(--font-sans-sc), "Noto Sans SC", "PingFang SC",
-    "Microsoft YaHei", system-ui, sans-serif;
+  --font-song: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --font-sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 
 /* Antd v5 + React 19 兼容 patch 在 admin/teacher 的 layout 里以 JS 方式 import（不是 CSS） */

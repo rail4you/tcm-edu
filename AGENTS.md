@@ -5,6 +5,33 @@ This is a web application written using the Phoenix web framework.
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues
 - Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps
 
+### Migrations (AshPostgres + tenant schemas)
+
+- **Generate, never hand-write**: after changing resources run `mix ash.codegen <lower_snake_case_name>`; use `mix ash.codegen --dev` during iteration and a final named run before commit. Tenant migrations for `multitenancy strategy: :context` resources are generated into `priv/repo/tenant_migrations` — **always audit generated files in both directories** and prune anything already applied (keep the generated snapshots as the future baseline).
+- **Apply**: `mix tcm_edu.migrate` (public + default tenant + all tenant schemas); `mix tcm_edu.migrate --tenants` (tenant schemas only).
+- Raw SQL in tenant migrations **must** be schema-qualified with `"#{prefix()}"` (double-quoted — tenant slugs may contain dashes, an unquoted schema name is a syntax error); the migrator prefix does NOT apply to `execute/1` strings, unqualified DDL lands on `public`.
+- Never leave `*_dev.exs` migrations / `*_dev.json` snapshots unfinalized: every codegen run rolls them back first and aborts the whole command if any down migration is broken.
+- After DDL that changes column types, restart long-lived `mix phx.server` (stale prepared statements in the pool raise `datatype_mismatch`); fresh processes (`mix run`, `mix test`) and prod releases (migrate-before-boot) are unaffected.
+- After adding new Hex deps, restart the dev server (the code reloader does not load new dependency beams).
+
+### Feature tests (PhoenixTest)
+
+- `{:phoenix_test, only: :test}` is included. Use PhoenixTest for **all** new LiveView/feature e2e tests — do NOT use raw `Phoenix.LiveViewTest` (`live`, `render_click`, ...) or Playwright for functional assertions (Playwright is kept for visual UI checks only).
+- Pattern: `use TcmEduWeb.LiveViewCase` + `import PhoenixTest`; build conn, `Plug.Test.init_test_session` with the portal keys, `PhoenixTest.put_endpoint(conn, TcmEduWeb.Endpoint)`; then `visit |> click_button/click_link |> fill_in/select/check/upload |> assert_has/refute_has`. Reference: `test/tcm_edu_web/live/teacher_quiz_import_test.exs`.
+- `upload/4` (LiveView live uploads) requires the file input to have an associated `<label>`; `assert_download/2` requires `content-disposition: attachment` (`send_download` sets it).
+- Give row-level action buttons stable ids (`edit-question-<id>`) and use `click_button(selector, text)`; for repeated labels use the selector variants (`fill_in(selector, label, ...)`, `check/uncheck(selector, label)`); pair checkboxes with hidden inputs so `uncheck` works.
+
+### File uploads (AshStorage)
+
+- All uploads go through AshStorage (`{:ash_storage, github: "ash-project/ash_storage"}`). Never hand-roll storage: use `AshStorage.Operations.attach/detach/purge`.
+- Layers: `TcmEdu.Storage.OSS` (raw OSS REST client: signing, upload/download/delete — creds env-only, never hardcoded) → `TcmEdu.Storage.OSS.Service` (the `AshStorage.Service` impl, production) / `AshStorage.Service.Test` (tests, in-memory) / `AshStorage.Service.Disk` (local).
+- Blob (`TcmEdu.Storage.Blob`, global) + attachment resources: `TcmEdu.Storage.Attachment` is FK-bound to the global `Post`; tenant-schema hosts (e.g. `Course`) **must** use a separate polymorphic attachment resource (`TcmEdu.Storage.CourseAttachment`, no `belongs_to_resource` → `record_type`/`record_id` strings), because cross-schema foreign keys are impossible.
+- Host setup: `extensions: [AshStorage]` + `otp_app: :tcm_edu` (required so tests can override the service via app config) + `storage do service/blob_resource/attachment_resource/has_one_attached end`. This auto-generates the `<name>` relationship, the `<name>_url` calculation, and `attach_<name>` / `detach_<name>` / `purge_<name>` update actions.
+- Policies: the generated attach/detach/purge actions match NO policy by default (forbidden) — add an explicit `policy action([:attach_<name>, :detach_<name>, :purge_<name>])` mirroring `:update`.
+- LiveView pattern: `allow_upload` + `consume_uploaded_entries`. The consume callback **must** return `{:ok, value}`; LiveView unwraps that layer (both channel and external paths — the final list holds the inner value, not `{ref, value}`). File inputs need an associated `<label>` for PhoenixTest `upload/4`.
+- Credentials: `OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET` (plus optional `OSS_BUCKET` / `OSS_ENDPOINT` / `OSS_REGION`) via environment or repo-root `.env` (gitignored). Never hardcode keys in `lib/` — they end up in git history.
+- Test setup: `config :tcm_edu, MyResource, storage: [service: {AshStorage.Service.Test, []}]]` in `config/test.exs`, `AshStorage.Service.Test.start()` in `test_helper.exs`, `reset!()` per test.
+
 ### Phoenix v1.8 guidelines
 
 - **Always** begin your LiveView templates with `<Layouts.app flash={@flash} ...>` which wraps all inner content

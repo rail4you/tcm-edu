@@ -25,7 +25,10 @@ import { useRequireAuth } from "@/lib/auth/guard";
 const MENU = [
   { path: "/teacher", name: "工作台" },
   { path: "/teacher/courses", name: "我的课程" },
+  { path: "/teacher/quiz", name: "题库" },
   { path: "/teacher/students", name: "我的学生" },
+  { path: "/teacher/ai/lesson-plan", name: "AI 备课" },
+  { path: "/teacher/ai/image", name: "AI 图片" }
 ];
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {

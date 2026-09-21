@@ -180,7 +180,13 @@ defmodule TcmEduWeb.StudentCourseDetailLive do
       course =
         Course
         |> Ash.Query.filter(id == ^socket.assigns.course_id)
-        |> Ash.Query.load([:lesson_count, :student_count, :teacher, chapters: [:lessons]])
+        |> Ash.Query.load([
+          :cover_image_url,
+          :lesson_count,
+          :student_count,
+          :teacher,
+          chapters: [:lessons]
+        ])
         |> Ash.read_one!(actor: actor, tenant: tenant, authorize?: student != nil)
 
       chapters = course.chapters |> Enum.sort_by(&(&1.sort_order || 0))

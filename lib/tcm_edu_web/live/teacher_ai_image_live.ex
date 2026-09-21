@@ -4,7 +4,8 @@ defmodule TcmEduWeb.TeacherAIImageLive do
 
   Prompt + style/size form; generation (task creation + polling + OSS
   archiving) runs in a background Task and the resulting images render
-  in a gallery. URLs can be copied into a course cover.
+  in a gallery. Each image can be set as a course cover directly
+  (downloaded and attached via AshStorage).
   """
 
   use TcmEduWeb, :live_view
@@ -12,11 +13,15 @@ defmodule TcmEduWeb.TeacherAIImageLive do
   import TcmEduWeb.TeacherComponents, only: [teacher_shell: 1]
 
   alias TcmEdu.AI.MedicalImage
+  alias TcmEdu.Courses.Course
+  alias TcmEduWeb.CourseCover
 
   on_mount {TcmEduWeb.TeacherAuth, :ensure_teacher}
 
   @impl true
   def mount(_params, _session, socket) do
+    teacher = socket.assigns.current_teacher
+
     {:ok,
      socket
      |> assign(:page_title, "AI 配图")
@@ -24,7 +29,9 @@ defmodule TcmEduWeb.TeacherAIImageLive do
      |> assign(:form, image_form(%{}))
      |> assign(:generating, false)
      |> assign(:urls, [])
-     |> assign(:run_ref, nil)}
+     |> assign(:run_ref, nil)
+     |> assign(:courses, list_courses(teacher))
+     |> assign(:cover_course_id, nil)}
   end
 
   @impl true
@@ -62,6 +69,29 @@ defmodule TcmEduWeb.TeacherAIImageLive do
     end
   end
 
+  def handle_event("select-cover-course", %{"cover" => %{"course_id" => course_id}}, socket) do
+    {:noreply, assign(socket, :cover_course_id, empty_to_nil(course_id))}
+  end
+
+  def handle_event("set-cover", %{"url" => url}, socket) do
+    teacher = socket.assigns.current_teacher
+
+    with course_id when not is_nil(course_id) <- socket.assigns.cover_course_id,
+         {:ok, course} <- fetch_course(course_id, teacher),
+         :ok <- CourseCover.attach_from_url(course, teacher, url, basename(url)) do
+      {:noreply, put_flash(socket, :info, "已设为《#{course.title}》的封面")}
+    else
+      nil ->
+        {:noreply, put_flash(socket, :error, "请先选择一门课程")}
+
+      {:error, :not_found} ->
+        {:noreply, put_flash(socket, :error, "课程不存在或无权限")}
+
+      {:error, message} ->
+        {:noreply, put_flash(socket, :error, "设为封面失败：#{message}")}
+    end
+  end
+
   @impl true
   def handle_info({:image_done, ref, result}, socket) do
     if ref == socket.assigns.run_ref do
@@ -88,6 +118,35 @@ defmodule TcmEduWeb.TeacherAIImageLive do
 
   defp style_options,
     do: [{"写实", "realistic"}, {"水墨", "ink"}, {"扁平插画", "flat"}, {"解剖图", "anatomy"}]
+
+  defp list_courses(teacher) do
+    case Course
+         |> Ash.Query.for_read(:list_by_teacher, %{teacher_id: teacher.id},
+           actor: teacher.actor,
+           tenant: teacher.tenant
+         )
+         |> Ash.read() do
+      {:ok, courses} -> Enum.sort_by(courses, & &1.title)
+      _ -> []
+    end
+  end
+
+  defp fetch_course(course_id, teacher) do
+    case Ash.get(Course, course_id, actor: teacher.actor, tenant: teacher.tenant) do
+      {:ok, course} when not is_nil(course) -> {:ok, course}
+      _ -> {:error, :not_found}
+    end
+  end
+
+  defp basename(url) do
+    case URI.parse(url) do
+      %URI{path: path} when is_binary(path) ->
+        path |> Path.basename() |> then(fn b -> if b == "", do: "ai-cover.png", else: b end)
+
+      _ ->
+        "ai-cover.png"
+    end
+  end
 
   defp size_options, do: [{"方形 1024", "1024x1024"}, {"横版 16:9", "16:9"}, {"竖版 9:16", "9:16"}]
 

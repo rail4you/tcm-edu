@@ -27,13 +27,20 @@ defmodule TcmEdu.Storage.Variants.VideoThumbnail do
     args =
       [
         "-y",
-        "-ss", "#{second}",
-        "-i", source_path,
-        "-vframes", "1",
-        "-q:v", "2"
+        "-ss",
+        "#{second}",
+        "-i",
+        source_path,
+        "-vframes",
+        "1",
+        "-q:v",
+        "2"
       ] ++
         if width do
-          ["-vf", "scale='min(#{width},iw)':min'(#{div(width * 9, 16)},ih)':force_original_aspect_ratio=decrease"]
+          [
+            "-vf",
+            "scale='min(#{width},iw)':min'(#{div(width * 9, 16)},ih)':force_original_aspect_ratio=decrease"
+          ]
         else
           []
         end ++

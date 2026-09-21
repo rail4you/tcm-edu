@@ -87,7 +87,13 @@ defmodule TcmEdu.Workers.LongTaskWorker do
         |> Ash.update()
 
       broadcast_event(topic, :task_completed, chat_task_payload(completed_task))
-      append_assistant_message(running_task.session_id, running_task.task_id, running_task.task_name, duration_ms)
+
+      append_assistant_message(
+        running_task.session_id,
+        running_task.task_id,
+        running_task.task_name,
+        duration_ms
+      )
 
       :ok
     else
@@ -107,7 +113,8 @@ defmodule TcmEdu.Workers.LongTaskWorker do
         other -> inspect(other)
       end
 
-    case Ash.Changeset.for_update(task, :mark_failed, %{error_message: message}) |> Ash.update() do
+    case Ash.Changeset.for_update(task, :mark_failed, %{error_message: message})
+         |> Ash.update() do
       {:ok, failed} ->
         broadcast_event(topic, :task_failed, chat_task_payload(failed))
         :ok

@@ -53,6 +53,7 @@ defmodule TcmEduWeb.AuthController do
 
       {:error, reason} ->
         Logger.error("Failed to issue auth token: #{inspect(reason)}")
+
         conn
         |> put_status(500)
         |> json(%{error: "token_generation_failed"})
@@ -128,6 +129,7 @@ defmodule TcmEduWeb.AuthController do
           })
         else
           Logger.error("super_admin_sign_in failed: #{inspect(err)}")
+
           conn
           |> put_status(500)
           |> json(%{error: "internal_error"})
@@ -135,6 +137,7 @@ defmodule TcmEduWeb.AuthController do
 
       {:error, reason} ->
         Logger.error("super_admin_sign_in failed: #{inspect(reason)}")
+
         conn
         |> put_status(500)
         |> json(%{error: "internal_error"})
@@ -209,7 +212,7 @@ defmodule TcmEduWeb.AuthController do
 
       conn
       |> put_status(200)
-        |> json(%{data: %{user_id: user_id, permissions: permissions}})
+      |> json(%{data: %{user_id: user_id, permissions: permissions}})
     else
       conn
       |> put_status(403)

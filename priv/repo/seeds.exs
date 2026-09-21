@@ -36,7 +36,10 @@ defmodule SeedHelper do
       end
 
     # Fetch or create the role
-    role = TcmEdu.Accounts.Role |> Ash.Query.filter(name == ^role_name) |> Ash.read_one!(authorize?: false)
+    role =
+      TcmEdu.Accounts.Role
+      |> Ash.Query.filter(name == ^role_name)
+      |> Ash.read_one!(authorize?: false)
 
     if role do
       # Ensure user has this role
@@ -88,13 +91,21 @@ defmodule SeedHelper do
         |> Ash.Changeset.for_create(:create, %{name: name, description: description})
         |> Ash.create!(authorize?: false)
 
-      p -> p
+      p ->
+        p
     end
   end
 
   def ensure_role_permission(role_name, perm_name) do
-    role = TcmEdu.Accounts.Role |> Ash.Query.filter(name == ^role_name) |> Ash.read_one!(authorize?: false)
-    perm = TcmEdu.Accounts.Permission |> Ash.Query.filter(name == ^perm_name) |> Ash.read_one!(authorize?: false)
+    role =
+      TcmEdu.Accounts.Role
+      |> Ash.Query.filter(name == ^role_name)
+      |> Ash.read_one!(authorize?: false)
+
+    perm =
+      TcmEdu.Accounts.Permission
+      |> Ash.Query.filter(name == ^perm_name)
+      |> Ash.read_one!(authorize?: false)
 
     if role && perm do
       existing =
@@ -138,6 +149,7 @@ end
 for name <- Map.keys(perms) do
   SeedHelper.ensure_role_permission("admin", name)
 end
+
 IO.puts("  ✓ Admin role has all permissions")
 
 # User gets no extra permissions by default

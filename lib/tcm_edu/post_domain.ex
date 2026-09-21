@@ -9,11 +9,11 @@ defmodule TcmEdu.PostDomain do
 
   typescript_rpc do
     resource TcmEdu.Post do
-      rpc_action :list_posts, :read
-      rpc_action :get_post, :read, get?: true
-      rpc_action :create_post, :create
-      rpc_action :update_post, :update
-      rpc_action :delete_post, :destroy
+      rpc_action(:list_posts, :read)
+      rpc_action(:get_post, :read, get?: true)
+      rpc_action(:create_post, :create)
+      rpc_action(:update_post, :update)
+      rpc_action(:delete_post, :destroy)
     end
   end
 

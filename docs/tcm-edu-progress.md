@@ -1,9 +1,24 @@
 # TCM-Edu · 实施进度跟踪
 
-> **当前状态**：🟢 Phase 10 已完成，下一步 Phase 11（部署与文档）
+> **当前状态**：🟢 Phase 10 已完成 + ✅ 合同 V2 一期功能（Quiz/Notification/AI/OSS/前端）完成，下一步：真实 AI 联调（需 DashScope 余额）
 > **开始日期**：2026-09-06
 > **预计完成**：（待定）
 > **部署目标**：111.229.72.15（`ssh tcm-edu` 免密；`deploy.sh` 默认 REMOTE_HOST 已切到 `tcm-edu`）
+>
+> ## 合同 V2 · 第一期增量（2026-07-22 起）
+>
+> 平台名 **杏宁树**（`docs/xingningshu-dev-plan.md` 主计划）。在既有 Phase 0-10 基础上新增：
+>
+> - ✅ **6 个 Ash 资源**：Quiz（Bank/Question/Attempt/Grading）+ Notification + AuditLog + ApiKeyConfig
+> - ✅ **迁移**：public（audit/key）+ tenant_migrations（quiz/notif），已应用
+> - ✅ **AI 层**：`TcmEdu.AI`（key override→DB→env）+ `Qwen`（chat/stream）+ `LessonPlan` + `MistakeExplainer` + `MedicalImage`（wanx2.1-t2i）+ MistakeExplainerWorker
+> - ✅ **OSS**：`TcmEdu.Storage.OSS`（v1 HMAC 签名）+ `OSS.Service`（AshStorage.Service），bucket=`xingningshu`
+> - ✅ **控制器**：`/api/ai/lesson_plan` `/api/ai/image` `/api/ai/mistake_explain`
+> - ✅ **前端**：教师 AI 备课 / 题库 / 学生错题本 / 通知中心 / 管理员 AI 驾驶舱+Key 管理
+> - ✅ **阻塞修复**：`mix compile --warnings-as-errors` 全绿；`pnpm build` 26/26 全绿（删死代码+router 去重+SSG+Suspense）
+> - ✅ **测试加固**：AI 测试改 `api_key_override`（消 DBConnection/OS-env 竞态）；164 测试稳定，仅剩 2 个预存在 ChatAgentTest 需 DashScope 余额
+>
+> 详细：`docs/xingningshu-phase1-tech-plan.md` §18（已实现进度）。联调待 DashScope 充值。
 >
 > **使用方式**：每完成一项，把 `[ ]` 改成 `[x]`，并在右侧备注里写实际工期 / commit hash / 阻塞原因
 

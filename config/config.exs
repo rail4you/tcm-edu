@@ -11,6 +11,12 @@ config :tcm_edu,
   ecto_repos: [TcmEdu.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# AshStorage：所有上传走 `xingningshu` OSS bucket（阶段一部署前提）
+config :tcm_edu,
+  storage: [
+    service: {TcmEdu.Storage.OSS.Service, []}
+  ]
+
 # Ash framework — list all domains so codegen and CLI tools can find them.
 config :tcm_edu,
   ash_domains: [
@@ -21,6 +27,8 @@ config :tcm_edu,
     TcmEdu.Enrollment,
     TcmEdu.ChatDomain,
     TcmEdu.PostDomain,
+    TcmEdu.Quiz,
+    TcmEdu.Notification,
     TcmEdu.Storage
   ],
   # Storage: local Disk service for file uploads
@@ -79,13 +87,31 @@ config :tcm_edu, TcmEdu.Jido,
   agent_pools: []
 
 # Jido AI — model aliases map short names to provider:model-id
+# 参考 KnowledgeHub：text=qwen-flash / vision=qwen3-vl-flash / plus=qwen-plus，
+# 均走 req_llm 内置 `:alibaba_cn`（DashScope OpenAI 兼容）。
 config :jido_ai,
   react_token_secret:
     System.get_env("REACT_TOKEN_SECRET", "tcm-edu-local-react-token-secret-32b"),
   model_aliases: %{
-    fast: "deepseek:deepseek-chat",
-    minimax: "minimax:abab6.5s-chat"
+    # 默认聊天走 qwen-flash（DashScope 有余额，参考 KnowledgeHub）
+    fast: "alibaba_cn:qwen-flash",
+    deepseek: "deepseek:deepseek-chat",
+    minimax: "minimax:abab6.5s-chat",
+    qwen: "alibaba_cn:qwen-flash",
+    qwen_flash: "alibaba_cn:qwen-flash",
+    qwen_plus: "alibaba_cn:qwen-plus",
+    qwen_vl: "alibaba_cn:qwen3-vl-flash"
   }
+
+# TcmEdu AI — 直接对接 DashScope OpenAI 兼容接口（Req 实现，参考 KnowledgeHub）
+config :tcm_edu, TcmEdu.AI,
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  text_model: "qwen-flash",
+  vision_model: "qwen3-vl-flash",
+  plus_model: "qwen-plus",
+  image_model: "wanx2.1-t2i-turbo",
+  image_base_url: "https://dashscope.aliyuncs.com/api/v1",
+  timeout: 60_000
 
 # ReqLLM — HTTP client for LLM APIs, auto-loads .env for API keys
 config :req_llm,

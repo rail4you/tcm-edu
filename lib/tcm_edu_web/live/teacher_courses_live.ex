@@ -11,6 +11,7 @@ defmodule TcmEduWeb.TeacherCoursesLive do
 
   alias TcmEdu.Courses.Course
   alias TcmEdu.Courses.CourseCategory
+  alias TcmEduWeb.CourseCover
 
   @levels ~w(beginner intermediate advanced)
 
@@ -23,7 +24,7 @@ defmodule TcmEduWeb.TeacherCoursesLive do
     {:ok,
      socket
      |> assign(:page_title, "我的课程")
-     |> assign(:page_subtitle, "创建课程 → 添加章节与课时 → 发布，学生即可选课")
+     |> assign(:page_subtitle, "创建课程 → 上传封面 → 发布，学生即可选课")
      |> assign(:keyword, "")
      |> assign(:status_filter, "all")
      |> assign(:view, "table")
@@ -34,6 +35,7 @@ defmodule TcmEduWeb.TeacherCoursesLive do
      |> assign(:edit_modal, false)
      |> assign(:editing, nil)
      |> assign(:edit_form, course_form(%{}))
+     |> CourseCover.allow_cover_upload()
      |> load_courses()}
   end
 
@@ -52,11 +54,19 @@ defmodule TcmEduWeb.TeacherCoursesLive do
   end
 
   def handle_event("open-create", _params, socket) do
-    {:noreply, assign(socket, :create_modal, true) |> assign(:create_form, course_form(%{}))}
+    {:noreply,
+     socket
+     |> assign(:create_modal, true)
+     |> assign(:create_form, course_form(%{}))
+     |> CourseCover.reset_cover_upload()}
   end
 
   def handle_event("close-create", _params, socket) do
-    {:noreply, assign(socket, :create_modal, false)}
+    {:noreply, socket |> assign(:create_modal, false) |> CourseCover.reset_cover_upload()}
+  end
+
+  def handle_event("cancel-cover", %{"ref" => ref}, socket) do
+    {:noreply, Phoenix.LiveView.cancel_upload(socket, :cover, ref)}
   end
 
   def handle_event("validate-create", %{"course" => params}, socket) do
@@ -74,7 +84,6 @@ defmodule TcmEduWeb.TeacherCoursesLive do
         title: get.(:title) |> to_string() |> String.trim(),
         subtitle: get_optional(changeset, :subtitle),
         description: get_optional(changeset, :description),
-        cover_image_url: get_optional(changeset, :cover_image_url),
         level: get_atom(changeset, :level, :beginner),
         price_cents: get_price_cents(changeset),
         teacher_id: teacher.id,
@@ -83,10 +92,25 @@ defmodule TcmEduWeb.TeacherCoursesLive do
 
       case Course.create_course(attrs, actor: teacher.actor, tenant: teacher.tenant) do
         {:ok, course} ->
+          socket =
+            case CourseCover.consume_cover(socket, course, teacher) do
+              {:ok, _url} ->
+                put_flash(socket, :info, "课程《#{course.title}》已创建，封面已上传")
+
+              {:error, message} ->
+                put_flash(
+                  socket,
+                  :info,
+                  "课程《#{course.title}》已创建，但封面上传失败（#{message}）"
+                )
+
+              :no_entry ->
+                put_flash(socket, :info, "课程《#{course.title}》已创建，回到列表继续编辑")
+            end
+
           {:noreply,
            socket
            |> assign(:create_modal, false)
-           |> put_flash(:info, "课程《#{course.title}》已创建，回到列表继续编辑")
            |> push_navigate(to: "/teacher/courses")}
 
         {:error, error} ->
@@ -135,16 +159,21 @@ defmodule TcmEduWeb.TeacherCoursesLive do
 
       course ->
         {:noreply,
-         assign(socket,
+         socket
+         |> assign(
            edit_modal: true,
            editing: course,
            edit_form: course_form(course_to_params(course))
-         )}
+         )
+         |> CourseCover.reset_cover_upload()}
     end
   end
 
   def handle_event("close-edit", _params, socket) do
-    {:noreply, assign(socket, edit_modal: false, editing: nil)}
+    {:noreply,
+     socket
+     |> assign(edit_modal: false, editing: nil)
+     |> CourseCover.reset_cover_upload()}
   end
 
   def handle_event("validate-edit", %{"course" => params}, socket) do
@@ -163,7 +192,6 @@ defmodule TcmEduWeb.TeacherCoursesLive do
         title: get.(:title) |> to_string() |> String.trim(),
         subtitle: get_optional(changeset, :subtitle),
         description: get_optional(changeset, :description),
-        cover_image_url: get_optional(changeset, :cover_image_url),
         level: get_atom(changeset, :level, :beginner),
         price_cents: get_price_cents(changeset),
         category_id: get_optional(changeset, :category_id)
@@ -175,11 +203,22 @@ defmodule TcmEduWeb.TeacherCoursesLive do
              tenant: teacher.tenant
            )
            |> Ash.update() do
-        {:ok, _} ->
+        {:ok, updated} ->
+          socket =
+            case CourseCover.consume_cover(socket, updated, teacher) do
+              {:ok, _url} ->
+                put_flash(socket, :info, "课程信息已保存，封面已更新")
+
+              {:error, message} ->
+                put_flash(socket, :info, "课程信息已保存，但封面上传失败（#{message}）")
+
+              :no_entry ->
+                put_flash(socket, :info, "课程信息已保存")
+            end
+
           {:noreply,
            socket
            |> assign(edit_modal: false, editing: nil)
-           |> put_flash(:info, "课程信息已保存")
            |> load_courses()}
 
         {:error, error} ->
@@ -187,6 +226,23 @@ defmodule TcmEduWeb.TeacherCoursesLive do
       end
     else
       {:noreply, assign(socket, :edit_form, Phoenix.Component.to_form(changeset, as: "course"))}
+    end
+  end
+
+  def handle_event("remove-cover", _params, socket) do
+    teacher = socket.assigns.current_teacher
+
+    case CourseCover.remove_cover(socket.assigns.editing, teacher) do
+      :ok ->
+        socket = load_courses(socket)
+
+        {:noreply,
+         socket
+         |> assign(:editing, find_course(socket, socket.assigns.editing.id))
+         |> put_flash(:info, "封面已移除")}
+
+      {:error, message} ->
+        {:noreply, put_flash(socket, :error, message)}
     end
   end
 
@@ -276,7 +332,7 @@ defmodule TcmEduWeb.TeacherCoursesLive do
           actor: teacher.actor,
           tenant: teacher.tenant
         )
-        |> Ash.Query.load([:lesson_count, :chapter_count])
+        |> Ash.Query.load([:cover_image_url, :lesson_count, :chapter_count])
         |> Ash.read!()
         |> Enum.sort_by(& &1.inserted_at, {:desc, DateTime})
       rescue
@@ -295,7 +351,6 @@ defmodule TcmEduWeb.TeacherCoursesLive do
       "title" => course.title,
       "subtitle" => course.subtitle || "",
       "description" => course.description || "",
-      "cover_image_url" => course.cover_image_url || "",
       "level" => to_string(course.level || :beginner),
       "price_yuan" => if(is_nil(course.price_cents), do: 0, else: course.price_cents / 100),
       "category_id" => course.category_id || ""
@@ -322,7 +377,6 @@ defmodule TcmEduWeb.TeacherCoursesLive do
       title: :string,
       subtitle: :string,
       description: :string,
-      cover_image_url: :string,
       level: :string,
       price_yuan: :float,
       category_id: :string

@@ -32,6 +32,8 @@ const MENU_BY_ROLE: Record<"super_admin" | "tenant_admin", { path: string; name:
     { path: "/admin", name: "工作台" },
     { path: "/admin/tenants", name: "租户管理" },
     { path: "/admin/users", name: "用户管理" },
+    { path: "/admin/ai-dashboard", name: "AI 驾驶舱" },
+    { path: "/admin/ai-keys", name: "AI Key 管理" },
   ],
   tenant_admin: [
     { path: "/admin", name: "工作台" },

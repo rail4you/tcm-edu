@@ -3,7 +3,7 @@
     current_teacher={@current_teacher}
     current_page={:courses}
     page_title="我的课程"
-    page_subtitle="创建课程 → 添加章节与课时 → 发布，学生即可选课"
+    page_subtitle="创建课程 → 上传封面 → 发布，学生即可选课"
   >
     <:page_actions>
       <button class="btn btn-primary btn-sm" phx-click="open-create" id="new-course-btn">
@@ -119,17 +119,11 @@
                       aria-label="编辑"
                       phx-click="open-edit"
                       phx-value-id={course.id}
+                      id={"edit-course-#{course.id}"}
                     >
                       <.icon name="hero-pencil-square" class="size-4" />
+                      <span class="sr-only">编辑</span>
                     </button>
-                    <.link
-                      navigate={"/teacher/courses/#{course.id}/edit"}
-                      class="btn btn-ghost btn-sm btn-square tooltip tooltip-left"
-                      data-tip="管理章节"
-                      aria-label="管理章节"
-                    >
-                      <.icon name="hero-bars-3" class="size-4" />
-                    </.link>
                     <button
                       :if={course.status != :published}
                       class={["btn btn-ghost btn-sm btn-square tooltip tooltip-left", !can_publish?(course) && "btn-disabled"]}
@@ -214,17 +208,11 @@
                   aria-label="编辑"
                   phx-click="open-edit"
                   phx-value-id={course.id}
+                  id={"edit-card-#{course.id}"}
                 >
                   <.icon name="hero-pencil-square" class="size-4" />
+                  <span class="sr-only">编辑</span>
                 </button>
-                <.link
-                  navigate={"/teacher/courses/#{course.id}/edit"}
-                  class="btn btn-ghost btn-sm btn-square tooltip"
-                  data-tip="管理章节"
-                  aria-label="管理章节"
-                >
-                  <.icon name="hero-bars-3" class="size-4" />
-                </.link>
                 <button
                   :if={course.status != :published}
                   class={["btn btn-ghost btn-sm btn-square tooltip", !can_publish?(course) && "btn-disabled"]}
@@ -321,12 +309,28 @@
               min="0"
               step="0.01"
             />
-            <.input
-              field={@create_form[:cover_image_url]}
-              type="text"
-              label="封面图片 URL"
-              placeholder="可选，或去 AI 配图"
-            />
+            <div class="flex flex-col gap-2">
+              <span class="label">课程封面 <span class="text-base-content/50">（可选，≤ 5MB）</span></span>
+              <label class="btn btn-soft btn-sm w-fit cursor-pointer">
+                <.icon name="hero-photo" class="size-4" /> 选择封面图片
+                <.live_file_input upload={@uploads.cover} class="hidden" />
+              </label>
+              <div :for={entry <- @uploads.cover.entries} class="flex items-center gap-2 text-sm">
+                <.live_img_preview entry={entry} class="h-16 w-24 rounded object-cover" />
+                <span class="max-w-48 truncate">{entry.client_name}</span>
+                <button
+                  type="button"
+                  phx-click="cancel-cover"
+                  phx-value-ref={entry.ref}
+                  class="btn btn-ghost btn-xs"
+                >
+                  移除
+                </button>
+              </div>
+              <p :for={err <- upload_errors(@uploads.cover)} class="text-xs text-error">
+                {TcmEduWeb.CourseCover.error_text(err)}
+              </p>
+            </div>
           </div>
           <.input
             field={@create_form[:description]}
@@ -383,12 +387,43 @@
               min="0"
               step="0.01"
             />
-            <.input
-              field={@edit_form[:cover_image_url]}
-              type="text"
-              label="封面图片 URL"
-              placeholder="可选，或去 AI 配图"
-            />
+            <div class="flex flex-col gap-2">
+              <span class="label">课程封面 <span class="text-base-content/50">（JPG / PNG / WebP，≤ 5MB）</span></span>
+              <img
+                :if={@editing && @editing.cover_image_url}
+                id="edit-cover-preview"
+                src={@editing.cover_image_url}
+                alt="当前封面"
+                class="aspect-[16/9] w-full rounded-box object-cover"
+              />
+              <label class="btn btn-soft btn-sm w-fit cursor-pointer">
+                <.icon name="hero-photo" class="size-4" /> 选择封面图片
+                <.live_file_input upload={@uploads.cover} class="hidden" />
+              </label>
+              <div :for={entry <- @uploads.cover.entries} class="flex items-center gap-2 text-sm">
+                <.live_img_preview entry={entry} class="h-16 w-24 rounded object-cover" />
+                <span class="max-w-48 truncate">{entry.client_name}</span>
+                <button
+                  type="button"
+                  phx-click="cancel-cover"
+                  phx-value-ref={entry.ref}
+                  class="btn btn-ghost btn-xs"
+                >
+                  移除
+                </button>
+              </div>
+              <p :for={err <- upload_errors(@uploads.cover)} class="text-xs text-error">
+                {TcmEduWeb.CourseCover.error_text(err)}
+              </p>
+              <button
+                :if={@editing && @editing.cover_image_url}
+                type="button"
+                phx-click="remove-cover"
+                class="btn btn-ghost btn-xs w-fit text-error"
+              >
+                移除当前封面
+              </button>
+            </div>
           </div>
           <.input
             field={@edit_form[:description]}

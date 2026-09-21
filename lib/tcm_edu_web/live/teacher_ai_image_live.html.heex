@@ -51,13 +51,31 @@
             在左侧描述画面后点击生成
           </p>
           <div :if={@urls != []} class="grid gap-4 sm:grid-cols-2">
-            <div :for={url <- @urls} class="flex flex-col gap-2">
+            <form
+              :for={url <- @urls}
+              phx-change="select-cover-course"
+              class="flex flex-col gap-2"
+            >
               <img src={url} alt="AI 生成的教学配图" loading="lazy" class="aspect-square w-full rounded-box object-cover" />
-              <div class="flex items-center gap-2">
-                <input type="text" readonly value={url} class="input input-sm w-full" aria-label="图片链接" />
-              </div>
-              <p class="text-xs text-base-content/60">已归档，可将链接粘贴为课程封面</p>
-            </div>
+              <select name="cover[course_id]" class="select select-sm w-full" aria-label="选择课程">
+                <option value="">设为封面：先选课程…</option>
+                <option
+                  :for={course <- @courses}
+                  value={course.id}
+                  selected={@cover_course_id == course.id}
+                >
+                  {course.title}
+                </option>
+              </select>
+              <button
+                type="button"
+                phx-click="set-cover"
+                phx-value-url={url}
+                class="btn btn-soft btn-sm w-fit"
+              >
+                <.icon name="hero-photo" class="size-4" /> 设为该课程封面
+              </button>
+            </form>
           </div>
         </div>
       </div>

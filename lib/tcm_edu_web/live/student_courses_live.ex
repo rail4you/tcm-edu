@@ -157,7 +157,7 @@ defmodule TcmEduWeb.StudentCoursesLive do
       try do
         Course
         |> Ash.Query.for_read(:list_published, %{}, tenant: @tenant, authorize?: false)
-        |> Ash.Query.load([:lesson_count, :student_count])
+        |> Ash.Query.load([:cover_image_url, :lesson_count, :student_count])
         |> Ash.read!()
         |> Enum.filter(&match_keyword?(&1, keyword))
         |> Enum.filter(&match_category?(&1, category_id))
