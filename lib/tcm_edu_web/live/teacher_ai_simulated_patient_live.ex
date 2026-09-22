@@ -26,7 +26,7 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
 
   require Ash.Query
 
-  alias TcmEdu.SimulatedPatient.Examples
+  alias TcmEdu.SimulatedPatient.{ClinicalCases, Examples}
   alias TcmEdu.SimulatedPatient.RubricTranslations
   alias TcmEdu.SimulatedPatient.{Assignment, Evaluation, Patient, Session}
 
@@ -206,11 +206,22 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
   # 加载示例病人 ─────────────────────────────────────────
 
   def handle_event("load-example", %{"key" => key}, socket) do
-    case Examples.to_form_params(key) do
+    # 先查全流程临床病例（包含标准路径与难度分级），再回退到普通 SP 模板
+    params = ClinicalCases.to_form_params(key) || Examples.to_form_params(key)
+
+    case params do
       nil ->
-        {:noreply, put_flash(socket, :error, "示例病人模板不存在")}
+        {:noreply, put_flash(socket, :error, "示例模板不存在")}
 
       params ->
+        # 把 red_flags_lines 数组映射成表单的 red_flags_text 文本框（每行一条）
+        params =
+          Map.put_new(
+            params,
+            "red_flags_text",
+            (params["red_flags_lines"] || []) |> Enum.join("\n")
+          )
+
         {:noreply,
          socket
          |> assign(:patient_form, patient_form(params))
@@ -499,6 +510,19 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
       key_points: key_points,
       rubric: rubric,
       difficulty: parse_int(params["difficulty"], 3) |> clamp(1, 5),
+      difficulty_level:
+        parse_difficulty_level(
+          params["difficulty_level"] || patient_form_attr(socket.assigns.patient_form, "difficulty_level")
+        ),
+            standard_pathway:
+        parse_pathway_json(
+          params["standard_pathway_json"] ||
+            patient_form_attr(socket.assigns.patient_form, "standard_pathway_json")
+        ),
+      red_flags:
+        parse_red_flags(
+          params["red_flags_text"] || patient_form_attr(socket.assigns.patient_form, "red_flags_text")
+        ),
       min_questions: parse_int(params["min_questions"], 5) |> clamp(3, 30),
       max_turns: parse_int(params["max_turns"], 20) |> clamp(5, 100),
       status: parse_status(params["status"]) || :draft,
@@ -621,6 +645,9 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
       personality: :string,
       talking_style: :string,
       difficulty: :integer,
+      difficulty_level: :string,
+      standard_pathway_json: :string,
+      red_flags_text: :string,
       min_questions: :integer,
       max_turns: :integer,
       status: :string,
@@ -640,6 +667,9 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
       personality: "",
       talking_style: "",
       difficulty: 3,
+      difficulty_level: "introductory",
+      standard_pathway_json: "",
+      red_flags_text: "",
       min_questions: 5,
       max_turns: 20,
       status: "draft",
@@ -841,6 +871,7 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
   defp normalize_modal_tab(nil), do: :basic
   defp normalize_modal_tab("basic"), do: :basic
   defp normalize_modal_tab("rubric"), do: :rubric
+  defp normalize_modal_tab("clinical"), do: :clinical
   defp normalize_modal_tab(_), do: :basic
 
   defp parse_subject(nil), do: :traditional_chinese_medicine
@@ -859,6 +890,45 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
   defp parse_status(s) when is_binary(s), do: String.to_existing_atom(s)
   defp parse_status(_), do: :draft
 
+  defp parse_difficulty_level(nil), do: :introductory
+
+  defp parse_difficulty_level(s) when is_binary(s) do
+    case String.to_existing_atom(s) do
+      l when l in [:introductory, :advanced, :expert, :emergency] -> l
+      _ -> :introductory
+    end
+  rescue
+    _ -> :introductory
+  end
+
+  defp parse_difficulty_level(_), do: :introductory
+
+  # 解析标准路径 JSON 文本；空或非法回退 %{}（保持原问诊模式）
+  defp parse_pathway_json(nil), do: %{}
+  defp parse_pathway_json(""), do: %{}
+
+  defp parse_pathway_json(text) when is_binary(text) do
+    case Jason.decode(String.trim(text)) do
+      {:ok, map} when is_map(map) -> map
+      _ -> %{}
+    end
+  end
+
+  defp parse_pathway_json(_), do: %{}
+
+  # 把 red flags 文本框按行拆成数组
+  defp parse_red_flags(nil), do: []
+  defp parse_red_flags(""), do: []
+
+  defp parse_red_flags(text) when is_binary(text) do
+    text
+    |> String.split("\n")
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  defp parse_red_flags(_), do: []
+
   defp parse_int(nil, _default), do: nil
   defp parse_int("", default), do: default
   defp parse_int(value, _default) when is_integer(value), do: value
@@ -875,6 +945,7 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
   defp clamp(value, _min, _max) when not is_integer(value), do: value
   defp clamp(value, min, _max) when is_integer(value) and value < min, do: min
   defp clamp(value, _min, max) when is_integer(value) and value > max, do: max
+  defp clamp(value, _min, _max) when is_integer(value), do: value
 
   defp parse_deadline(""), do: nil
   defp parse_deadline(nil), do: nil
@@ -915,11 +986,23 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
       "rubric_keys" => Enum.map(rubric_lines, &elem(&1, 0)),
       "rubric_values" => Enum.map(rubric_lines, &elem(&1, 1)),
       "difficulty" => patient.difficulty || 3,
+      "difficulty_level" => to_string(patient.difficulty_level || :introductory),
+      "standard_pathway_json" => encode_pathway(patient.standard_pathway),
+      "red_flags_text" => Enum.join(patient.red_flags || [], "\n"),
       "min_questions" => patient.min_questions || 5,
       "max_turns" => patient.max_turns || 20,
       "status" => to_string(patient.status || "draft")
     }
   end
+
+  defp encode_pathway(nil), do: ""
+  defp encode_pathway(%{} = map) when map_size(map) == 0, do: ""
+
+  defp encode_pathway(map) when is_map(map) do
+    Jason.encode!(map)
+  end
+
+  defp encode_pathway(_), do: ""
 
   defp map_to_pairs(nil), do: []
 
@@ -1466,8 +1549,19 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
               <summary class="btn btn-soft btn-sm">
                 <.icon name="hero-book-open" class="size-4" /> 加载示例病人
               </summary>
-              <ul class="menu dropdown-content z-10 mt-2 w-72 rounded-box border border-base-300 bg-base-100 p-2 shadow-md">
-                <li class="menu-title">常见慢性病模板（点击一键填表）</li>
+              <ul class="menu dropdown-content z-10 mt-2 w-80 rounded-box border border-base-300 bg-base-100 p-2 shadow-md">
+                <li class="menu-title">全流程临床病例（带标准路径与难度分级）</li>
+                <li :for={ex <- ClinicalCases.list()}>
+                  <button
+                    type="button"
+                    phx-click="load-example"
+                    phx-value-key={ex.key}
+                    class="text-left"
+                  >
+                    {ex.label}
+                  </button>
+                </li>
+                <li class="menu-title mt-1">常见慢性病模板（普通问诊）</li>
                 <li :for={ex <- examples()}>
                   <button
                     type="button"
@@ -1509,6 +1603,18 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
           >
             <.icon name="hero-clipboard-document-check" class="size-4" /> 评分配置
           </button>
+          <button
+            type="button"
+            id="modal-tab-clinical"
+            phx-click="modal-switch-tab"
+            phx-value-tab="clinical"
+            class={[
+              "btn btn-ghost btn-sm rounded-b-none",
+              @modal_tab == :clinical && "border-b-2 border-primary text-primary"
+            ]}
+          >
+            <.icon name="hero-academic-cap" class="size-4" /> 临床流程
+          </button>
         </div>
 
         <.form
@@ -1520,6 +1626,7 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
         >
           {basic_tab_content(assigns)}
           {rubric_tab_content(assigns)}
+          {clinical_tab_content(assigns)}
 
           <div class="flex items-center justify-between gap-2 border-t border-base-300 pt-3">
             <button
@@ -1548,7 +1655,7 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
 
   defp basic_tab_content(assigns) do
     ~H"""
-    <div :if={@modal_tab == :basic} class="flex flex-col gap-3">
+    <div class={["flex flex-col gap-3", @modal_tab != :basic && "hidden"]}>
       <div class="grid items-start gap-3 md:grid-cols-2">
         <.input field={@patient_form[:name]} type="text" label="姓名" required maxlength="100" />
         <.subject_select field={@patient_form[:subject]} />
@@ -1661,7 +1768,7 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
 
   defp rubric_tab_content(assigns) do
     ~H"""
-    <div :if={@modal_tab == :rubric} class="flex flex-col gap-3">
+    <div class={["flex flex-col gap-3", @modal_tab != :rubric && "hidden"]}>
       <div>
         <div class="mb-2 flex items-center justify-between">
           <p class="text-sm font-medium">评分要点清单</p>
@@ -1788,6 +1895,79 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
     rows
     |> Enum.map(fn %{"v" => v} -> parse_int(v, 0) end)
     |> Enum.sum()
+  end
+
+  defp clinical_tab_content(assigns) do
+    ~H"""
+    <div class={["flex flex-col gap-3", @modal_tab != :clinical && "hidden"]}>
+      <div class="alert alert-info alert-soft text-sm">
+        配置「标准诊疗路径」后，学生端将启动<b>全流程临床模拟</b>
+        （问诊→体格检查→辅助检查→诊断→鉴别诊断→治疗方案→随访），
+        并实时对比标准路径标注思维漏洞。留空则保持普通问诊对话。
+      </div>
+
+      <div class="grid items-start gap-3 md:grid-cols-2">
+        <div>
+          <p class="mb-1 text-sm font-medium">难度分级</p>
+          <select
+            name="patient[difficulty_level]"
+            class="select select-bordered w-full"
+          >
+            <option
+              :for={{label, value} <- ClinicalCases.difficulty_levels()}
+              value={value}
+              selected={patient_form_attr(@patient_form, "difficulty_level") == to_string(value)}
+            >
+              {label}
+            </option>
+          </select>
+          <p class="mt-1 text-xs text-base-content/60">
+            入门(典型) / 进阶(复杂) / 专家(疑难) / 急诊(危重，red flag 强约束)
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <p class="mb-1 text-sm font-medium">
+          急诊危重信号（red_flags）
+          <span class="ms-1 text-xs text-base-content/60">（每行一条，急诊病例建议填写）</span>
+        </p>
+        <.input
+          field={@patient_form[:red_flags_text]}
+          type="textarea"
+          label="急诊危重信号（每行一条）"
+          placeholder="例：持续胸痛 >20 分钟伴大汗"
+          rows="3"
+        />
+      </div>
+
+      <div>
+        <p class="mb-1 text-sm font-medium">标准诊疗路径（JSON）</p>
+        <.input
+          field={@patient_form[:standard_pathway_json]}
+          type="textarea"
+          label="标准诊疗路径 JSON"
+          placeholder="填七阶段标准动作 JSON，或用「加载临床病例」一键填好"
+          rows="10"
+        />
+        <p class="mt-1 text-xs text-base-content/60">
+          用「加载临床病例」可一键填好。键为阶段：inquiry / physical_exam / auxiliary /
+          diagnosis / differential / treatment / follow_up。
+        </p>
+      </div>
+    </div>
+    """
+  end
+
+  # 从表单 params 取指定键（缺省空串）
+  defp patient_form_attr(form, key) do
+    form.params[key] || form.params[String.to_atom(key)] || ""
+  end
+
+
+
+  defp clinical_cases do
+    ClinicalCases
   end
 
   defp examples do

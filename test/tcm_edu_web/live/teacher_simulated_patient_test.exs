@@ -310,4 +310,31 @@ defmodule TcmEduWeb.TeacherSimulatedPatientTest do
     )
     |> Ash.create!()
   end
+
+  test "加载临床病例模板并保存完整流程病人（含 standard_pathway / 难度分级）", %{
+    conn: conn,
+    teacher: teacher
+  } do
+    page = visit(conn, "/teacher/ai/simulated-patient")
+    page = click_button(page, "#new-patient-btn", "新建病人档案")
+
+    # 从下拉选「进阶 · 稳定型心绞痛」（菜单项常驻 DOM，直接触发 load-example 事件）
+    page = click_button(page, "button[phx-click=load-example]", "进阶 · 稳定型心绞痛")
+
+    # 加载后 modal 回到基本信息 tab，重新进临床流程 tab 查看补全的字段
+    page = click_button(page, "#modal-tab-clinical", "临床流程")
+    rendered = Phoenix.LiveViewTest.render(page.view)
+    assert rendered =~ "冠心病 稳定型心绞痛"
+    assert rendered =~ "advanced"
+
+    # 回到基本信息填主诉后保存
+    page = click_button(page, "#modal-tab-basic", "病人基本信息")
+    page = fill_in(page, "主诉（开场）", with: "活动后胸闷胸痛 2 月")
+    page = click_button(page, "#patient-modal-form button[type=submit]", "保存")
+
+    [patient] = list_patients(teacher)
+    assert patient.difficulty_level == :advanced
+    assert patient.standard_pathway["diagnosis"]["primary"] == "冠心病 稳定型心绞痛"
+    assert patient.red_flags != []
+  end
 end
