@@ -152,16 +152,16 @@ defmodule TcmEdu.SimulatedPatient.CaseStage do
     policy action_type(:read) do
       authorize_if(actor_attribute_equals(:role, :tenant_admin))
       authorize_if(actor_attribute_equals(:role, :teacher))
-      authorize_if(expr(session.student_id == ^actor(:id)))
+      authorize_if(expr(exists(session, student_id == ^actor(:id))))
     end
 
-    policy action_type(:update) do
-      authorize_if(expr(session.student_id == ^actor(:id)))
+    policy action_type([:create, :update]) do
       authorize_if(actor_attribute_equals(:role, :tenant_admin))
       authorize_if(actor_attribute_equals(:role, :teacher))
+      authorize_if(expr(exists(session, student_id == ^actor(:id))))
     end
 
-    policy action_type(:create) do
+    policy action_type(:destroy) do
       authorize_if(actor_attribute_equals(:role, :tenant_admin))
       authorize_if(actor_attribute_equals(:role, :teacher))
     end

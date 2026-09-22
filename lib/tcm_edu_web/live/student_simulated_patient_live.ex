@@ -215,6 +215,9 @@ defmodule TcmEduWeb.StudentSimulatedPatientLive do
       "key_points" => patient.key_points || [],
       "rubric" => patient.rubric || %{},
       "difficulty" => patient.difficulty,
+      "difficulty_level" => patient.difficulty_level,
+      "standard_pathway" => patient.standard_pathway || %{},
+      "red_flags" => patient.red_flags || [],
       "min_questions" => patient.min_questions,
       "max_turns" => patient.max_turns
     }
