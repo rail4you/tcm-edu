@@ -174,7 +174,10 @@ defmodule TcmEduWeb.StudentMdtRoomLive do
       end)
 
     if Process.alive?(lv_pid) do
-      send(lv_pid, if(elem(result, 0) == :ok, do: {:mdt_done, ref, :ok}, else: {:mdt_error, ref, "AI 回应失败"}))
+      send(
+        lv_pid,
+        if(elem(result, 0) == :ok, do: {:mdt_done, ref, :ok}, else: {:mdt_error, ref, "AI 回应失败"})
+      )
     end
   rescue
     e ->
@@ -197,7 +200,10 @@ defmodule TcmEduWeb.StudentMdtRoomLive do
     Task.start(fn ->
       case MdtFacilitator.summarize(
              case_snapshot: room.case_snapshot,
-             history: Enum.map(load_messages(room, student), fn m -> %{role: m.role, content: m.content} end)
+             history:
+               Enum.map(load_messages(room, student), fn m ->
+                 %{role: m.role, content: m.content}
+               end)
            ) do
         {:ok, result} ->
           store_conclusion(room, result, student)
@@ -318,7 +324,10 @@ defmodule TcmEduWeb.StudentMdtRoomLive do
   end
 
   defp my_dept(socket) do
-    case Enum.find(socket.assigns.participants, &(&1.user_id == socket.assigns.current_student.id)) do
+    case Enum.find(
+           socket.assigns.participants,
+           &(&1.user_id == socket.assigns.current_student.id)
+         ) do
       nil -> "医生"
       p -> p.department
     end
@@ -527,15 +536,20 @@ defmodule TcmEduWeb.StudentMdtRoomLive do
 
   defp role_label(role, participants) do
     case String.split(role, ":", parts: 2) do
-      ["patient", _] -> "患者（AI）"
+      ["patient", _] ->
+        "患者（AI）"
+
       ["student", dept] ->
         case Enum.find(participants, &(&1.department == dept)) do
           nil -> dept
           p -> p.display_name || dept
         end
 
-      ["dept", dept] -> "#{dept}（AI 专家）"
-      [other] -> other
+      ["dept", dept] ->
+        "#{dept}（AI 专家）"
+
+      [other] ->
+        other
     end
   end
 

@@ -25,7 +25,16 @@ defmodule TcmEduWeb.StudentSimulatedPatientSessionLive do
 
   alias TcmEdu.AI.ClinicalReasoning
   alias TcmEdu.AI.SimulatedPatient, as: SPResponder
-  alias TcmEdu.SimulatedPatient.{Assignment, CaseStage, ClinicalWorkflow, Message, Session, StageMachine}
+
+  alias TcmEdu.SimulatedPatient.{
+    Assignment,
+    CaseStage,
+    ClinicalWorkflow,
+    Message,
+    Session,
+    StageMachine
+  }
+
   alias TcmEdu.Workers.SimulatedPatientEvaluationWorker
 
   on_mount {TcmEduWeb.StudentAuth, :ensure_student}
@@ -247,6 +256,7 @@ defmodule TcmEduWeb.StudentSimulatedPatientSessionLive do
         with :ok <- persist_stage(session, stage, student, actions, gaps) do
           level = level_for(session)
           descriptors = socket.assigns.stage_descriptors
+
           {next_descriptors, _unlocked} =
             StageMachine.apply_completion(descriptors, stage, level)
 
@@ -781,8 +791,14 @@ defmodule TcmEduWeb.StudentSimulatedPatientSessionLive do
   # complete-stage 时，从表单/结果里取当前阶段动作
   defp stage_actions_for(socket, stage) do
     case stage do
-      :inquiry -> inquiry_actions(socket.assigns.messages)
-      _ -> parse_stage_actions(stage, Ecto.Changeset.get_field(socket.assigns.stage_action_form, :content) || "")
+      :inquiry ->
+        inquiry_actions(socket.assigns.messages)
+
+      _ ->
+        parse_stage_actions(
+          stage,
+          Ecto.Changeset.get_field(socket.assigns.stage_action_form, :content) || ""
+        )
     end
   end
 

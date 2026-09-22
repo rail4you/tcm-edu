@@ -21,32 +21,8 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "name",
+      "source": "stage",
       "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "scenario_title",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "%{}",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "profile",
-      "type": "map"
     },
     {
       "allow_nil?": false,
@@ -57,19 +33,19 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "complaint",
-      "type": "text"
+      "source": "order",
+      "type": "bigint"
     },
     {
       "allow_nil?": true,
-      "default": "nil",
+      "default": "\"locked\"",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "history",
+      "source": "status",
       "type": "text"
     },
     {
@@ -81,10 +57,25 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "departments",
+      "source": "student_actions",
       "type": [
         "array",
-        "text"
+        "map"
+      ]
+    },
+    {
+      "allow_nil?": true,
+      "default": "[]",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "reasoning_gaps",
+      "type": [
+        "array",
+        "map"
       ]
     },
     {
@@ -96,63 +87,8 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "expected_conclusion",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "\"draft\"",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "status",
-      "type": "text"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": {
-        "deferrable": false,
-        "destination_attribute": "id",
-        "destination_attribute_default": null,
-        "destination_attribute_generated": null,
-        "index?": false,
-        "match_type": null,
-        "match_with": null,
-        "multitenancy": {
-          "attribute": null,
-          "global": false,
-          "strategy": "context"
-        },
-        "name": "mdt_cases_created_by_id_fkey",
-        "on_delete": null,
-        "on_update": null,
-        "primary_key?": true,
-        "schema": "public",
-        "table": "users"
-      },
-      "scale": null,
-      "size": null,
-      "source": "created_by_id",
-      "type": "uuid"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "created_by_email",
-      "type": "text"
+      "source": "completed_at",
+      "type": "utc_datetime"
     },
     {
       "allow_nil?": false,
@@ -177,6 +113,37 @@
       "size": null,
       "source": "updated_at",
       "type": "utc_datetime_usec"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": false,
+          "strategy": "context"
+        },
+        "name": "simulated_patient_case_stages_session_id_fkey",
+        "on_delete": null,
+        "on_update": null,
+        "primary_key?": true,
+        "schema": "public",
+        "table": "simulated_patient_sessions"
+      },
+      "scale": null,
+      "size": null,
+      "source": "session_id",
+      "type": "uuid"
     }
   ],
   "base_filter": null,
@@ -185,7 +152,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "6AE29B628B1C0A87E60A0629E598702780ADE98B149DAED73DB2F7A34670C384",
+  "hash": "C1D4F8D9DE6A9A2AEEF29576D9C38DA1F190800AF185EA08670383CA05A615E9",
   "identities": [],
   "multitenancy": {
     "attribute": null,
@@ -194,5 +161,5 @@
   },
   "repo": "Elixir.TcmEdu.Repo",
   "schema": null,
-  "table": "mdt_cases"
+  "table": "simulated_patient_case_stages"
 }

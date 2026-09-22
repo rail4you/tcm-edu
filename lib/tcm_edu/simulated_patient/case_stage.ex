@@ -39,6 +39,7 @@ defmodule TcmEdu.SimulatedPatient.CaseStage do
 
     attribute :stage, :atom do
       allow_nil?(false)
+
       constraints(
         one_of: [
           :inquiry,

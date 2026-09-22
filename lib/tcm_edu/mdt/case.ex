@@ -132,7 +132,17 @@ defmodule TcmEdu.Mdt.Case do
 
     update :update do
       primary?(true)
-      accept([:name, :scenario_title, :profile, :complaint, :history, :departments, :expected_conclusion, :status])
+
+      accept([
+        :name,
+        :scenario_title,
+        :profile,
+        :complaint,
+        :history,
+        :departments,
+        :expected_conclusion,
+        :status
+      ])
     end
 
     update :publish do

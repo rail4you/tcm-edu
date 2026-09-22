@@ -191,9 +191,10 @@ defmodule TcmEduWeb.StudentClinicalReasoningTest do
     assert session.turn_count >= 3
 
     # evaluate-inquiry 在缺 key 时优雅失败（flash 提示，不回退到聊天）
-    conn = conn
-    |> visit("/simulated-patient/sessions/#{session.id}")
-    |> click_button("#evaluate-inquiry", "评估问诊并进入下一阶段")
+    conn =
+      conn
+      |> visit("/simulated-patient/sessions/#{session.id}")
+      |> click_button("#evaluate-inquiry", "评估问诊并进入下一阶段")
 
     # 异步 Task 结果需要等待并触发重渲染 —— 有界重试直到 flash 出现
     html =

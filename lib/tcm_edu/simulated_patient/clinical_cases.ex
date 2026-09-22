@@ -139,7 +139,10 @@ defmodule TcmEdu.SimulatedPatient.ClinicalCases do
           min_steps: 4,
           hint: "明确急性加重诱因（感染/用药中断）"
         },
-        physical_exam: %{must_perform: ["生命体征与血氧饱和度", "胸廓与呼吸音", "发绀与水肿"], signs: "桶状胸，双肺呼吸音低，血氧 91%"},
+        physical_exam: %{
+          must_perform: ["生命体征与血氧饱和度", "胸廓与呼吸音", "发绀与水肿"],
+          signs: "桶状胸，双肺呼吸音低，血氧 91%"
+        },
         auxiliary: %{
           lab_orders: ["血氧饱和度", "血常规", "动脉血气"],
           imaging: ["胸部 X 线"],
@@ -183,14 +186,20 @@ defmodule TcmEdu.SimulatedPatient.ClinicalCases do
           min_steps: 5,
           hint: "发热 + 心脏杂音 + 栓塞表现高度提示心内膜炎"
         },
-        physical_exam: %{must_perform: ["生命体征", "心脏杂音听诊（新发/变化）", "皮肤黏膜瘀点与甲床", "脾肿大触诊"], signs: "新发主动脉瓣反流杂音，指端 Osler 结节，脾大"},
+        physical_exam: %{
+          must_perform: ["生命体征", "心脏杂音听诊（新发/变化）", "皮肤黏膜瘀点与甲床", "脾肿大触诊"],
+          signs: "新发主动脉瓣反流杂音，指端 Osler 结节，脾大"
+        },
         auxiliary: %{
           lab_orders: ["血培养（治疗前 ×3 套）", "血常规与炎性指标", "肝肾功能"],
           imaging: ["经食管超声心动图（TEE）"],
           hint: "血培养必须在抗生素前采集，TEE 更敏感"
         },
-        diagnosis: %{primary: "感染性心内膜炎", evidence: ["血培养阳性", "TEE 赘生物", "持续发热"],
-          notes: "Duke 标准：≥2 项主要标准或 1 主要+3 次要"},
+        diagnosis: %{
+          primary: "感染性心内膜炎",
+          evidence: ["血培养阳性", "TEE 赘生物", "持续发热"],
+          notes: "Duke 标准：≥2 项主要标准或 1 主要+3 次要"
+        },
         differential: %{
           competitors: ["风湿热", "系统性红斑狼疮", "淋巴瘤", "结核"],
           how_to_rules_out: ["无关节游走痛与链球菌前驱史可除外风湿热", "免疫学指标与抗核抗体阴性可除外狼疮", "淋巴结活检与影像排除淋巴瘤"]
@@ -228,13 +237,19 @@ defmodule TcmEdu.SimulatedPatient.ClinicalCases do
           min_steps: 3,
           hint: "先评估血流动力学，不可因问诊耽搁再灌注时间"
         },
-        physical_exam: %{must_perform: ["生命体征与血流动力学", "心肺听诊", "四肢皮肤湿冷"], signs: "血压 90/60，心率 115，皮肤湿冷，双肺底湿啰音"},
+        physical_exam: %{
+          must_perform: ["生命体征与血流动力学", "心肺听诊", "四肢皮肤湿冷"],
+          signs: "血压 90/60，心率 115，皮肤湿冷，双肺底湿啰音"
+        },
         auxiliary: %{
           lab_orders: ["18 导联心电图", "肌钙蛋白（快速）", "血常规/电解质/凝血"],
           imaging: ["床旁超声（室壁运动）"],
           hint: "10 分钟内完成首份心电图"
         },
-        diagnosis: %{primary: "急性 ST 段抬高型心肌梗死（Killip III）", evidence: ["ST 段抬高", "肌钙蛋白 ↑", "持续胸痛"]},
+        diagnosis: %{
+          primary: "急性 ST 段抬高型心肌梗死（Killip III）",
+          evidence: ["ST 段抬高", "肌钙蛋白 ↑", "持续胸痛"]
+        },
         differential: %{
           competitors: ["主动脉夹层", "肺栓塞", "张力性气胸"],
           how_to_rules_out: ["无撕裂样痛且血压不对称可初步除外夹层", "无突发呼吸困难与 D-二聚体阴性可除外肺栓塞", "呼吸音对称可除外张力性气胸"]
@@ -243,7 +258,10 @@ defmodule TcmEdu.SimulatedPatient.ClinicalCases do
           plan: ["阿司匹林+替格瑞洛负荷", "尽早再灌注（直接 PCI 优先）", "抗凝（普通肝素）", "必要时正性肌力药/升压"],
           contraindications: ["绝对禁忌溶栓（活动性出血）", "低血压慎用硝酸甘油"]
         },
-        follow_up: %{criteria: ["监测心衰/心律失常", "心功能评估与康复指导", "二级预防用药（双抗+他汀+ACEI+β激阻）"], timeline: "PCI 后住院监测"}
+        follow_up: %{
+          criteria: ["监测心衰/心律失常", "心功能评估与康复指导", "二级预防用药（双抗+他汀+ACEI+β激阻）"],
+          timeline: "PCI 后住院监测"
+        }
       },
       red_flags: ["持续胸痛 >20 分钟伴大汗", "心原性休克（血压<90/心率快）", "致死性心律失常（室颤）", "Killip 分级恶化"],
       name: "孙先生",
@@ -272,15 +290,24 @@ defmodule TcmEdu.SimulatedPatient.ClinicalCases do
           min_steps: 3,
           hint: "血压下降+气道症状高度提示休克，先用药再问诊"
         },
-        physical_exam: %{must_perform: ["气道与呼吸评估", "皮肤（荨麻疹/血管性水肿）", "血压心率血氧"], signs: "血压 70/40，心率 130，全身荨麻疹，喉鸣音"},
+        physical_exam: %{
+          must_perform: ["气道与呼吸评估", "皮肤（荨麻疹/血管性水肿）", "血压心率血氧"],
+          signs: "血压 70/40，心率 130，全身荨麻疹，喉鸣音"
+        },
         auxiliary: %{lab_orders: ["血常规", "血气", "必要时组胺/类胰蛋白酶"], imaging: [], hint: "救治优先，检查不做延误"},
         diagnosis: %{primary: "过敏性休克（Ⅱ级）", evidence: ["血压骤降", "荨麻疹+血管性水肿", "明确过敏原暴露"]},
-        differential: %{competitors: ["心源性休克", "迷走反射", "低血糖"], how_to_rules_out: ["无心梗证据且无胸痛可初步除外心源性", "无苍白冷汗前驱且无张力可除外迷走反射"]},
+        differential: %{
+          competitors: ["心源性休克", "迷走反射", "低血糖"],
+          how_to_rules_out: ["无心梗证据且无胸痛可初步除外心源性", "无苍白冷汗前驱且无张力可除外迷走反射"]
+        },
         treatment: %{
           plan: ["立即停止过敏原", "肾上腺素 0.3-0.5mg IM 首选", "大量晶体液扩容", "抗组胺+糖皮质激素辅助", "严重喉水肿考虑气管插管"],
           contraindications: ["肾上腺素禁止仅皮下注射", "禁用β受体阻滞剂加重难治性休克"]
         },
-        follow_up: %{criteria: ["观察 24h 防双相反应", "开具过敏原警示与肾上腺素自动注射装置", "转诊过敏专科"], timeline: "留观 24h"}
+        follow_up: %{
+          criteria: ["观察 24h 防双相反应", "开具过敏原警示与肾上腺素自动注射装置", "转诊过敏专科"],
+          timeline: "留观 24h"
+        }
       },
       red_flags: ["气道阻塞（喉头水肿/喉鸣）", "血压持续 <90/60 休克", "双相反应风险", "对肾上腺素无反应"],
       name: "陈女士",
@@ -322,11 +349,14 @@ defmodule TcmEdu.SimulatedPatient.ClinicalCases do
   @spec to_form_params(String.t()) :: map() | nil
   def to_form_params(key) do
     case get(key) do
-      nil -> nil
+      nil ->
+        nil
 
       t ->
         profile_lines = map_to_lines(t.profile)
-        rubric_lines = map_to_lines_with_label(%{"professional" => 50, "empathy" => 25, "communication" => 25})
+
+        rubric_lines =
+          map_to_lines_with_label(%{"professional" => 50, "empathy" => 25, "communication" => 25})
 
         %{
           "name" => t.name,

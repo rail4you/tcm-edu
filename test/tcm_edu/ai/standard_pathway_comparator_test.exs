@@ -33,7 +33,10 @@ defmodule TcmEdu.AI.StandardPathwayComparatorTest do
 
   test "缺病人 → :missing_patient" do
     assert {:error, :missing_patient} =
-             StandardPathwayComparator.compare(stage: :inquiry, student_actions: [%{type: "ask", content: "x"}])
+             StandardPathwayComparator.compare(
+               stage: :inquiry,
+               student_actions: [%{type: "ask", content: "x"}]
+             )
   end
 
   test "缺阶段 → :missing_stage" do
@@ -42,8 +45,7 @@ defmodule TcmEdu.AI.StandardPathwayComparatorTest do
   end
 
   test "空动作 → 空对比结果（不发 LLM）" do
-    assert {:ok,
-            %{matched: [], missing: [], wrong_order: [], red_flag_missed: [], notes: ""}} =
+    assert {:ok, %{matched: [], missing: [], wrong_order: [], red_flag_missed: [], notes: ""}} =
              StandardPathwayComparator.compare(
                patient: patient(),
                stage: :auxiliary,
@@ -134,10 +136,22 @@ defmodule TcmEdu.AI.StandardPathwayComparatorTest.Stub do
     case Process.get(:spc_responses) do
       [resp | rest] ->
         Process.put(:spc_responses, rest)
-        Req.Test.json(conn, %{"choices" => [%{"message" => %{"role" => "assistant", "content" => (if is_binary(resp), do: resp, else: Jason.encode!(resp))}}]})
+
+        Req.Test.json(conn, %{
+          "choices" => [
+            %{
+              "message" => %{
+                "role" => "assistant",
+                "content" => if(is_binary(resp), do: resp, else: Jason.encode!(resp))
+              }
+            }
+          ]
+        })
 
       _ ->
-        Req.Test.json(conn, %{"choices" => [%{"message" => %{"role" => "assistant", "content" => ""}}]})
+        Req.Test.json(conn, %{
+          "choices" => [%{"message" => %{"role" => "assistant", "content" => ""}}]
+        })
     end
   end
 end

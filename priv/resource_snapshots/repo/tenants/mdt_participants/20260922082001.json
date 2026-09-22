@@ -21,11 +21,11 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "role",
+      "source": "department",
       "type": "text"
     },
     {
-      "allow_nil?": false,
+      "allow_nil?": true,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -33,19 +33,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "content",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "\"chat\"",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "kind",
+      "source": "display_name",
       "type": "text"
     },
     {
@@ -79,7 +67,7 @@
           "global": false,
           "strategy": "context"
         },
-        "name": "mdt_messages_room_id_fkey",
+        "name": "mdt_participants_room_id_fkey",
         "on_delete": null,
         "on_update": null,
         "primary_key?": true,
@@ -92,7 +80,7 @@
       "type": "uuid"
     },
     {
-      "allow_nil?": true,
+      "allow_nil?": false,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -110,7 +98,7 @@
           "global": false,
           "strategy": "context"
         },
-        "name": "mdt_messages_author_id_fkey",
+        "name": "mdt_participants_user_id_fkey",
         "on_delete": null,
         "on_update": null,
         "primary_key?": true,
@@ -119,7 +107,7 @@
       },
       "scale": null,
       "size": null,
-      "source": "author_id",
+      "source": "user_id",
       "type": "uuid"
     }
   ],
@@ -129,7 +117,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "3FC0FC2473B6426603124F53AB3F5E0B26BE36F80A5AA5D814E1563F68BBA5B0",
+  "hash": "9E7F067852CB86B0AA776350BC3D0A93AC389454CE899B2B144935F0D49A3C5D",
   "identities": [],
   "multitenancy": {
     "attribute": null,
@@ -138,5 +126,5 @@
   },
   "repo": "Elixir.TcmEdu.Repo",
   "schema": null,
-  "table": "mdt_messages"
+  "table": "mdt_participants"
 }

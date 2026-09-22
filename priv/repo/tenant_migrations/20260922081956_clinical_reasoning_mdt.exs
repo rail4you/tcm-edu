@@ -1,4 +1,4 @@
-defmodule TcmEdu.Repo.TenantMigrations.MigrateResources2 do
+defmodule TcmEdu.Repo.TenantMigrations.ClinicalReasoningMdt do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 
@@ -8,6 +8,48 @@ defmodule TcmEdu.Repo.TenantMigrations.MigrateResources2 do
   use Ecto.Migration
 
   def up do
+    alter table(:simulated_patients, prefix: prefix()) do
+      add :difficulty_level, :text, default: "introductory"
+      add :standard_pathway, :map, default: %{}
+      add :red_flags, {:array, :text}, default: []
+    end
+
+    alter table(:simulated_patient_evaluations, prefix: prefix()) do
+      add :diagnosis_score, :bigint, default: 0
+      add :differential_score, :bigint, default: 0
+      add :treatment_score, :bigint, default: 0
+      add :stage_scores, :map, default: %{}
+      add :reasoning_gaps, {:array, :map}, default: []
+      add :standard_pathway_snapshot, :map
+    end
+
+    create table(:simulated_patient_case_stages, primary_key: false, prefix: prefix()) do
+      add :id, :uuid, null: false, default: fragment("gen_random_uuid()"), primary_key: true
+      add :stage, :text, null: false
+      add :order, :bigint, null: false
+      add :status, :text, default: "locked"
+      add :student_actions, {:array, :map}, default: []
+      add :reasoning_gaps, {:array, :map}, default: []
+      add :completed_at, :utc_datetime
+
+      add :inserted_at, :utc_datetime_usec,
+        null: false,
+        default: fragment("(now() AT TIME ZONE 'utc')")
+
+      add :updated_at, :utc_datetime_usec,
+        null: false,
+        default: fragment("(now() AT TIME ZONE 'utc')")
+
+      add :session_id,
+          references(:simulated_patient_sessions,
+            column: :id,
+            name: "simulated_patient_case_stages_session_id_fkey",
+            type: :uuid,
+            prefix: prefix()
+          ),
+          null: false
+    end
+
     create table(:mdt_rooms, primary_key: false, prefix: prefix()) do
       add :id, :uuid, null: false, default: fragment("gen_random_uuid()"), primary_key: true
       add :status, :text, default: "open"
@@ -156,9 +198,49 @@ defmodule TcmEdu.Repo.TenantMigrations.MigrateResources2 do
         null: false,
         default: fragment("(now() AT TIME ZONE 'utc')")
     end
+
+    create table(:clinical_reasoning_reports, primary_key: false, prefix: prefix()) do
+      add :id, :uuid, null: false, default: fragment("gen_random_uuid()"), primary_key: true
+
+      add :student_id,
+          references(:users,
+            column: :id,
+            name: "clinical_reasoning_reports_student_id_fkey",
+            type: :uuid,
+            prefix: prefix()
+          ),
+          null: false
+
+      add :report_period_start, :date
+      add :report_period_end, :date
+      add :inquiry_score, :bigint, default: 0
+      add :physical_exam_score, :bigint, default: 0
+      add :auxiliary_score, :bigint, default: 0
+      add :diagnosis_score, :bigint, default: 0
+      add :differential_score, :bigint, default: 0
+      add :treatment_score, :bigint, default: 0
+      add :follow_up_score, :bigint, default: 0
+      add :total_score, :decimal
+      add :grade, :text
+      add :rank, :bigint
+      add :peer_count, :bigint
+      add :statistics, :map, default: %{}
+      add :dimension_report, :map, default: %{}
+      add :improvement_plan, :text
+      add :session_count, :bigint, default: 0
+      add :generated_at, :utc_datetime, default: fragment("(now() AT TIME ZONE 'utc')")
+
+      add :inserted_at, :utc_datetime_usec,
+        null: false,
+        default: fragment("(now() AT TIME ZONE 'utc')")
+    end
   end
 
   def down do
+    drop constraint(:clinical_reasoning_reports, "clinical_reasoning_reports_student_id_fkey")
+
+    drop table(:clinical_reasoning_reports, prefix: prefix())
+
     drop constraint(:mdt_cases, "mdt_cases_created_by_id_fkey")
 
     alter table(:mdt_cases, prefix: prefix()) do
@@ -204,5 +286,27 @@ defmodule TcmEdu.Repo.TenantMigrations.MigrateResources2 do
     drop table(:mdt_participants, prefix: prefix())
 
     drop table(:mdt_rooms, prefix: prefix())
+
+    drop constraint(
+           :simulated_patient_case_stages,
+           "simulated_patient_case_stages_session_id_fkey"
+         )
+
+    drop table(:simulated_patient_case_stages, prefix: prefix())
+
+    alter table(:simulated_patient_evaluations, prefix: prefix()) do
+      remove :standard_pathway_snapshot
+      remove :reasoning_gaps
+      remove :stage_scores
+      remove :treatment_score
+      remove :differential_score
+      remove :diagnosis_score
+    end
+
+    alter table(:simulated_patients, prefix: prefix()) do
+      remove :red_flags
+      remove :standard_pathway
+      remove :difficulty_level
+    end
   end
 end

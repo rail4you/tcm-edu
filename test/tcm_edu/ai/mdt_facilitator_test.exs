@@ -22,9 +22,19 @@ defmodule TcmEdu.AI.MdtFacilitatorTest do
   end
 
   test "respond 入参校验" do
-    assert {:error, :missing_case} = MdtFacilitator.respond(role: "patient", history: [], student_message: "hi")
-    assert {:error, :missing_role} = MdtFacilitator.respond(case_snapshot: snap(), history: [], student_message: "hi")
-    assert {:error, :empty_message} = MdtFacilitator.respond(case_snapshot: snap(), role: "patient", history: [], student_message: "")
+    assert {:error, :missing_case} =
+             MdtFacilitator.respond(role: "patient", history: [], student_message: "hi")
+
+    assert {:error, :missing_role} =
+             MdtFacilitator.respond(case_snapshot: snap(), history: [], student_message: "hi")
+
+    assert {:error, :empty_message} =
+             MdtFacilitator.respond(
+               case_snapshot: snap(),
+               role: "patient",
+               history: [],
+               student_message: ""
+             )
   end
 
   test "respond 作为 patient 返回患者发言" do
@@ -113,10 +123,15 @@ defmodule TcmEdu.AI.MdtFacilitatorTest.Stub do
       [resp | rest] ->
         Process.put(:mdt_responses, rest)
         content = if is_binary(resp), do: resp, else: Jason.encode!(resp)
-        Req.Test.json(conn, %{"choices" => [%{"message" => %{"role" => "assistant", "content" => content}}]})
+
+        Req.Test.json(conn, %{
+          "choices" => [%{"message" => %{"role" => "assistant", "content" => content}}]
+        })
 
       _ ->
-        Req.Test.json(conn, %{"choices" => [%{"message" => %{"role" => "assistant", "content" => ""}}]})
+        Req.Test.json(conn, %{
+          "choices" => [%{"message" => %{"role" => "assistant", "content" => ""}}]
+        })
     end
   end
 end

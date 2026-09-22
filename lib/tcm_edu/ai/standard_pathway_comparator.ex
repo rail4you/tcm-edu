@@ -126,50 +126,52 @@ defmodule TcmEdu.AI.StandardPathwayComparator do
     [
       %{
         role: "system",
-        content: """
-        你是一名临床医学教育评估专家，负责把医学生在某临床阶段采取的动作，
-        与病例的「标准诊疗路径」实时对比，识别学生的思维漏洞。
+        content:
+          """
+          你是一名临床医学教育评估专家，负责把医学生在某临床阶段采取的动作，
+          与病例的「标准诊疗路径」实时对比，识别学生的思维漏洞。
 
-        学生动作是结构化列表。请输出四项：
+          学生动作是结构化列表。请输出四项：
 
-        - **matched**：学生动作中符合标准路径的条目（原文改写，不超过 30 字/条）
-        - **missing**：标准路径要求但学生未做的动作（按标准路径逐条核对，最多 6 条）
-        - **wrong_order**：顺序 / 优先级不当的动作（例如急诊先诊断后处理、未先排查危重）
-        - **red_flag_missed**：应优先识别的危重信号（red flag）被遗漏或未处置
+          - **matched**：学生动作中符合标准路径的条目（原文改写，不超过 30 字/条）
+          - **missing**：标准路径要求但学生未做的动作（按标准路径逐条核对，最多 6 条）
+          - **wrong_order**：顺序 / 优先级不当的动作（例如急诊先诊断后处理、未先排查危重）
+          - **red_flag_missed**：应优先识别的危重信号（red flag）被遗漏或未处置
 
-        规则：
+          规则：
 
-        - 只输出严格 JSON，不要 markdown 围栏，不要解释。
-        - matched/missing/wrong_order/red_flag_missed 都是字符串数组，可为空。
-        - notes 是一句话总结（≤ 50 字）。
-        - 审慎度：#{strictness}。
-        - 急诊病例 red_flags 若未全部覆盖，必须在 red_flag_missed 中列出。
-        """
-        |> String.trim()
+          - 只输出严格 JSON，不要 markdown 围栏，不要解释。
+          - matched/missing/wrong_order/red_flag_missed 都是字符串数组，可为空。
+          - notes 是一句话总结（≤ 50 字）。
+          - 审慎度：#{strictness}。
+          - 急诊病例 red_flags 若未全部覆盖，必须在 red_flag_missed 中列出。
+          """
+          |> String.trim()
       },
       %{
         role: "user",
-        content: """
-        # 病例
+        content:
+          """
+          # 病例
 
-        - 难度分级：#{level_label}
-        - 当前阶段：#{stage_label}（#{stage}）
+          - 难度分级：#{level_label}
+          - 当前阶段：#{stage_label}（#{stage}）
 
-        # 患者标准路径（本阶段）
+          # 患者标准路径（本阶段）
 
-        #{format_map(stage_standard)}
+          #{format_map(stage_standard)}
 
-        # 急诊危重信号（red_flags）
+          # 急诊危重信号（red_flags）
 
-        #{format_red_flags(red_flags)}
+          #{format_red_flags(red_flags)}
 
-        # 学生本科阶段动作
+          # 学生本科阶段动作
 
-        #{format_actions(actions)}
+          #{format_actions(actions)}
 
-        请对比并输出 JSON。
-        """
-        |> String.trim()
+          请对比并输出 JSON。
+          """
+          |> String.trim()
       }
     ]
   end

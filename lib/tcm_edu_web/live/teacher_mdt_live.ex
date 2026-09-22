@@ -50,7 +50,10 @@ defmodule TcmEduWeb.TeacherMdtLive do
     with %Case{} = case <- Enum.find(socket.assigns.cases, &(&1.id == id)),
          {:ok, _} <-
            case
-           |> Ash.Changeset.for_update(:archive, %{}, actor: teacher.actor, tenant: teacher.tenant)
+           |> Ash.Changeset.for_update(:archive, %{},
+             actor: teacher.actor,
+             tenant: teacher.tenant
+           )
            |> Ash.update() do
       {:noreply, socket |> load_cases() |> put_flash(:info, "已归档")}
     else

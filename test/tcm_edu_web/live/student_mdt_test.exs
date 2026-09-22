@@ -127,7 +127,9 @@ defmodule TcmEduWeb.StudentMdtTest do
 
     # 先有两条发言（直接入库，绕开 AI）
     conn = conn |> visit("/mdt") |> click_button("#start-mdt-#{mdt_case.id}", "进入会诊")
-    [room] = Room |> Ash.Query.for_read(:read, %{}, actor: student, tenant: @tenant) |> Ash.read!()
+
+    [room] =
+      Room |> Ash.Query.for_read(:read, %{}, actor: student, tenant: @tenant) |> Ash.read!()
 
     for msg <- ["患者您好，胸痛多久了？", "我建议先做心电图排除心梗"] do
       Message

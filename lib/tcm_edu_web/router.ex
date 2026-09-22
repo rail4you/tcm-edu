@@ -240,6 +240,8 @@ defmodule TcmEduWeb.Router do
       live "/simulated-patient/sessions/:id/evaluation",
            StudentSimulatedPatientSessionLive,
            :evaluation
+
+      live "/simulated-patient/report", StudentClinicalReasoningReportLive, :index
       live "/mdt", StudentMdtLive, :index
       live "/mdt/rooms/:id", StudentMdtRoomLive, :index
     end

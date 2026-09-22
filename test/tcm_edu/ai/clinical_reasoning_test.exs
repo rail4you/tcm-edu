@@ -32,8 +32,11 @@ defmodule TcmEdu.AI.ClinicalReasoningTest do
   end
 
   test "reveal 缺参校验" do
-    assert {:error, :missing_patient} = ClinicalReasoning.reveal(stage: :physical_exam, student_actions: [])
-    assert {:error, :missing_stage} = ClinicalReasoning.reveal(patient: patient(), student_actions: [])
+    assert {:error, :missing_patient} =
+             ClinicalReasoning.reveal(stage: :physical_exam, student_actions: [])
+
+    assert {:error, :missing_stage} =
+             ClinicalReasoning.reveal(patient: patient(), student_actions: [])
 
     assert {:error, :inquiry_uses_simulated_patient} =
              ClinicalReasoning.reveal(
@@ -45,7 +48,11 @@ defmodule TcmEdu.AI.ClinicalReasoningTest do
 
   test "reveal 空动作 → 空揭示（不发 LLM）" do
     assert {:ok, %{result_text: "", findings: [], hints: []}} =
-             ClinicalReasoning.reveal(patient: patient(), stage: :physical_exam, student_actions: [])
+             ClinicalReasoning.reveal(
+               patient: patient(),
+               stage: :physical_exam,
+               student_actions: []
+             )
   end
 
   test "reveal 成功：解析结构化 JSON" do
@@ -165,10 +172,22 @@ defmodule TcmEdu.AI.ClinicalReasoningTest.Stub do
     case Process.get(:cr_responses) do
       [resp | rest] ->
         Process.put(:cr_responses, rest)
-        Req.Test.json(conn, %{"choices" => [%{"message" => %{"role" => "assistant", "content" => (if is_binary(resp), do: resp, else: Jason.encode!(resp))}}]})
+
+        Req.Test.json(conn, %{
+          "choices" => [
+            %{
+              "message" => %{
+                "role" => "assistant",
+                "content" => if(is_binary(resp), do: resp, else: Jason.encode!(resp))
+              }
+            }
+          ]
+        })
 
       _ ->
-        Req.Test.json(conn, %{"choices" => [%{"message" => %{"role" => "assistant", "content" => ""}}]})
+        Req.Test.json(conn, %{
+          "choices" => [%{"message" => %{"role" => "assistant", "content" => ""}}]
+        })
     end
   end
 end

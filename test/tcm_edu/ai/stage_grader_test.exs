@@ -82,10 +82,22 @@ defmodule TcmEdu.AI.StageGraderTest.Stub do
     case Process.get(:sg_responses) do
       [resp | rest] ->
         Process.put(:sg_responses, rest)
-        Req.Test.json(conn, %{"choices" => [%{"message" => %{"role" => "assistant", "content" => (if is_binary(resp), do: resp, else: Jason.encode!(resp))}}]})
+
+        Req.Test.json(conn, %{
+          "choices" => [
+            %{
+              "message" => %{
+                "role" => "assistant",
+                "content" => if(is_binary(resp), do: resp, else: Jason.encode!(resp))
+              }
+            }
+          ]
+        })
 
       _ ->
-        Req.Test.json(conn, %{"choices" => [%{"message" => %{"role" => "assistant", "content" => ""}}]})
+        Req.Test.json(conn, %{
+          "choices" => [%{"message" => %{"role" => "assistant", "content" => ""}}]
+        })
     end
   end
 end

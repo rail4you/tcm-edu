@@ -11,7 +11,8 @@ defmodule TcmEdu.SimulatedPatient.StageMachineTest do
   end
 
   test "入门：完成问诊解锁查体" do
-    {new, unlocked} = StageMachine.apply_completion(descriptors(:introductory), :inquiry, :introductory)
+    {new, unlocked} =
+      StageMachine.apply_completion(descriptors(:introductory), :inquiry, :introductory)
 
     assert unlocked == [:physical_exam]
     assert stage_status(new, :inquiry) == :completed

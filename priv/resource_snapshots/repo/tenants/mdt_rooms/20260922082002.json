@@ -13,16 +13,28 @@
       "type": "uuid"
     },
     {
-      "allow_nil?": false,
-      "default": "nil",
+      "allow_nil?": true,
+      "default": "\"open\"",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "department",
+      "source": "status",
       "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "%{}",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "case_snapshot",
+      "type": "map"
     },
     {
       "allow_nil?": true,
@@ -33,8 +45,8 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "display_name",
-      "type": "text"
+      "source": "concluded_at",
+      "type": "utc_datetime"
     },
     {
       "allow_nil?": false,
@@ -46,6 +58,18 @@
       "scale": null,
       "size": null,
       "source": "inserted_at",
+      "type": "utc_datetime_usec"
+    },
+    {
+      "allow_nil?": false,
+      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "updated_at",
       "type": "utc_datetime_usec"
     },
     {
@@ -67,16 +91,16 @@
           "global": false,
           "strategy": "context"
         },
-        "name": "mdt_participants_room_id_fkey",
+        "name": "mdt_rooms_case_id_fkey",
         "on_delete": null,
         "on_update": null,
         "primary_key?": true,
         "schema": "public",
-        "table": "mdt_rooms"
+        "table": "mdt_cases"
       },
       "scale": null,
       "size": null,
-      "source": "room_id",
+      "source": "case_id",
       "type": "uuid"
     },
     {
@@ -98,7 +122,7 @@
           "global": false,
           "strategy": "context"
         },
-        "name": "mdt_participants_user_id_fkey",
+        "name": "mdt_rooms_owner_id_fkey",
         "on_delete": null,
         "on_update": null,
         "primary_key?": true,
@@ -107,7 +131,7 @@
       },
       "scale": null,
       "size": null,
-      "source": "user_id",
+      "source": "owner_id",
       "type": "uuid"
     }
   ],
@@ -117,7 +141,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "BBDF7E8217164DF359E3051BE1D1CEFF57C2324CA86E76BB7D4044C0E7EC3652",
+  "hash": "20787A799F0CB6089550EF9B40A056B47350582594FA2062AD68DF8ED7F7722F",
   "identities": [],
   "multitenancy": {
     "attribute": null,
@@ -126,5 +150,5 @@
   },
   "repo": "Elixir.TcmEdu.Repo",
   "schema": null,
-  "table": "mdt_participants"
+  "table": "mdt_rooms"
 }

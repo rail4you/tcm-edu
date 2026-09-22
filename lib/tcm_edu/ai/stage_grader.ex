@@ -106,29 +106,30 @@ defmodule TcmEdu.AI.StageGrader do
     [
       %{
         role: "system",
-        content: """
-        你是一名临床医学教育评分专家。请对医学生在「#{stage_label}」阶段的表现打分，
-        只输出严格 JSON。
+        content:
+          """
+          你是一名临床医学教育评分专家。请对医学生在「#{stage_label}」阶段的表现打分，
+          只输出严格 JSON。
 
-        # 本阶段评分侧重
+          # 本阶段评分侧重
 
-        #{dimension}
+          #{dimension}
 
-        # 输出格式（严格 JSON，不要 markdown 围栏）
+          # 输出格式（严格 JSON，不要 markdown 围栏）
 
-            {
-              "score": 78,
-              "grade": "pass",
-              "gaps": ["思维漏洞 1", "思维漏洞 2"],
-              "suggestions": ["改进建议 1", "改进建议 2"],
-              "feedback": "一句话总评（≤60 字）"
-            }
+              {
+                "score": 78,
+                "grade": "pass",
+                "gaps": ["思维漏洞 1", "思维漏洞 2"],
+                "suggestions": ["改进建议 1", "改进建议 2"],
+                "feedback": "一句话总评（≤60 字）"
+              }
 
-        - score 为 0-100 整数；
-        - grade ∈ excellent(90+)/good(80-89)/pass(70-79)/borderline(60-69)/fail(<60)；
-        - gaps 1-4 条（已被功能标出的漏洞直接引用）；suggestions 1-4 条，给学生可执行建议。
-        """
-        |> String.trim()
+          - score 为 0-100 整数；
+          - grade ∈ excellent(90+)/good(80-89)/pass(70-79)/borderline(60-69)/fail(<60)；
+          - gaps 1-4 条（已被功能标出的漏洞直接引用）；suggestions 1-4 条，给学生可执行建议。
+          """
+          |> String.trim()
       },
       %{
         role: "user",

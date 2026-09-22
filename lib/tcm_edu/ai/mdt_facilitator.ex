@@ -168,18 +168,19 @@ defmodule TcmEdu.AI.MdtFacilitator do
     [
       %{
         role: "system",
-        content: """
-        你是 MDT 会诊主持人，请综合整场会诊讨论，输出一个结构化结论（严格 JSON，不要 markdown 围栏）：
-            {
-              "primary_diagnosis": "会诊共同诊断",
-              "differential": "需鉴别的疾病",
-              "treatment": "最终处置/治疗方案（含跨科室协作）",
-              "roles_considered": ["采纳意见的科室1", "科室2"],
-              "summary": "两句以内的总结"
-            }
-        若讨论未收敛或缺失关键信息，在 summary 中指出分歧/缺口。
-        """
-        |> String.trim()
+        content:
+          """
+          你是 MDT 会诊主持人，请综合整场会诊讨论，输出一个结构化结论（严格 JSON，不要 markdown 围栏）：
+              {
+                "primary_diagnosis": "会诊共同诊断",
+                "differential": "需鉴别的疾病",
+                "treatment": "最终处置/治疗方案（含跨科室协作）",
+                "roles_considered": ["采纳意见的科室1", "科室2"],
+                "summary": "两句以内的总结"
+              }
+          若讨论未收敛或缺失关键信息，在 summary 中指出分歧/缺口。
+          """
+          |> String.trim()
       },
       %{
         role: "user",
@@ -225,7 +226,13 @@ defmodule TcmEdu.AI.MdtFacilitator do
       _ ->
         # 兜底：整段作为 summary
         {:ok,
-         %{primary_diagnosis: "", differential: "", treatment: "", roles_considered: [], summary: stripped}}
+         %{
+           primary_diagnosis: "",
+           differential: "",
+           treatment: "",
+           roles_considered: [],
+           summary: stripped
+         }}
     end
   end
 

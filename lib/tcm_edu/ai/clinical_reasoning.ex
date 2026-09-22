@@ -87,7 +87,8 @@ defmodule TcmEdu.AI.ClinicalReasoning do
            ) do
       parse_reveal(content)
     else
-      {:error, :empty} -> {:error, :empty}
+      {:error, :empty} ->
+        {:error, :empty}
 
       {:error, reason} ->
         Logger.warning("[ClinicalReasoning] reveal LLM failed: #{inspect(reason)}")
@@ -109,20 +110,21 @@ defmodule TcmEdu.AI.ClinicalReasoning do
       %{role: "system", content: role_intro},
       %{
         role: "user",
-        content: """
-        # 病例背景（仅作依据，不主动和盘托出）
+        content:
+          """
+          # 病例背景（仅作依据，不主动和盘托出）
 
-        #{background}
+          #{background}
 
-        # 学员本阶段的动作
+          # 学员本阶段的动作
 
-        #{format_actions(actions)}
+          #{format_actions(actions)}
 
-        # 当前是#{stage_label}第 #{turn_index + 1} 轮
+          # 当前是#{stage_label}第 #{turn_index + 1} 轮
 
-        请按角色输出 JSON。
-        """
-        |> String.trim()
+          请按角色输出 JSON。
+          """
+          |> String.trim()
       }
     ]
   end

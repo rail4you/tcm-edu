@@ -512,16 +512,18 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
       difficulty: parse_int(params["difficulty"], 3) |> clamp(1, 5),
       difficulty_level:
         parse_difficulty_level(
-          params["difficulty_level"] || patient_form_attr(socket.assigns.patient_form, "difficulty_level")
+          params["difficulty_level"] ||
+            patient_form_attr(socket.assigns.patient_form, "difficulty_level")
         ),
-            standard_pathway:
+      standard_pathway:
         parse_pathway_json(
           params["standard_pathway_json"] ||
             patient_form_attr(socket.assigns.patient_form, "standard_pathway_json")
         ),
       red_flags:
         parse_red_flags(
-          params["red_flags_text"] || patient_form_attr(socket.assigns.patient_form, "red_flags_text")
+          params["red_flags_text"] ||
+            patient_form_attr(socket.assigns.patient_form, "red_flags_text")
         ),
       min_questions: parse_int(params["min_questions"], 5) |> clamp(3, 30),
       max_turns: parse_int(params["max_turns"], 20) |> clamp(5, 100),
@@ -1963,9 +1965,6 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
   defp patient_form_attr(form, key) do
     form.params[key] || form.params[String.to_atom(key)] || ""
   end
-
-
-
 
   defp examples do
     Examples.list()
