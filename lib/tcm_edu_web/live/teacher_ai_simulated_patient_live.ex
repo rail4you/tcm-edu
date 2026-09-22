@@ -74,7 +74,9 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
 
   @impl true
   def handle_event("switch-tab", %{"tab" => tab}, socket) do
-    {:noreply, push_patch(socket, to: tab_path(tab)) |> assign(:tab, tab)}
+    # 不要再 assign(:tab)，改由 handle_params 统一把 ?tab= 归一化成 atom，
+    # 否则这里把字符串覆盖上去导致 case @tab 无子句匹配 → CaseClauseError。
+    {:noreply, push_patch(socket, to: tab_path(tab))}
   end
 
   def handle_event("search", %{"search" => %{"q" => q}}, socket) do
@@ -1014,10 +1016,12 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
         page_title="AI 模拟诊疗"
         page_subtitle="创建标准化病人档案，分配给学生进行模拟问诊，并查看 AI 评分"
       >
-        <div class="mb-4 flex flex-wrap items-center gap-2">
-          <.tab_button tab={:patients} current={@tab} label="病人档案" count={length(@patients)} />
-          <.tab_button tab={:assignments} current={@tab} label="分配管理" count={length(@assignments)} />
-          <.tab_button tab={:evaluations} current={@tab} label="评分与记录" count={length(@sessions)} />
+        <div class="mb-4 flex flex-wrap items-center gap-3">
+          <div class="tabs tabs-box w-fit" role="tablist" aria-label="模块切换">
+            <.tab_button tab={:patients} current={@tab} label="病人档案" count={length(@patients)} />
+            <.tab_button tab={:assignments} current={@tab} label="分配管理" count={length(@assignments)} />
+            <.tab_button tab={:evaluations} current={@tab} label="评分与记录" count={length(@sessions)} />
+          </div>
           <div class="ms-auto">
             <button
               :if={@tab == :patients}
@@ -1044,7 +1048,7 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
     """
   end
 
-  # ── tabs ──────────────────────────────────────────────────
+  # ── tabs（与 teacher_courses 的 daisyUI tabs tabs-box 风格统一）──
 
   attr :tab, :atom, required: true
   attr :current, :atom, required: true
@@ -1055,16 +1059,15 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
     ~H"""
     <button
       type="button"
+      role="tab"
       phx-click="switch-tab"
       phx-value-tab={@tab}
-      class={[
-        "btn btn-sm",
-        @current == @tab && "btn-primary",
-        @current != @tab && "btn-ghost"
-      ]}
+      class={["tab", @current == @tab && "tab-active"]}
     >
       {@label}
-      <span class="badge badge-soft badge-sm">{@count}</span>
+      <span class={["badge badge-xs ms-1", @current == @tab && "badge-primary", @current != @tab && "badge-ghost"]}>
+        {@count}
+      </span>
     </button>
     """
   end
@@ -1326,9 +1329,7 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
   end
 
   defp eval_summary(assigns, session) do
-    eval = evaluation_for(assigns.sessions, session.id)
-
-    case eval do
+    case evaluation_for(assigns.sessions, session.id) do
       %Evaluation{} = evaluation ->
         assigns =
           assigns
@@ -1359,6 +1360,31 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
             </p>
             <p class="mt-2 whitespace-pre-line text-base-content/80">{@evaluation.feedback}</p>
           </details>
+        </div>
+        """
+
+      nil ->
+        # 会话尚未评分（evaluation 为空）：显示“未评分 / 评分中”状态，而不是崩溃
+        eval_error = session.evaluation_error
+
+        assigns =
+          assigns
+          |> assign(:session_eval_status, session.evaluation_status)
+          |> assign(:has_eval_error?, not is_nil(eval_error))
+          |> assign(:eval_error_text, truncate(eval_error, 200))
+
+        ~H"""
+        <div :if={!@has_eval_error?}
+          class="rounded-box border border-base-300 bg-base-200/30 p-3 text-sm text-base-content/70"
+        >
+          <span class="flex items-center gap-1">
+            {evaluation_status_text(@session_eval_status)}
+          </span>
+        </div>
+        <div :if={@has_eval_error?}
+          class="alert alert-warning alert-soft text-xs"
+        >
+          <span>评分失败：{@eval_error_text}</span>
         </div>
         """
     end

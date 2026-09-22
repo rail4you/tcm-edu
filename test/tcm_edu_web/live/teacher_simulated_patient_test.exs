@@ -15,7 +15,7 @@ defmodule TcmEduWeb.TeacherSimulatedPatientTest do
   require Ash.Query
 
   alias TcmEdu.Accounts.User
-  alias TcmEdu.SimulatedPatient.{Assignment, Patient}
+  alias TcmEdu.SimulatedPatient.{Assignment, Patient, Session}
 
   @tenant "tenant_default"
 
@@ -205,6 +205,72 @@ defmodule TcmEduWeb.TeacherSimulatedPatientTest do
     assert Map.has_key?(patient.rubric, "professional")
     assert Map.has_key?(patient.rubric, "empathy")
     assert Map.has_key?(patient.rubric, "communication")
+  end
+
+  test "切换三个 tab 都能显示对应内容（回归：之前 CaseClauseError）", %{conn: conn} do
+    page = visit(conn, "/teacher/ai/simulated-patient")
+    # 默认 tab：病人档案
+    assert has_element?(page.view, "#new-patient-btn")
+
+    # 切到「分配管理」
+    page = click_button(page, "button[role=tab]", "分配管理")
+    assert_has(page, "p", text: "已分配的任务")
+    assert_has(page, "p", text: "暂无分配记录")
+
+    # 切到「评分与记录」
+    page = click_button(page, "button[role=tab]", "评分与记录")
+    rendered = Phoenix.LiveViewTest.render(page.view)
+    assert rendered =~ "学生对话与 AI 评分"
+    # 切回「病人档案」
+    page = click_button(page, "button[role=tab]", "病人档案")
+    assert_has(page, "#new-patient-btn")
+    refute_has(page, "已分配的任务")
+  end
+
+  test "tab 样式是 daisyUI tabs tabs-box（与 courses 统一）", %{conn: conn} do
+    page = visit(conn, "/teacher/ai/simulated-patient")
+    rendered = Phoenix.LiveViewTest.render(page.view)
+    # 统一后的 tab 容器 / tab 元素样式
+    assert rendered =~ ~s(tabs tabs-box)
+    assert rendered =~ ~s(role="tablist")
+    assert rendered =~ ~s(role="tab")
+  end
+
+  test "评分与记录 tab 在有会话但未评分时不崩溃（回归：之前 CaseClauseError nil）", %{
+    conn: conn,
+    teacher: teacher,
+    student: student
+  } do
+    patient = create_patient(teacher, "未评分病人")
+
+    # 创建一个 active、但 evaluation 为 nil 的会话（模拟真实数据）
+    Session
+    |> Ash.Changeset.for_create(
+      :create,
+      %{
+        patient_id: patient.id,
+        student_id: student.id,
+        patient_snapshot: %{
+          "name" => patient.name,
+          "complaint" => patient.complaint,
+          "history" => patient.history || "",
+          "min_questions" => patient.min_questions,
+          "max_turns" => patient.max_turns
+        },
+        status: :active,
+        evaluation_status: :none
+      },
+      actor: teacher,
+      tenant: @tenant
+    )
+    |> Ash.create!()
+
+    page = visit(conn, "/teacher/ai/simulated-patient")
+    page = click_button(page, "button[role=tab]", "评分与记录")
+    rendered = Phoenix.LiveViewTest.render(page.view)
+    # 不崩溃 + 展示“未评分”状态
+    assert rendered =~ "学生对话与 AI 评分"
+    assert rendered =~ "未评分"
   end
 
   # ─── helpers ───────────────────────────────────────────
