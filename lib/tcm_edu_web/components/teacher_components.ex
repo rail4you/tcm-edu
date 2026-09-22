@@ -30,7 +30,20 @@ defmodule TcmEduWeb.TeacherComponents do
       phx-hook="SidebarCollapse"
       data-collapse-key="tcm-teacher-sidebar"
     >
-      <input id="teacher-drawer" type="checkbox" class="drawer-toggle" />
+      <input id="teacher-drawer" type="checkbox" class="drawer-toggle" phx-update="ignore" />
+      <script>
+        (function () {
+          try {
+            var t = document.getElementById("teacher-drawer");
+            if (window.innerWidth >= 1024) {
+              var shell = t.closest("[data-collapse-key]");
+              var key = (shell && shell.dataset.collapseKey) || "tcm-teacher-sidebar";
+              var saved = localStorage.getItem(key);
+              t.checked = saved === null ? true : saved === "1";
+            }
+          } catch (e) {}
+        })();
+      </script>
 
       <div class="drawer-content flex min-w-0 flex-col bg-base-200/10">
         <header class="navbar h-16 shrink-0 gap-2 border-b border-base-300 bg-base-100 px-4">

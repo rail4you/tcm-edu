@@ -4,6 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("tcm-theme");
+          if (!t) t = location.pathname.indexOf("/teacher") === 0 ? "tcm" : "light";
+          document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {}
+      })();
+    </script>
     <.live_title default="中医教学" suffix=" · 管理端">
       {assigns[:page_title]}
     </.live_title>

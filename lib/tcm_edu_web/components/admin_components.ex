@@ -36,7 +36,20 @@ defmodule TcmEduWeb.AdminComponents do
       phx-hook="SidebarCollapse"
       data-collapse-key="tcm-admin-sidebar"
     >
-      <input id="admin-drawer" type="checkbox" class="drawer-toggle" />
+      <input id="admin-drawer" type="checkbox" class="drawer-toggle" phx-update="ignore" />
+      <script>
+        (function () {
+          try {
+            var t = document.getElementById("admin-drawer");
+            if (window.innerWidth >= 1024) {
+              var shell = t.closest("[data-collapse-key]");
+              var key = (shell && shell.dataset.collapseKey) || "tcm-admin-sidebar";
+              var saved = localStorage.getItem(key);
+              t.checked = saved === null ? true : saved === "1";
+            }
+          } catch (e) {}
+        })();
+      </script>
 
       <div class="drawer-content flex min-w-0 flex-col">
         <.topbar
