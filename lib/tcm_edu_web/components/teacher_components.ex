@@ -209,6 +209,15 @@ defmodule TcmEduWeb.TeacherComponents do
                         AI 问答
                       </.link>
                     </li>
+                    <li>
+                      <.link
+                        navigate="/teacher/ai/simulated-patient"
+                        class={["w-full", @current_page == :ai_simulated_patient && "menu-active"]}
+                      >
+                        <.icon name="hero-user-group" class="size-4" />
+                        AI 模拟诊疗
+                      </.link>
+                    </li>
                   </ul>
                 </details>
               </li>
@@ -323,6 +332,15 @@ defmodule TcmEduWeb.TeacherComponents do
                   data-tip="AI 问答"
                 >
                   <.icon name="hero-chat-bubble-left-right" class="size-4" />
+                </.link>
+              </li>
+              <li>
+                <.link
+                  navigate="/teacher/ai/simulated-patient"
+                  class={["tooltip tooltip-right w-full", @current_page == :ai_simulated_patient && "menu-active"]}
+                  data-tip="AI 模拟诊疗"
+                >
+                  <.icon name="hero-user-group" class="size-4" />
                 </.link>
               </li>
               <li>
