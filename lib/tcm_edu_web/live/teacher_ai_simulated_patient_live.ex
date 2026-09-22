@@ -1091,48 +1091,6 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
 
   # ── render ────────────────────────────────────────────────
 
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <Layouts.app flash={@flash} shell={:admin}>
-      <.teacher_shell
-        current_teacher={@current_teacher}
-        current_page={:ai_simulated_patient}
-        page_title="AI 模拟诊疗"
-        page_subtitle="创建标准化病人档案，分配给学生进行模拟问诊，并查看 AI 评分"
-      >
-        <div class="mb-4 flex flex-wrap items-center gap-3">
-          <div class="tabs tabs-box w-fit" role="tablist" aria-label="模块切换">
-            <.tab_button tab={:patients} current={@tab} label="病人档案" count={length(@patients)} />
-            <.tab_button tab={:assignments} current={@tab} label="分配管理" count={length(@assignments)} />
-            <.tab_button tab={:evaluations} current={@tab} label="评分与记录" count={length(@sessions)} />
-          </div>
-          <div class="ms-auto">
-            <button
-              :if={@tab == :patients}
-              type="button"
-              id="new-patient-btn"
-              phx-click="new-patient"
-              class="btn btn-primary btn-sm"
-            >
-              <.icon name="hero-plus" class="size-4" /> 新建病人档案
-            </button>
-          </div>
-        </div>
-
-        {case @tab do
-          :patients -> patients_tab(assigns)
-          :assignments -> assignments_tab(assigns)
-          :evaluations -> evaluations_tab(assigns)
-        end}
-
-        {patient_modal(assigns)}
-        {assign_modal(assigns)}
-      </.teacher_shell>
-    </Layouts.app>
-    """
-  end
-
   # ── tabs（与 teacher_courses 的 daisyUI tabs tabs-box 风格统一）──
 
   attr :tab, :atom, required: true

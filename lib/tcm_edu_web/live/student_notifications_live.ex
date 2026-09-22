@@ -61,64 +61,6 @@ defmodule TcmEduWeb.StudentNotificationsLive do
     end
   end
 
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <Layouts.app flash={@flash} shell={:admin}>
-      <.student_shell
-        current_student={@current_student}
-        current_page={:notifications}
-        unread_count={unread_count(@notifications)}
-      >
-        <div class="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p class="text-2xl font-semibold md:text-3xl">通知中心</p>
-              <p class="mt-1 text-sm text-base-content/60">
-                {unread_text(unread_count(@notifications))}
-              </p>
-            </div>
-            <button
-              :if={unread_count(@notifications) > 0}
-              class="btn btn-soft btn-sm"
-              phx-click="mark-all-read"
-              phx-disable-with="处理中..."
-            >
-              <.icon name="hero-check" class="size-4" /> 全部标为已读
-            </button>
-          </div>
-
-          <div :for={notification <- @notifications} class="card mt-4 bg-base-100 shadow-sm">
-            <div class="card-body gap-1 p-4 sm:p-6">
-              <div class="flex items-center gap-2">
-                <span class={["badge badge-soft", type_badge(notification.type)]}>{type_label(notification.type)}</span>
-                <span :if={is_nil(notification.read_at)} class="badge badge-error badge-xs">未读</span>
-                <p class="ml-auto text-xs text-base-content/60">{format_time(notification.inserted_at)}</p>
-              </div>
-              <p class="font-medium">{notification.title}</p>
-              <p :if={notification.body} class="whitespace-pre-line text-sm text-base-content/80">{notification.body}</p>
-              <div :if={is_nil(notification.read_at)} class="card-actions justify-end">
-                <button
-                  class="btn btn-ghost btn-xs"
-                  phx-click="mark-read"
-                  phx-value-id={notification.id}
-                >
-                  标为已读
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div :if={@notifications == []} class="mt-4 rounded-box bg-base-200/30 px-6 py-12 text-center">
-            <.icon name="hero-bell-slash" class="size-8 text-base-content/40" />
-            <p class="mt-2 text-sm text-base-content/60">暂无通知</p>
-          </div>
-        </div>
-      </.student_shell>
-    </Layouts.app>
-    """
-  end
-
   defp unread_count(notifications), do: Enum.count(notifications, &is_nil(&1.read_at))
 
   defp unread_text(0), do: "全部已读"

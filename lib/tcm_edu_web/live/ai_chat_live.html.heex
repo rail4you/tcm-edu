@@ -1,0 +1,11 @@
+  <Layouts.app flash={@flash} shell={:admin}>
+    <%= if teacher_view?(@identity) do %>
+      <.teacher_shell current_teacher={@identity} current_page={:ai_chat}>
+        {chat_body(assigns)}
+      </.teacher_shell>
+    <% else %>
+      <.student_shell current_student={@identity} current_page={:ai_chat}>
+        {chat_body(assigns)}
+      </.student_shell>
+    <% end %>
+  </Layouts.app>

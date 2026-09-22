@@ -1,0 +1,61 @@
+  <Layouts.app flash={@flash} shell={:admin}>
+    <.student_shell current_student={@current_student} current_page={:courses}>
+      <div class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+        <p class="text-2xl font-semibold md:text-3xl">课程表</p>
+        <p class="mt-1 text-sm text-base-content/60">已发布课程，免费试看先行</p>
+
+        <form phx-change="search" phx-submit="search" class="mt-4 flex max-w-md gap-2">
+          <input
+            type="search"
+            name="keyword"
+            value={@keyword}
+            placeholder="搜索课程标题"
+            class="input input-bordered w-full"
+            aria-label="搜索课程"
+          />
+        </form>
+
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button
+            class={["btn btn-sm", is_nil(@category_id) && "btn-active"]}
+            phx-click="filter-category"
+            phx-value-category_id=""
+          >
+            全部分类
+          </button>
+          <button
+            :for={category <- @categories}
+            class={["btn btn-sm", @category_id == category.id && "btn-active"]}
+            phx-click="filter-category"
+            phx-value-category_id={category.id}
+          >
+            {category.name}
+          </button>
+        </div>
+
+        <div class="tabs tabs-boxed mt-4 w-fit" role="tablist" aria-label="按难度筛选">
+          <button
+            :for={level <- ["all", "beginner", "intermediate", "advanced"]}
+            role="tab"
+            class={["tab", @level == level && "tab-active"]}
+            phx-click="filter-level"
+            phx-value-level={level}
+          >
+            {level_label(level)}
+          </button>
+        </div>
+
+        <div :if={visible(@courses, @level) != []} class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <.course_card
+            :for={course <- visible(@courses, @level)}
+            course={course}
+            id={"catalog-course-#{course.id}"}
+          />
+        </div>
+        <div :if={visible(@courses, @level) == []} class="mt-6 rounded-box bg-base-200/30 px-6 py-10 text-center">
+          <.icon name="hero-book-open" class="size-8 text-base-content/40" />
+          <p class="mt-2 text-sm text-base-content/60">没有找到匹配的课程，换个条件试试</p>
+        </div>
+      </div>
+    </.student_shell>
+  </Layouts.app>

@@ -1,0 +1,87 @@
+  <Layouts.app flash={@flash} shell={:admin}>
+    <.student_shell current_student={@current_student} current_page={:my_learning}>
+      <div :if={@not_found} class="mx-auto w-full max-w-6xl px-4 py-16 text-center sm:px-6">
+        <.icon name="hero-exclamation-triangle" class="size-8 text-base-content/40" />
+        <p class="mt-2 text-sm text-base-content/60">缺少课程或课时参数，或课程不存在</p>
+        <.link navigate="/my-learning" class="btn btn-sm btn-primary mt-4">返回我的学习</.link>
+      </div>
+
+      <div :if={!@not_found and @course} class="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-3">
+        <div class="flex flex-col gap-4 lg:col-span-2">
+          <div class="breadcrumbs text-xs text-base-content/60">
+            <ul>
+              <li><.link navigate="/my-learning">我的学习</.link></li>
+              <li>{@course.title}</li>
+              <li :if={active_lesson_assign(@lesson_id, @flat_lessons)}>{active_lesson_assign(@lesson_id, @flat_lessons).title}</li>
+            </ul>
+          </div>
+
+          <div :if={active_lesson_assign(@lesson_id, @flat_lessons)} class="card bg-base-100 shadow-sm">
+            <div class="card-body gap-2.5 p-4 sm:p-6">
+              <p class="text-xl font-semibold">{active_lesson_assign(@lesson_id, @flat_lessons).title}</p>
+              <.lesson_body lesson={active_lesson_assign(@lesson_id, @flat_lessons)} />
+              <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex gap-2">
+                  <.link
+                    :if={prev_lesson(@lesson_id, @flat_lessons)}
+                    navigate={learn_path(@course_id, prev_lesson(@lesson_id, @flat_lessons).id)}
+                    class="btn btn-soft btn-sm"
+                  >
+                    ← 上一节
+                  </.link>
+                  <.link
+                    :if={next_lesson(@lesson_id, @flat_lessons)}
+                    navigate={learn_path(@course_id, next_lesson(@lesson_id, @flat_lessons).id)}
+                    class="btn btn-soft btn-sm"
+                  >
+                    下一节 →
+                  </.link>
+                </div>
+                <button
+                  class="btn btn-primary btn-sm"
+                  phx-click="complete-lesson"
+                  phx-disable-with="保存中..."
+                  disabled={lesson_done?(@progress_map, @lesson_id)}
+                >
+                  {if lesson_done?(@progress_map, @lesson_id), do: "已完成 ✓", else: "标记本节已完成"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div :if={!active_lesson_assign(@lesson_id, @flat_lessons)} class="card bg-base-100 shadow-sm">
+            <div class="card-body items-center gap-2 p-8">
+              <p class="text-sm text-base-content/60">从右侧大纲选择一节开始学习</p>
+            </div>
+          </div>
+        </div>
+
+        <aside class="card h-fit bg-base-100 shadow-sm lg:sticky lg:top-20">
+          <div class="card-body gap-2 p-4 sm:p-6">
+            <p class="font-medium">{@course.title}</p>
+            <div class="flex items-center gap-2">
+              <progress class="progress progress-success w-full" value={overall_pct(@progress_map, @flat_lessons)} max="100" />
+              <p class="text-xs tabular-nums text-base-content/60">{overall_pct(@progress_map, @flat_lessons)}%</p>
+            </div>
+            <div class="divider my-1" />
+            <ul class="menu w-full gap-1 p-0">
+              <li :for={chapter <- @course.chapters || []} class="menu-title">
+                <span>{chapter.title}</span>
+                <ul class="w-full">
+                  <li :for={lesson <- Enum.sort_by(chapter.lessons || [], &(&1.sort_order || 0))}>
+                    <.link
+                      navigate={learn_path(@course_id, lesson.id)}
+                      class={["w-full", lesson.id == @lesson_id && "menu-active"]}
+                    >
+                      <span class="flex-1 truncate">{lesson.title}</span>
+                      <span :if={lesson_done?(@progress_map, lesson.id)} class="badge badge-soft badge-success badge-xs">✓</span>
+                    </.link>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </.student_shell>
+  </Layouts.app>

@@ -864,25 +864,6 @@ defmodule TcmEduWeb.StudentSimulatedPatientSessionLive do
 
   # ── render ────────────────────────────────────────────────
 
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <Layouts.app flash={@flash} shell={:admin}>
-      <.student_shell current_student={@current_student} current_page={:simulated_patient}>
-        <%= case @live_action do %>
-          <% :evaluation -> %>
-            {evaluation_view(assigns)}
-          <% _ -> %>
-            <div class="mx-auto grid w-full max-w-6xl items-start gap-6 px-4 py-6 sm:px-6 lg:grid-cols-5">
-              {patient_panel(assigns)}
-              {chat_panel(assigns)}
-            </div>
-        <% end %>
-      </.student_shell>
-    </Layouts.app>
-    """
-  end
-
   defp evaluation_view(assigns) do
     ~H"""
     <div class="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 py-6 sm:px-6">

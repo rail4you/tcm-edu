@@ -225,20 +225,6 @@ defmodule TcmEduWeb.StudentSimulatedPatientLive do
 
   # ── render ────────────────────────────────────────────────
 
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <Layouts.app flash={@flash} shell={:admin}>
-      <.student_shell current_student={@current_student} current_page={:simulated_patient}>
-        <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
-          {tasks_section(assigns)}
-          {history_section(assigns)}
-        </div>
-      </.student_shell>
-    </Layouts.app>
-    """
-  end
-
   defp tasks_section(assigns) do
     ~H"""
     <div class="card border border-base-300 bg-base-100">

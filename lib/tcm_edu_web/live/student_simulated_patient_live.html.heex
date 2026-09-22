@@ -1,0 +1,8 @@
+  <Layouts.app flash={@flash} shell={:admin}>
+    <.student_shell current_student={@current_student} current_page={:simulated_patient}>
+      <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
+        {tasks_section(assigns)}
+        {history_section(assigns)}
+      </div>
+    </.student_shell>
+  </Layouts.app>

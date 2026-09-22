@@ -5,6 +5,12 @@ This is a web application written using the Phoenix web framework.
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues
 - Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps
 
+### UI 模板分离 (LiveView co-location) + daisyUI dashboard
+
+- **每个 LiveView 的渲染 HTML 必须放独立的协同定位文件**：`lib/tcm_edu_web/live/<name>_live.html.heex`（与 `<name>_live.ex` 同目录同名）。不要在 `.ex` 里写内联 `def render(assigns)` + `~H` —— 删掉该 render，Phoenix 会自动用同名的 `.html.heex` 作为渲染模板（参考已有的 `teacher_courses_live.html.heex` 等）。仅当 HTML 非常少（几行）时，才允许在 `.ex` 里内联一个简单 `~H`。
+- 协同定位的 `.html.heex` 模板可以直接调用所在模块的 `defp` 辅助函数与 `<.component>`（它们留在 `.ex` 即可），模板根节点必须是**单一** `<Layouts.app flash={@flash} ...>`。
+- 新建页面按 daisyUI dashboard 设计系统实现（规范：`~/.pi/agent/skills/dashboard-design`，即下方「UI containers (daisyUI)」规则）：模块化网格 + 卡片面板 + 强层级，用语义 token（`base-*`/`primary`/`success`/`warning`/`error`），不用裸颜色值。
+
 ### Migrations (AshPostgres + tenant schemas)
 
 - **Generate, never hand-write**: after changing resources run `mix ash.codegen <lower_snake_case_name>`; use `mix ash.codegen --dev` during iteration and a final named run before commit. Tenant migrations for `multitenancy strategy: :context` resources are generated into `priv/repo/tenant_migrations` — **always audit generated files in both directories** and prune anything already applied (keep the generated snapshots as the future baseline).

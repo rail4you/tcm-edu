@@ -200,23 +200,6 @@ defmodule TcmEduWeb.AiChatLive do
 
   # ── 渲染 ────────────────────────────────────────────────────
 
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <Layouts.app flash={@flash} shell={:admin}>
-      <%= if teacher_view?(@identity) do %>
-        <.teacher_shell current_teacher={@identity} current_page={:ai_chat}>
-          {chat_body(assigns)}
-        </.teacher_shell>
-      <% else %>
-        <.student_shell current_student={@identity} current_page={:ai_chat}>
-          {chat_body(assigns)}
-        </.student_shell>
-      <% end %>
-    </Layouts.app>
-    """
-  end
-
   defp chat_body(assigns) do
     ~H"""
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 md:flex-row">

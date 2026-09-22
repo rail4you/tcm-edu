@@ -1,0 +1,78 @@
+  <Layouts.app flash={@flash} shell={:admin}>
+    <.student_shell current_student={@current_student} current_page={:mdt}>
+      <div class="mx-auto grid w-full max-w-6xl items-start gap-6 px-4 py-6 sm:px-6">
+        <div>
+          <h1 class="text-xl font-semibold">多学科会诊（MDT）</h1>
+          <p class="mt-1 text-sm text-base-content/60">
+            选择病例进入会诊室。未认领的科室由 AI 扮演专家与你同台讨论。
+          </p>
+        </div>
+
+        <div class="grid items-start gap-4 lg:grid-cols-2">
+          <div :for={case <- @cases} class="card border border-base-300 bg-base-100">
+            <div class="card-body gap-2 p-4">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <p class="font-semibold">{case.name}</p>
+                  <p class="text-xs text-base-content/60">{case.scenario_title || case.complaint}</p>
+                </div>
+                <span class="badge badge-soft badge-primary badge-sm">
+                  {length(case.departments || [])} 科室
+                </span>
+              </div>
+              <p class="text-sm text-base-content/80">{case.complaint}</p>
+              <div class="flex flex-wrap gap-1">
+                <span
+                  :for={d <- case.departments || []}
+                  class="badge badge-ghost badge-sm"
+                >
+                  {d}
+                </span>
+              </div>
+              <button
+                type="button"
+                id={"start-mdt-#{case.id}"}
+                phx-click="start"
+                phx-value-case_id={case.id}
+                class="btn btn-primary btn-sm mt-1 self-start"
+              >
+                <.icon name="hero-user-group" class="size-4" /> 进入会诊
+              </button>
+            </div>
+          </div>
+
+          <div :if={@cases == []} class="card border border-base-300 bg-base-100">
+            <div class="card-body items-center gap-2 p-6 text-center">
+              <.icon name="hero-user-group" class="size-8 text-base-content/30" />
+              <p class="text-sm text-base-content/60">暂无可参与的会诊病例</p>
+            </div>
+          </div>
+        </div>
+
+        <div :if={@my_rooms != []}>
+          <h2 class="mb-2 text-base font-semibold">我的会诊室</h2>
+          <div class="grid items-start gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <div
+              :for={room <- @my_rooms}
+              class="card border border-base-300 bg-base-100"
+            >
+              <div class="card-body gap-1 p-4">
+                <p class="font-medium">
+                  {room.case_snapshot["name"] || "会诊"}
+                </p>
+                <p class="text-xs text-base-content/60">
+                  {room_status_text(room.status)} · {room.message_count} 条
+                </p>
+                <.link
+                  navigate={"/mdt/rooms/#{room.id}"}
+                  class="btn btn-soft btn-sm mt-1 self-start"
+                >
+                  继续会诊
+                </.link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </.student_shell>
+  </Layouts.app>

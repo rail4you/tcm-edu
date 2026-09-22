@@ -1,0 +1,53 @@
+  <Layouts.app flash={@flash} shell={:admin}>
+    <.student_shell current_student={@current_student} current_page={:chat}>
+      <div class="mx-auto flex min-h-[60vh] w-full max-w-4xl flex-col px-4 py-8 sm:px-6">
+        <p class="text-2xl font-semibold md:text-3xl">AI 问答</p>
+        <p class="mt-1 text-sm text-base-content/60">中医学习问题，随时提问</p>
+
+        <div :if={@tasks != []} class="alert alert-soft alert-info mt-4">
+          <.icon name="hero-cog-6-tooth" class="size-5" />
+          <p class="text-sm">后台任务进行中：{Enum.map_join(@tasks, "、", & &1.task_name)}</p>
+        </div>
+
+        <div id="chat-messages" class="mt-4 flex flex-1 flex-col gap-3" aria-live="polite">
+          <div :if={@messages == [] and !@answering} class="rounded-box bg-base-200/30 px-6 py-10 text-center">
+            <p class="text-sm text-base-content/60">比如：手太阴肺经有哪些常用腧穴？</p>
+          </div>
+          <div :for={message <- @messages} class={["chat", message.role == "user" && "chat-end", message.role != "user" && "chat-start"]}>
+            <div class={["chat-bubble", message.role == "user" && "chat-bubble-primary"]}>
+              <p class="whitespace-pre-line text-sm">{message.content}</p>
+              <p :if={Map.get(message, :tools_note)} class="mt-1 text-xs opacity-70">{message.tools_note}</p>
+            </div>
+          </div>
+          <div :if={@answering} class="chat chat-start">
+            <div class="chat-bubble">
+              <p :if={@draft == ""} class="flex items-center gap-2 text-sm">
+                <span class="loading loading-dots loading-sm" /> 思考中…
+              </p>
+              <p :if={@draft != ""} class="whitespace-pre-line text-sm">{@draft}<span class="animate-pulse">▍</span></p>
+            </div>
+          </div>
+        </div>
+
+        <.form
+          for={@form}
+          id="chat-form"
+          phx-change="validate"
+          phx-submit="send"
+          class="sticky bottom-0 mt-4 flex gap-2 bg-base-100 py-2"
+        >
+          <.input
+            field={@form[:content]}
+            type="text"
+            label="问 AI 一个中医问题"
+            placeholder="比如：什么是阴阳五行？"
+            autocomplete="off"
+            maxlength="2000"
+          />
+          <.button type="submit" phx-disable-with="发送中..." class="btn-primary mt-auto" disabled={@answering}>
+            发送
+          </.button>
+        </.form>
+      </div>
+    </.student_shell>
+  </Layouts.app>
