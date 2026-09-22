@@ -219,6 +219,7 @@ defmodule TcmEduWeb.Router do
       live "/login", LoginLive, :index
       live "/courses", StudentCoursesLive, :index
       live "/courses/:id", StudentCourseDetailLive, :index
+      live "/resources", StudentDownloadsLive, :index
     end
   end
 

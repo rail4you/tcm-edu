@@ -1,4 +1,4 @@
-  <Layouts.app flash={@flash} shell={:admin}>
+  <Layouts.app flash={@flash} shell={:storefront}>
     <.student_shell current_student={@current_student} current_page={:courses}>
       <div :if={@not_found} class="mx-auto w-full max-w-6xl px-4 py-16 text-center sm:px-6">
         <.icon name="hero-exclamation-triangle" class="size-8 text-base-content/40" />
@@ -30,14 +30,14 @@
               <img src={@course.cover_image_url} alt={@course.title} class="aspect-[16/9] w-full object-cover" />
             </figure>
 
-            <div :if={@course.description} class="card bg-base-100 shadow-sm">
+            <div :if={@course.description} class="card bg-white shadow-sm">
               <div class="card-body gap-2 p-4 sm:p-6">
                 <p class="font-medium">课程介绍</p>
                 <p class="whitespace-pre-line text-sm text-base-content/80">{@course.description}</p>
               </div>
             </div>
 
-            <div class="card bg-base-100 shadow-sm">
+            <div class="card bg-white shadow-sm">
               <div class="card-body gap-2 p-4 sm:p-6">
                 <p class="font-medium">课程大纲</p>
                 <p :if={@course.chapters == []} class="text-sm text-base-content/60">大纲筹备中</p>
@@ -65,9 +65,9 @@
           </div>
 
           <div class="flex flex-col gap-6">
-            <div class="card bg-base-100 shadow-sm lg:sticky lg:top-20">
+            <div class="card bg-white shadow-sm lg:sticky lg:top-20">
               <div class="card-body items-center gap-2 p-4 text-center sm:p-6">
-                <p class="text-3xl font-semibold tabular-nums">{price_label(@course.price_cents)}</p>
+                <p class="text-3xl font-semibold tabular-nums text-[#ff4d2f]">{price_label(@course.price_cents)}</p>
                 <button
                   :if={!@enrolled?}
                   class="btn btn-primary w-full"
@@ -84,9 +84,9 @@
               </div>
             </div>
 
-            <div :if={@course.teacher} class="card bg-base-100 shadow-sm">
+            <div :if={@course.teacher} class="card bg-white shadow-sm">
               <div class="card-body items-center gap-1 p-4 text-center">
-                <span class="flex size-12 items-center justify-center rounded-full bg-neutral text-neutral-content">
+                <span class="flex size-12 items-center justify-center rounded-full bg-[#00b86b] text-white">
                   {(@course.teacher.name || "?") |> String.first() |> String.upcase()}
                 </span>
                 <p class="font-medium">{@course.teacher.name}</p>

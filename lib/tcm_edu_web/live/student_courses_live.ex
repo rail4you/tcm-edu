@@ -55,11 +55,6 @@ defmodule TcmEduWeb.StudentCoursesLive do
     {:noreply, assign(socket, :level, level)}
   end
 
-  defp level_label("all"), do: "全部难度"
-  defp level_label("beginner"), do: "初级"
-  defp level_label("intermediate"), do: "中级"
-  defp level_label("advanced"), do: "高级"
-
   defp visible(courses, "all"), do: courses
   defp visible(courses, level), do: Enum.filter(courses, &(to_string(&1.level) == level))
 
@@ -90,7 +85,7 @@ defmodule TcmEduWeb.StudentCoursesLive do
       try do
         Course
         |> Ash.Query.for_read(:list_published, %{}, tenant: @tenant, authorize?: false)
-        |> Ash.Query.load([:cover_image_url, :lesson_count, :student_count])
+        |> Ash.Query.load([:cover_image_url, :lesson_count, :student_count, :category])
         |> Ash.read!()
         |> Enum.filter(&match_keyword?(&1, keyword))
         |> Enum.filter(&match_category?(&1, category_id))

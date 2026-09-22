@@ -33,24 +33,10 @@ defmodule TcmEduWeb.StudentHomeLive do
      |> assign(:unread_count, unread_count(student))}
   end
 
-  attr :eyebrow, :string, required: true
-  attr :title, :string, required: true
-  attr :desc, :string, default: nil
-
-  defp section_head(assigns) do
-    ~H"""
-    <div class="mb-6 text-center">
-      <p class="text-xs font-semibold uppercase tracking-widest text-primary">{@eyebrow}</p>
-      <p class="mt-2 text-2xl font-semibold md:text-3xl">{@title}</p>
-      <p :if={@desc} class="mx-auto mt-2 max-w-xl text-sm text-base-content/60">{@desc}</p>
-    </div>
-    """
-  end
-
   defp list_popular do
     Course
     |> Ash.Query.for_read(:list_popular, %{}, tenant: @tenant, authorize?: false)
-    |> Ash.Query.load([:cover_image_url, :lesson_count, :student_count])
+    |> Ash.Query.load([:cover_image_url, :lesson_count, :student_count, :category])
     |> Ash.read!()
   rescue
     _ -> []

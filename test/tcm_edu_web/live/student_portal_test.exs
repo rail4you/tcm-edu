@@ -176,7 +176,15 @@ defmodule TcmEduWeb.StudentPortalTest do
     test "courses catalog renders", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/courses")
 
-      assert html =~ "课程表"
+      assert html =~ "精品课程"
+    end
+
+    test "resources downloads page renders", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/resources")
+
+      assert html =~ "资料下载"
+      assert html =~ "全部资料"
+      assert html =~ "推荐题库"
     end
   end
 

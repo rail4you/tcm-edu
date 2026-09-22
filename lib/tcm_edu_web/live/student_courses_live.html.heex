@@ -1,60 +1,73 @@
-  <Layouts.app flash={@flash} shell={:admin}>
+<Layouts.app flash={@flash} shell={:storefront}>
     <.student_shell current_student={@current_student} current_page={:courses}>
-      <div class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-        <p class="text-2xl font-semibold md:text-3xl">课程表</p>
-        <p class="mt-1 text-sm text-base-content/60">已发布课程，免费试看先行</p>
+      <div class="bg-gradient-to-r from-[#08a9b9] to-[#00c991] text-white">
+        <div class="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 text-sm sm:px-6">
+          <span>全部课程　›　精品课程</span>
+          <form phx-change="search" phx-submit="search" class="flex">
+            <input
+              type="search"
+              name="keyword"
+              value={@keyword}
+              placeholder="关键字"
+              class="h-8 w-56 rounded bg-white px-3 text-[#555] outline-none"
+              aria-label="搜索课程"
+            />
+          </form>
+        </div>
+      </div>
 
-        <form phx-change="search" phx-submit="search" class="mt-4 flex max-w-md gap-2">
-          <input
-            type="search"
-            name="keyword"
-            value={@keyword}
-            placeholder="搜索课程标题"
-            class="input input-bordered w-full"
-            aria-label="搜索课程"
-          />
-        </form>
-
-        <div class="mt-4 flex flex-wrap gap-2">
+      <div class="mx-auto w-full max-w-6xl px-4 py-3 sm:px-6">
+        <div class="flex flex-wrap gap-x-9 gap-y-4 border-b border-[#ddd] py-5 text-sm font-semibold">
           <button
-            class={["btn btn-sm", is_nil(@category_id) && "btn-active"]}
+            class={[is_nil(@category_id) && "rounded bg-[#00c98a] px-3 py-1 text-white", is_nil(@category_id) || "text-[#555] hover:text-[#00b86b]"]}
             phx-click="filter-category"
             phx-value-category_id=""
           >
-            全部分类
+            全部
           </button>
           <button
             :for={category <- @categories}
-            class={["btn btn-sm", @category_id == category.id && "btn-active"]}
+            class={[@category_id == category.id && "rounded bg-[#00c98a] px-3 py-1 text-white", @category_id == category.id || "text-[#555] hover:text-[#00b86b]"]}
             phx-click="filter-category"
             phx-value-category_id={category.id}
           >
             {category.name}
           </button>
         </div>
+      </div>
 
-        <div class="tabs tabs-boxed mt-4 w-fit" role="tablist" aria-label="按难度筛选">
-          <button
-            :for={level <- ["all", "beginner", "intermediate", "advanced"]}
-            role="tab"
-            class={["tab", @level == level && "tab-active"]}
-            phx-click="filter-level"
-            phx-value-level={level}
-          >
-            {level_label(level)}
-          </button>
+      <div class="mx-auto w-full max-w-6xl px-4 py-3 sm:px-6">
+        <div class="mb-4 flex flex-wrap items-center gap-x-8 gap-y-2 bg-white px-5 py-4 text-sm text-[#555]">
+          <span>
+            <span class="mr-3 font-semibold text-[#00b86b]">全部</span>
+            <span class="mr-3">免费课</span>
+            <span class="mr-3">付费课</span>
+            <span>有试听</span>
+          </span>
+          <span class="ml-auto flex items-center gap-3">
+            难度
+            <select
+              class="rounded border border-[#e2e2e2] bg-white px-2 py-1 text-sm outline-none"
+              phx-change="filter-level"
+              name="level"
+            >
+              <option value="all" selected={@level == "all"}>全部</option>
+              <option value="beginner" selected={@level == "beginner"}>初级</option>
+              <option value="intermediate" selected={@level == "intermediate"}>中级</option>
+              <option value="advanced" selected={@level == "advanced"}>高级</option>
+            </select>
+          </span>
         </div>
 
-        <div :if={visible(@courses, @level) != []} class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div :if={visible(@courses, @level) != []} class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <.course_card
             :for={course <- visible(@courses, @level)}
             course={course}
             id={"catalog-course-#{course.id}"}
           />
         </div>
-        <div :if={visible(@courses, @level) == []} class="mt-6 rounded-box bg-base-200/30 px-6 py-10 text-center">
-          <.icon name="hero-book-open" class="size-8 text-base-content/40" />
-          <p class="mt-2 text-sm text-base-content/60">没有找到匹配的课程，换个条件试试</p>
+        <div :if={visible(@courses, @level) == []} class="rounded bg-white px-6 py-14 text-center shadow-sm">
+          <p class="text-sm text-[#999]">没有找到匹配的课程，换个条件试试</p>
         </div>
       </div>
     </.student_shell>

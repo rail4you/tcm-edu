@@ -1,4 +1,4 @@
-  <Layouts.app flash={@flash} shell={:admin}>
+  <Layouts.app flash={@flash} shell={:storefront}>
     <.student_shell current_student={@current_student} current_page={:my_learning}>
       <div :if={@not_found} class="mx-auto w-full max-w-6xl px-4 py-16 text-center sm:px-6">
         <.icon name="hero-exclamation-triangle" class="size-8 text-base-content/40" />

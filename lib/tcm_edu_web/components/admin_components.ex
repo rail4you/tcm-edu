@@ -88,11 +88,13 @@ defmodule TcmEduWeb.AdminComponents do
         <label for="admin-drawer" aria-label="关闭菜单" class="drawer-overlay"></label>
         <aside class="flex min-h-full w-60 flex-col bg-base-100 transition-all duration-200 lg:is-drawer-open:w-64 lg:is-drawer-close:w-16">
           <div class="flex h-16 shrink-0 items-center gap-2 border-b border-base-300 px-4 lg:is-drawer-close:justify-center lg:is-drawer-close:px-2">
-            <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-content">
-              <.icon name="hero-academic-cap" class="size-5" />
-            </span>
+            <img
+              src="/images/logo-mark.png"
+              alt="杏宁树"
+              class="size-8 shrink-0 rounded-full object-cover"
+            />
             <div class="min-w-0 lg:is-drawer-close:hidden">
-              <p class="text-sm font-semibold leading-tight">中医教学</p>
+              <p class="text-sm font-semibold leading-tight">杏宁树 · 中医教学</p>
               <p class="text-xs text-base-content/60">管理端</p>
             </div>
           </div>

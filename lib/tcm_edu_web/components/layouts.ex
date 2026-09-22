@@ -19,11 +19,11 @@ defmodule TcmEduWeb.Layouts do
 
   attr :flash, :map, required: true, doc: "the map of flash messages"
   attr :current_scope, :map, default: nil, doc: "the current scope (unused for now)"
-  attr :shell, :atom, default: :default, values: [:default, :admin]
+  attr :shell, :atom, default: :default, values: [:default, :admin, :storefront]
 
   slot :inner_block, required: true
 
-  def app(%{shell: :admin} = assigns) do
+  def app(%{shell: shell} = assigns) when shell in [:admin, :storefront] do
     ~H"""
     {render_slot(@inner_block)}
     <.flash_group flash={@flash} />
