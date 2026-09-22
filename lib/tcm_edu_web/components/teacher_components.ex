@@ -231,6 +231,15 @@ defmodule TcmEduWeb.TeacherComponents do
                         AI 模拟诊疗
                       </.link>
                     </li>
+                    <li>
+                      <.link
+                        navigate="/teacher/mdt"
+                        class={["w-full", @current_page == :mdt && "menu-active"]}
+                      >
+                        <.icon name="hero-chat-bubble-oval-left-ellipsis" class="size-4" />
+                        MDT 会诊
+                      </.link>
+                    </li>
                   </ul>
                 </details>
               </li>

@@ -205,6 +205,7 @@ defmodule TcmEduWeb.Router do
       live "/ai/knowledge", TeacherAIKnowledgeLive, :index
       live "/ai/chat", AiChatLive, :index
       live "/ai/simulated-patient", TeacherAISimulatedPatientLive, :index
+      live "/mdt", TeacherMdtLive, :index
     end
   end
 
@@ -239,6 +240,8 @@ defmodule TcmEduWeb.Router do
       live "/simulated-patient/sessions/:id/evaluation",
            StudentSimulatedPatientSessionLive,
            :evaluation
+      live "/mdt", StudentMdtLive, :index
+      live "/mdt/rooms/:id", StudentMdtRoomLive, :index
     end
   end
 

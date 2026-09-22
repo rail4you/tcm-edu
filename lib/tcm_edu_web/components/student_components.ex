@@ -52,6 +52,7 @@ defmodule TcmEduWeb.StudentComponents do
           <.nav_link navigate="/chat" label="AI 问答" active={@current_page == :chat} />
           <.nav_link navigate="/ai-chat" label="AI 聊天" active={@current_page == :ai_chat} />
           <.nav_link navigate="/simulated-patient" label="AI 诊疗" active={@current_page == :simulated_patient} />
+          <.nav_link navigate="/mdt" label="MDT 会诊" active={@current_page in [:mdt, :mdt_room]} />
         </nav>
         <div class="navbar-end gap-2">
           <div :if={@current_student}>

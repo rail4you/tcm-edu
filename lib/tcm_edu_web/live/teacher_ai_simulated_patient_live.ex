@@ -1966,9 +1966,6 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
 
 
 
-  defp clinical_cases do
-    ClinicalCases
-  end
 
   defp examples do
     Examples.list()
