@@ -760,8 +760,8 @@ config :tcm_edu, TcmEdu.Storage,   # 或在现有 Storage domain 里加 OSS adap
   bucket: "kg-edu",
   region: "cn-beijing",
   endpoint: "oss-cn-beijing.aliyuncs.com",
-  access_key_id: "<OSS_ACCESS_KEY_ID>",
-  access_key_secret: "<OSS_ACCESS_KEY_SECRET>"
+  access_key_id: System.get_env("OSS_ACCESS_KEY_ID"),
+  access_key_secret: System.get_env("OSS_ACCESS_KEY_SECRET")
 
 # ⚠️ 安全：access_key_secret 不应写死进代码库，应改为环境变量
 config :tcm_edu, TcmEdu.Storage,
@@ -947,7 +947,7 @@ config :tcm_edu, TcmEdu.Storage,
   endpoint: "oss-cn-beijing.aliyuncs.com",
   access_key_id: System.get_env("OSS_ACCESS_KEY_ID"),
   access_key_secret: System.get_env("OSS_ACCESS_KEY_SECRET")
-  # 已沿用 kg-edu 的凭证：access_key_id=<OSS_ACCESS_KEY_ID>
+  # 已沿用 kg-edu 的凭证（走环境变量注入，勿写死）
   # ⚠️ secret 走环境变量，勿写死，生产通过 deploy.sh / .env 注入
 ```
 
