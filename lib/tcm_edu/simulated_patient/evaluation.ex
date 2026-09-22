@@ -56,6 +56,44 @@ defmodule TcmEdu.SimulatedPatient.Evaluation do
       description("加权总分（按 rubric 比例，保留两位小数）")
     end
 
+    attribute :diagnosis_score, :integer do
+      default(0)
+      constraints(min: 0, max: 100)
+      public?(true)
+      description("诊断准确性（0-100）")
+    end
+
+    attribute :differential_score, :integer do
+      default(0)
+      constraints(min: 0, max: 100)
+      public?(true)
+      description("鉴别诊断全面性（0-100）")
+    end
+
+    attribute :treatment_score, :integer do
+      default(0)
+      constraints(min: 0, max: 100)
+      public?(true)
+      description("治疗合理性（0-100）")
+    end
+
+    attribute :stage_scores, :map do
+      default(%{})
+      public?(true)
+      description("各阶段（问诊/查体/检查/诊断/鉴别/治疗/随访）打分快照 JSON")
+    end
+
+    attribute :reasoning_gaps, {:array, :map} do
+      default([])
+      public?(true)
+      description("整会同诊后汇总的思维漏洞（诊断思路 / 鉴别 / 治疗合理性）")
+    end
+
+    attribute :standard_pathway_snapshot, :map do
+      public?(true)
+      description("评分时使用的标准路径快照（用于校验用）")
+    end
+
     attribute :rubric_snapshot, :map do
       public?(true)
       description("评分时使用的 rubric 快照")
@@ -140,6 +178,12 @@ defmodule TcmEdu.SimulatedPatient.Evaluation do
         :professional_score,
         :empathy_score,
         :communication_score,
+        :diagnosis_score,
+        :differential_score,
+        :treatment_score,
+        :stage_scores,
+        :reasoning_gaps,
+        :standard_pathway_snapshot,
         :total_score,
         :rubric_snapshot,
         :grade,

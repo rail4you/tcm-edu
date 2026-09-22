@@ -114,6 +114,25 @@ defmodule TcmEdu.SimulatedPatient.Patient do
       public?(true)
     end
 
+    attribute :difficulty_level, :atom do
+      default(:introductory)
+      constraints(one_of: [:introductory, :advanced, :expert, :emergency])
+      public?(true)
+      description("难度分级语义：入门 / 进阶 / 专家 / 急诊")
+    end
+
+    attribute :standard_pathway, :map do
+      default(%{})
+      public?(true)
+      description("标准诊疗路径（分阶段标准动作清单），用于实时对比学员思维漏洞")
+    end
+
+    attribute :red_flags, {:array, :string} do
+      default([])
+      public?(true)
+      description("急诊危重信号（需优先识别的 red flag），漏诊即警示降级")
+    end
+
     attribute :min_questions, :integer do
       default(5)
       constraints(min: 3, max: 30)
@@ -200,6 +219,9 @@ defmodule TcmEdu.SimulatedPatient.Patient do
         :key_points,
         :rubric,
         :difficulty,
+        :difficulty_level,
+        :standard_pathway,
+        :red_flags,
         :min_questions,
         :max_turns,
         :status,
@@ -227,6 +249,9 @@ defmodule TcmEdu.SimulatedPatient.Patient do
         :key_points,
         :rubric,
         :difficulty,
+        :difficulty_level,
+        :standard_pathway,
+        :red_flags,
         :min_questions,
         :max_turns,
         :status
