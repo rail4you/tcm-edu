@@ -10,6 +10,7 @@ defmodule TcmEduWeb.StudentCoursesLive do
 
   require Ash.Query
 
+  alias TcmEdu.Accounts.User
   alias TcmEdu.Courses.Course
   alias TcmEdu.Courses.CourseCategory
 
@@ -21,11 +22,12 @@ defmodule TcmEduWeb.StudentCoursesLive do
   def mount(params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "课程")
+     |> assign(:page_title, "精品课程")
      |> assign(:keyword, "")
      |> assign(:category_id, params["category_id"])
      |> assign(:level, "all")
      |> assign(:categories, list_categories())
+     |> assign(:stats, load_stats())
      |> load_courses()}
   end
 
@@ -76,6 +78,33 @@ defmodule TcmEduWeb.StudentCoursesLive do
     |> Enum.sort_by(& &1.name)
   rescue
     _ -> []
+  end
+
+  defp load_stats do
+    courses =
+      Course
+      |> Ash.Query.for_read(:list_published, %{}, tenant: @tenant, authorize?: false)
+      |> Ash.Query.load([:lesson_count, :student_count])
+      |> Ash.read!()
+
+    teachers =
+      try do
+        User
+        |> Ash.Query.for_read(:list_teacher_profiles, %{}, tenant: @tenant, authorize?: false)
+        |> Ash.read!()
+        |> length()
+      rescue
+        _ -> 0
+      end
+
+    %{
+      total_lessons: courses |> Enum.map(&(&1.lesson_count || 0)) |> Enum.sum(),
+      total_courses: length(courses),
+      total_teachers: teachers,
+      total_students: courses |> Enum.map(&(&1.student_count || 0)) |> Enum.sum()
+    }
+  rescue
+    _ -> %{total_lessons: 0, total_courses: 0, total_teachers: 0, total_students: 0}
   end
 
   defp load_courses(socket) do

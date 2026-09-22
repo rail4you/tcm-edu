@@ -24,13 +24,36 @@ defmodule TcmEduWeb.StudentHomeLive do
   def mount(_params, _session, socket) do
     student = socket.assigns.current_student
 
+    courses = list_popular()
+    teachers = list_teachers()
+
     {:ok,
      socket
      |> assign(:page_title, "首页")
-     |> assign(:courses, list_popular())
+     |> assign(:courses, courses)
      |> assign(:categories, list_categories())
-     |> assign(:teachers, list_teachers())
+     |> assign(:teachers, teachers)
+     |> assign(:stats, build_all_stats(teachers))
      |> assign(:unread_count, unread_count(student))}
+  end
+
+  defp build_all_stats(teachers) do
+    courses =
+      try do
+        Course
+        |> Ash.Query.for_read(:list_published, %{}, tenant: @tenant, authorize?: false)
+        |> Ash.Query.load([:lesson_count, :student_count])
+        |> Ash.read!()
+      rescue
+        _ -> []
+      end
+
+    %{
+      total_lessons: courses |> Enum.map(&(&1.lesson_count || 0)) |> Enum.sum(),
+      total_teachers: length(teachers),
+      total_courses: length(courses),
+      total_students: courses |> Enum.map(&(&1.student_count || 0)) |> Enum.sum()
+    }
   end
 
   defp list_popular do

@@ -1,25 +1,60 @@
 <Layouts.app flash={@flash} shell={:storefront}>
     <.student_shell current_student={@current_student} current_page={:courses}>
-      <div class="bg-gradient-to-r from-[#08a9b9] to-[#00c991] text-white">
-        <div class="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 text-sm sm:px-6">
-          <span>全部课程　›　精品课程</span>
-          <form phx-change="search" phx-submit="search" class="flex">
+      <section
+        class="relative overflow-hidden text-white"
+        style="background-image: url(/images/covers/landscape.jpg); background-size: cover; background-position: center;"
+      >
+        <div class="absolute inset-0 bg-gradient-to-b from-black/65 via-black/40 to-black/65"></div>
+        <div class="relative mx-auto w-full max-w-6xl px-4 py-16 text-center sm:px-6 lg:py-20">
+          <p class="text-xs font-semibold uppercase tracking-[4px] text-[#c8e6b8]">杏宁树 · 精品课程</p>
+          <h1 class="mt-4 text-3xl font-black leading-tight md:text-4xl lg:text-5xl">
+            师者传道，系统学中医
+          </h1>
+          <p class="mx-auto mt-4 max-w-xl text-sm text-white/85 md:text-base">
+            从基础理论到临床精进，名师精讲 · 进度云端同步 · 选课免费起步
+          </p>
+
+          <div class="mx-auto mt-10 grid max-w-3xl grid-cols-2 gap-y-6 sm:grid-cols-4">
+            <div class="px-3">
+              <p class="text-4xl font-black tabular-nums text-white md:text-5xl">{@stats.total_lessons}</p>
+              <p class="mt-2 text-xs tracking-widest text-white/75 md:text-sm">精选课时</p>
+            </div>
+            <div class="px-3">
+              <p class="text-4xl font-black tabular-nums text-white md:text-5xl">{@stats.total_teachers}</p>
+              <p class="mt-2 text-xs tracking-widest text-white/75 md:text-sm">一线教师</p>
+            </div>
+            <div class="px-3">
+              <p class="text-4xl font-black tabular-nums text-white md:text-5xl">{@stats.total_courses}</p>
+              <p class="mt-2 text-xs tracking-widest text-white/75 md:text-sm">热门课程</p>
+            </div>
+            <div class="px-3">
+              <p class="text-4xl font-black tabular-nums text-white md:text-5xl">{@stats.total_students}</p>
+              <p class="mt-2 text-xs tracking-widest text-white/75 md:text-sm">在学人次</p>
+            </div>
+          </div>
+
+          <form phx-change="search" phx-submit="search" class="mx-auto mt-10 flex max-w-lg">
             <input
               type="search"
               name="keyword"
               value={@keyword}
-              placeholder="关键字"
-              class="h-8 w-56 rounded bg-white px-3 text-[#555] outline-none"
+              placeholder="搜索课程标题或简介"
+              class="min-w-0 flex-1 rounded-l border border-white/30 bg-white/95 px-4 py-2.5 text-sm text-[#333] outline-none placeholder:text-[#999]"
               aria-label="搜索课程"
             />
+            <button type="submit" class="rounded-r bg-[#00b86b] px-7 text-sm font-medium text-white">搜索</button>
           </form>
         </div>
-      </div>
+      </section>
 
-      <div class="mx-auto w-full max-w-6xl px-4 py-3 sm:px-6">
-        <div class="flex flex-wrap gap-x-9 gap-y-4 border-b border-[#ddd] py-5 text-sm font-semibold">
+      <div class="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6">
+        <div class="flex flex-wrap gap-x-3 gap-y-2 border-b border-[#e5e5e5] py-4 text-sm font-semibold">
           <button
-            class={[is_nil(@category_id) && "rounded bg-[#00c98a] px-3 py-1 text-white", is_nil(@category_id) || "text-[#555] hover:text-[#00b86b]"]}
+            class={[
+              "rounded px-3 py-1 transition",
+              is_nil(@category_id) && "bg-[#00c98a] text-white",
+              is_nil(@category_id) || "text-[#555] hover:bg-[#f5faf6] hover:text-[#00b86b]"
+            ]}
             phx-click="filter-category"
             phx-value-category_id=""
           >
@@ -27,7 +62,11 @@
           </button>
           <button
             :for={category <- @categories}
-            class={[@category_id == category.id && "rounded bg-[#00c98a] px-3 py-1 text-white", @category_id == category.id || "text-[#555] hover:text-[#00b86b]"]}
+            class={[
+              "rounded px-3 py-1 transition",
+              @category_id == category.id && "bg-[#00c98a] text-white",
+              @category_id == category.id || "text-[#555] hover:bg-[#f5faf6] hover:text-[#00b86b]"
+            ]}
             phx-click="filter-category"
             phx-value-category_id={category.id}
           >
@@ -36,18 +75,17 @@
         </div>
       </div>
 
-      <div class="mx-auto w-full max-w-6xl px-4 py-3 sm:px-6">
-        <div class="mb-4 flex flex-wrap items-center gap-x-8 gap-y-2 bg-white px-5 py-4 text-sm text-[#555]">
-          <span>
-            <span class="mr-3 font-semibold text-[#00b86b]">全部</span>
-            <span class="mr-3">免费课</span>
-            <span class="mr-3">付费课</span>
-            <span>有试听</span>
-          </span>
-          <span class="ml-auto flex items-center gap-3">
-            难度
+      <div class="mx-auto w-full max-w-6xl px-4 pb-10 pt-5 sm:px-6">
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3 bg-white px-5 py-3 text-sm shadow-sm">
+          <div class="flex items-center gap-5 text-[#555]">
+            <span class="rounded bg-[#eafaf3] px-3 py-1 font-medium text-[#00b86b]">全部</span>
+            <span class="hover:text-[#00b86b]">付费课</span>
+            <span class="hover:text-[#00b86b]">有试听</span>
+          </div>
+          <div class="flex items-center gap-3 text-sm">
+            <span class="text-[#888]">难度</span>
             <select
-              class="rounded border border-[#e2e2e2] bg-white px-2 py-1 text-sm outline-none"
+              class="rounded border border-[#e2e2e2] bg-white px-2 py-1 outline-none"
               phx-change="filter-level"
               name="level"
             >
@@ -56,10 +94,10 @@
               <option value="intermediate" selected={@level == "intermediate"}>中级</option>
               <option value="advanced" selected={@level == "advanced"}>高级</option>
             </select>
-          </span>
+          </div>
         </div>
 
-        <div :if={visible(@courses, @level) != []} class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div :if={visible(@courses, @level) != []} class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <.course_card
             :for={course <- visible(@courses, @level)}
             course={course}

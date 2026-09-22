@@ -1,72 +1,87 @@
 <Layouts.app flash={@flash} shell={:storefront}>
     <.student_shell current_student={@current_student} current_page={:home} unread_count={@unread_count}>
-      <section class="relative overflow-hidden bg-gradient-to-br from-[#08a9b9] via-[#00c991] to-[#00b86b] text-white">
-        <div class="absolute -right-10 -top-8 size-56 rounded-full border-[24px] border-white/25"></div>
-        <div class="absolute right-28 top-10 text-[80px] font-black text-white/20">◉</div>
-        <div class="mx-auto grid w-full max-w-6xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.4fr_1fr] lg:items-center">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[2px] text-white/80">杏宁树 · 中医教育数字化</p>
-            <h1 class="mt-3 text-4xl font-black tracking-tight md:text-5xl">系统学中医，<br />从这里开始</h1>
-            <p class="mt-4 max-w-md text-sm text-white/85">
+      <section
+        class="relative overflow-hidden text-white"
+        style="background-image: url(/images/hero.jpg); background-size: cover; background-position: center;"
+      >
+        <div class="absolute inset-0 bg-gradient-to-r from-black/70 via-black/45 to-black/15"></div>
+        <div class="relative mx-auto grid w-full max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.5fr_1fr] lg:items-center lg:py-24">
+          <div class="max-w-2xl">
+            <p class="text-xs font-semibold uppercase tracking-[3px] text-[#c8e6b8]">杏宁树 · 中医教育数字化</p>
+            <h1 class="mt-4 text-4xl font-black leading-tight tracking-tight md:text-5xl lg:text-6xl">
+              系统学中医，<br />从这里开始
+            </h1>
+            <p class="mt-5 max-w-lg text-base text-white/90 md:text-lg">
               从基础理论到临床精进，选课、看课、进度跟踪，全程免费起步。
             </p>
-            <div class="mt-7 flex flex-wrap gap-3">
-              <.link navigate="/courses" class="rounded-full bg-[#ffd817] px-8 py-3 text-base font-bold text-[#111] transition hover:brightness-95">
-                浏览课程 →
+            <div class="mt-8 flex flex-wrap gap-3">
+              <.link navigate="/courses" class="rounded-full bg-[#00b86b] px-7 py-3 text-base font-semibold text-white shadow-lg transition hover:brightness-110">
+                浏览精品课程
               </.link>
               <.link
                 navigate={if @current_student, do: "/my-learning", else: "/login"}
-                class="rounded-full border-2 border-white/60 px-8 py-3 text-base font-medium text-white transition hover:bg-white/10"
+                class="rounded-full border border-white/50 bg-white/10 px-7 py-3 text-base font-medium text-white backdrop-blur-sm transition hover:bg-white/20"
               >
-                {if @current_student, do: "继续学习", else: "登录"}
+                {if @current_student, do: "继续学习", else: "登录学习"}
               </.link>
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="rounded-lg bg-white/15 p-5 backdrop-blur-sm">
-              <p class="text-3xl font-bold tabular-nums">{@courses |> Enum.map(&(&1.lesson_count || 0)) |> Enum.sum()}</p>
-              <p class="mt-1 text-xs text-white/80">精选课时</p>
-            </div>
-            <div class="rounded-lg bg-white/15 p-5 backdrop-blur-sm">
-              <p class="text-3xl font-bold tabular-nums">{length(@teachers)}</p>
-              <p class="mt-1 text-xs text-white/80">一线教师</p>
-            </div>
-            <div class="rounded-lg bg-white/15 p-5 backdrop-blur-sm">
-              <p class="text-3xl font-bold tabular-nums">{length(@courses)}</p>
-              <p class="mt-1 text-xs text-white/80">热门课程</p>
-            </div>
-            <div class="rounded-lg bg-white/15 p-5 backdrop-blur-sm">
-              <p class="text-3xl font-bold tabular-nums">{@courses |> Enum.map(&(&1.student_count || 0)) |> Enum.sum()}</p>
-              <p class="mt-1 text-xs text-white/80">在学人次</p>
+          <div class="hidden lg:block">
+            <div class="rounded-2xl border border-white/20 bg-white/10 px-7 py-6 backdrop-blur-md">
+              <dl class="divide-y divide-white/15">
+                <div class="flex items-baseline justify-between py-2.5 first:pt-0">
+                  <dt class="text-sm tracking-widest text-white/75">精选课时</dt>
+                  <dd class="text-3xl font-black tabular-nums text-white md:text-4xl">{@stats.total_lessons}</dd>
+                </div>
+                <div class="flex items-baseline justify-between py-2.5">
+                  <dt class="text-sm tracking-widest text-white/75">一线教师</dt>
+                  <dd class="text-3xl font-black tabular-nums text-white md:text-4xl">{@stats.total_teachers}</dd>
+                </div>
+                <div class="flex items-baseline justify-between py-2.5">
+                  <dt class="text-sm tracking-widest text-white/75">热门课程</dt>
+                  <dd class="text-3xl font-black tabular-nums text-white md:text-4xl">{@stats.total_courses}</dd>
+                </div>
+                <div class="flex items-baseline justify-between py-2.5 last:pb-0">
+                  <dt class="text-sm tracking-widest text-white/75">在学人次</dt>
+                  <dd class="text-3xl font-black tabular-nums text-white md:text-4xl">{@stats.total_students}</dd>
+                </div>
+              </dl>
             </div>
           </div>
         </div>
       </section>
 
-      <div class="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
+      <div class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
         <section>
-          <div class="mb-4 flex flex-wrap items-center gap-x-8 gap-y-4 border-b border-[#ddd] pb-4 text-sm font-semibold">
-            <span class="rounded bg-[#00c98a] px-3 py-1 text-white">全部课程分类</span>
+          <div class="mb-3 flex items-center justify-between">
+            <div>
+              <p class="text-lg font-bold text-[#222]">全部课程分类</p>
+              <p class="mt-0.5 text-xs text-[#999]">按学科体系系统学中医</p>
+            </div>
+            <.link navigate="/courses" class="text-xs text-[#00b86b] hover:underline">查看全部 →</.link>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 border-b border-[#e5e5e5] pb-5 text-sm">
+            <span class="rounded bg-[#00c98a] px-3 py-1 font-semibold text-white">全部</span>
             <.link
               :for={category <- @categories}
               navigate={"/courses?category_id=#{category.id}"}
-              class="text-[#555] transition hover:text-[#00b86b]"
+              class="rounded px-3 py-1 font-medium text-[#555] transition hover:bg-[#f5faf6] hover:text-[#00b86b]"
             >
               {category.name}
             </.link>
+            <p :if={@categories == []} class="text-sm text-[#999]">分类筹备中</p>
           </div>
-          <p :if={@categories == []} class="pb-4 text-sm text-[#999]">分类筹备中</p>
         </section>
 
         <section class="mt-8">
-          <div class="mb-5 flex items-center justify-between">
+          <div class="mb-5 flex items-end justify-between">
             <div>
-              <p class="text-2xl font-bold">大家都在学</p>
+              <p class="text-xl font-bold">大家都在学</p>
               <p class="mt-1 text-sm text-[#888]">按在学人数排序的热门课程，免费试看先行</p>
             </div>
             <.link navigate="/courses" class="text-sm text-[#00b86b] hover:underline">更多课程 →</.link>
           </div>
-          <div :if={@courses != []} class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div :if={@courses != []} class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <.course_card :for={course <- @courses} course={course} id={"home-course-#{course.id}"} />
           </div>
           <p :if={@courses == []} class="rounded bg-white px-6 py-12 text-center text-sm text-[#999] shadow-sm">
@@ -79,14 +94,14 @@
         </section>
 
         <section :if={@teachers != []} class="mt-12">
-          <div class="mb-5 flex items-center justify-between">
+          <div class="mb-5 flex items-end justify-between">
             <div>
-              <p class="text-2xl font-bold">名师风采</p>
+              <p class="text-xl font-bold">名师风采</p>
               <p class="mt-1 text-sm text-[#888]">一线教师精讲每一门课</p>
             </div>
           </div>
           <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <div :for={teacher <- @teachers} class="flex items-center gap-3 bg-white p-4 shadow-sm">
+            <div :for={teacher <- @teachers} class="flex items-center gap-3 bg-white p-4 shadow-sm transition hover:shadow-md">
               <span class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#00b86b] text-lg font-bold text-white">
                 {teacher.name |> String.first() |> String.upcase()}
               </span>

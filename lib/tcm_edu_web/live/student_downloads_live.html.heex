@@ -1,23 +1,41 @@
 <Layouts.app flash={@flash} shell={:storefront}>
     <.student_shell current_student={@current_student} current_page={:resources}>
-      <div class="bg-gradient-to-r from-[#d9f9a3] via-[#c9f2cf] to-[#efffe1]">
-        <div class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-          <h1 class="text-3xl font-bold text-[#111] md:text-4xl">
-            知识无界，<span class="text-[#00bd7b]">资料尽在掌握</span>
-          </h1>
-          <p class="mt-3 inline-block bg-[#c7efa9] px-3 py-2 text-lg text-[#333]">
-            欢迎来到资料下载专区，一键解锁学习宝藏，让医者之路畅通无阻
-          </p>
+      <section
+        class="relative overflow-hidden text-white"
+        style="background-image: url(/images/covers/scrolls.jpg); background-size: cover; background-position: center;"
+      >
+        <div class="absolute inset-0 bg-gradient-to-r from-black/70 via-black/45 to-black/15"></div>
+        <div class="relative mx-auto grid w-full max-w-6xl gap-6 px-4 py-14 sm:px-6 lg:grid-cols-[1.4fr_1fr] lg:items-center">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[3px] text-[#c8e6b8]">杏宁树 · 资料下载</p>
+            <h1 class="mt-3 text-3xl font-black leading-tight md:text-4xl lg:text-5xl">
+              知识无界，<span class="text-[#c8e6b8]">资料尽在掌握</span>
+            </h1>
+            <p class="mt-4 max-w-xl text-sm text-white/85 md:text-base">
+              欢迎来到资料下载专区，一键解锁学习宝藏，让医者之路畅通无阻
+            </p>
+          </div>
+          <form phx-change="search" phx-submit="search" class="flex w-full lg:max-w-sm">
+            <input
+              type="search"
+              name="keyword"
+              value={@keyword}
+              placeholder="搜索资料关键字"
+              class="min-w-0 flex-1 rounded-l border border-white/30 bg-white/95 px-3 py-2 text-sm text-[#333] outline-none placeholder:text-[#999]"
+              aria-label="搜索资料"
+            />
+            <button type="submit" class="rounded-r bg-[#00b86b] px-5 text-sm font-medium text-white">搜索</button>
+          </form>
         </div>
-      </div>
+      </section>
 
-      <div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
-        <div class="flex flex-wrap gap-3">
+      <div class="mx-auto w-full max-w-6xl px-4 pb-10 pt-5 sm:px-6">
+        <div class="mb-5 flex flex-wrap gap-2">
           <button
             class={[
-              "rounded-full border px-4 py-1.5 text-sm",
-              @doc_type == "all" && "bg-white font-medium text-[#00b86b]",
-              @doc_type == "all" || "border-base-300 bg-base-100 text-[#555]"
+              "rounded-full border px-4 py-1.5 text-sm transition",
+              @doc_type == "all" && "border-[#00b86b] bg-white font-medium text-[#00b86b]",
+              @doc_type == "all" || "border-[#e2e2e2] bg-white text-[#555] hover:border-[#00b86b]"
             ]}
             phx-click="filter-type"
             phx-value-doc_type="all"
@@ -29,9 +47,9 @@
           <button
             :for={{value, label} <- @doc_type_pills}
             class={[
-              "rounded-full border px-4 py-1.5 text-sm",
-              @doc_type == value && "bg-white font-medium text-[#00b86b]",
-              @doc_type == value || "border-base-300 bg-base-100 text-[#555]"
+              "rounded-full border px-4 py-1.5 text-sm transition",
+              @doc_type == value && "border-[#00b86b] bg-white font-medium text-[#00b86b]",
+              @doc_type == value || "border-[#e2e2e2] bg-white text-[#555] hover:border-[#00b86b]"
             ]}
             phx-click="filter-type"
             phx-value-doc_type={value}
@@ -41,28 +59,18 @@
           </button>
         </div>
 
-        <div class="mt-4 grid gap-4 bg-transparent py-4 lg:grid-cols-[1fr_260px]">
+        <div class="grid gap-5 lg:grid-cols-[1fr_260px]">
           <section class="bg-white p-0 shadow-sm">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b p-5">
+            <div class="flex items-center justify-between p-5">
               <p class="border-l-4 border-[#00b86b] pl-3 text-xl font-bold">全部资料下载</p>
-              <form phx-change="search" phx-submit="search" class="flex h-9 w-full max-w-sm border">
-                <input
-                  type="search"
-                  name="keyword"
-                  value={@keyword}
-                  placeholder="关键字"
-                  class="min-w-0 flex-1 px-3 text-sm outline-none"
-                  aria-label="搜索资料"
-                />
-                <button type="submit" class="w-20 bg-[#00b86b] text-sm text-white">搜索</button>
-              </form>
+              <p class="text-xs text-[#999]">共 {visible(@docs, @keyword, @doc_type) |> length()} 个资料</p>
             </div>
 
             <p :if={visible(@docs, @keyword, @doc_type) == []} class="px-6 py-16 text-center text-sm text-[#999]">
               暂无匹配的资料，换个关键字或分类试试
             </p>
 
-            <div :for={doc <- visible(@docs, @keyword, @doc_type)} class="flex items-center gap-5 border-b p-5 last:border-b-0">
+            <div :for={doc <- visible(@docs, @keyword, @doc_type)} class="flex items-center gap-5 px-5 py-5">
               <span class={[
                 "flex h-20 w-16 shrink-0 flex-col items-center justify-center rounded bg-gradient-to-br text-white",
                 media_tone(doc.media_kind)
@@ -79,7 +87,6 @@
                   {doc_type_label(doc.doc_type)}　|　共 1 个资料
                 </div>
               </div>
-              <span class="shrink-0 font-medium text-[#ff4d2f]">免费</span>
               <a
                 :if={doc.asset_url}
                 href={doc.asset_url}
@@ -98,9 +105,12 @@
           <aside class="flex flex-col gap-4">
             <div class="bg-white p-5 shadow-sm">
               <p class="border-l-4 border-[#00b86b] pl-3 text-xl font-bold">推荐题库</p>
-              <div class="mt-4 bg-gradient-to-br from-[#effff9] to-[#b9f2dc] p-5 text-center text-lg text-[#333]">
-                杏宁树中医题库<br />
-                <span class="text-[#00b86b]">扫码进入题库</span>
+              <div class="mt-4 rounded bg-gradient-to-br from-[#effff9] to-[#b9f2dc] p-5 text-center text-[#333]">
+                <p class="text-base font-medium">登录进入题库</p>
+                <p class="mt-1 text-xs text-[#666]">登录后解锁中医题库海量题源</p>
+                <.link navigate="/login" class="mt-4 inline-block rounded bg-[#00b86b] px-5 py-2 text-sm text-white transition hover:brightness-95">
+                  立即登录
+                </.link>
               </div>
             </div>
             <div class="bg-white p-5 shadow-sm">
