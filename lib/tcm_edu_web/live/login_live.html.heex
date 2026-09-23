@@ -48,57 +48,35 @@
             <.icon name="hero-academic-cap" class="size-5" />
           </span>
           <div>
-            <p class="text-xl font-semibold">统一登录</p>
-            <p class="text-xs text-base-content/60">选择你的身份</p>
+            <p class="text-xl font-semibold">{if @mode == "super", do: "超级管理员登录", else: "统一登录"}</p>
+            <p class="text-xs text-base-content/60">
+              {if @mode == "super", do: "跨租户运营，无需选择机构", else: "先选机构，再选身份"}
+            </p>
           </div>
         </div>
 
-        <div role="tablist" class="tabs tabs-boxed mt-4" aria-label="选择身份">
-          <button
-            :for={tab <- @tabs}
-            role="tab"
-            class={["tab", @tab == tab && "tab-active"]}
-            phx-click="switch-tab"
-            phx-value-tab={tab}
-          >
-            {tab_label(tab)}
-          </button>
-        </div>
-
-        <p class="mt-2 text-xs text-base-content/60">{tab_hint(@tab, @admin_sub)}</p>
-
-        <div :if={@auth_error} class="alert alert-soft alert-error mt-1" role="alert">
+        <div :if={@auth_error} class="alert alert-soft alert-error mt-3" role="alert">
           <.icon name="hero-exclamation-circle" class="size-5 shrink-0" />
           <p class="text-sm">{@auth_error}</p>
         </div>
 
-        <div :if={@tab == "admin"} class="join mt-2 w-full" role="group" aria-label="管理员类型">
-          <button
-            :for={sub <- ["super", "tenant"]}
-            class={["btn join-item btn-sm flex-1", @admin_sub == sub && "btn-active"]}
-            phx-click="switch-admin-sub"
-            phx-value-sub={sub}
-          >
-            {if sub == "super", do: "超级管理员", else: "租户管理员"}
-          </button>
-        </div>
-
         <.form
-          :if={@tab == "student"}
-          for={@student_form}
+          :if={@mode == "tenant"}
+          for={@login_form}
           id="login-form"
           action="/session"
           method="post"
           phx-change="validate"
           phx-submit="submit"
           phx-trigger-action={@trigger_action}
-          class="mt-2 flex flex-col gap-2.5"
+          class="mt-4 flex flex-col gap-2.5"
         >
-          <input type="hidden" name="login[tab]" value="student" />
+          <input type="hidden" name="login[mode]" value="tenant" />
+          <input type="hidden" name="login[role]" value={@role} />
           <.login_field
-            form={@student_form}
+            form={@login_form}
             field={:tenant}
-            id="tenant-student"
+            id="tenant-select"
             label="所属机构"
             type="select"
             icon="hero-building-office-2"
@@ -106,10 +84,26 @@
             prompt="请选择机构"
             required
           />
+          <div>
+            <span class="label-text mb-1 block text-sm">选择身份</span>
+            <div role="tablist" class="tabs tabs-boxed" aria-label="选择身份">
+              <button
+                :for={role <- @roles}
+                type="button"
+                role="tab"
+                class={["tab", @role == role && "tab-active"]}
+                phx-click="switch-role"
+                phx-value-role={role}
+              >
+                {role_label(role)}
+              </button>
+            </div>
+            <p class="mt-2 text-xs text-base-content/60">{role_hint(@role)}</p>
+          </div>
           <.login_field
-            form={@student_form}
+            form={@login_form}
             field={:email}
-            id="email-student"
+            id="login-identity"
             label="邮箱或用户名"
             type="text"
             icon="hero-user"
@@ -118,9 +112,9 @@
             required
           />
           <.login_field
-            form={@student_form}
+            form={@login_form}
             field={:password}
-            id="pw-student"
+            id="login-password"
             label="密码"
             type="password"
             icon="hero-lock-closed"
@@ -133,37 +127,26 @@
             phx-disable-with="登录中..."
             class="btn mt-2 w-full border-none bg-[#00b86b] text-base text-white hover:bg-[#00a862]"
           >
-            登录学习
+            {submit_label(@role)}
           </button>
         </.form>
 
         <.form
-          :if={@tab == "teacher"}
-          for={@teacher_form}
+          :if={@mode == "super"}
+          for={@login_form}
           id="login-form"
           action="/session"
           method="post"
           phx-change="validate"
           phx-submit="submit"
           phx-trigger-action={@trigger_action}
-          class="mt-2 flex flex-col gap-2.5"
+          class="mt-4 flex flex-col gap-2.5"
         >
-          <input type="hidden" name="login[tab]" value="teacher" />
+          <input type="hidden" name="login[mode]" value="super" />
           <.login_field
-            form={@teacher_form}
-            field={:tenant}
-            id="tenant-teacher"
-            label="所属机构"
-            type="select"
-            icon="hero-building-office-2"
-            options={tenant_options(@tenants)}
-            prompt="请选择机构"
-            required
-          />
-          <.login_field
-            form={@teacher_form}
+            form={@login_form}
             field={:email}
-            id="email-teacher"
+            id="login-identity"
             label="邮箱或用户名"
             type="text"
             icon="hero-user"
@@ -172,65 +155,9 @@
             required
           />
           <.login_field
-            form={@teacher_form}
+            form={@login_form}
             field={:password}
-            id="pw-teacher"
-            label="密码"
-            type="password"
-            icon="hero-lock-closed"
-            placeholder="请输入密码"
-            autocomplete="current-password"
-            required
-          />
-          <button
-            type="submit"
-            phx-disable-with="登录中..."
-            class="btn mt-2 w-full border-none bg-[#00b86b] text-base text-white hover:bg-[#00a862]"
-          >
-            进入教师端
-          </button>
-        </.form>
-
-        <.form
-          :if={@tab == "admin"}
-          for={@admin_form}
-          id="login-form"
-          action="/session"
-          method="post"
-          phx-change="validate"
-          phx-submit="submit"
-          phx-trigger-action={@trigger_action}
-          class="mt-2 flex flex-col gap-2.5"
-        >
-          <input type="hidden" name="login[tab]" value="admin" />
-          <input type="hidden" name="login[sub]" value={@admin_sub} />
-          <.login_field
-            :if={@admin_sub == "tenant"}
-            form={@admin_form}
-            field={:tenant}
-            id="tenant-admin"
-            label="所属机构"
-            type="select"
-            icon="hero-building-office-2"
-            options={tenant_options(@tenants)}
-            prompt="请选择机构"
-            required
-          />
-          <.login_field
-            form={@admin_form}
-            field={:email}
-            id="email-admin"
-            label="邮箱或用户名"
-            type="text"
-            icon="hero-user"
-            placeholder="邮箱或用户名"
-            autocomplete="username"
-            required
-          />
-          <.login_field
-            form={@admin_form}
-            field={:password}
-            id="pw-admin"
+            id="login-password"
             label="密码"
             type="password"
             icon="hero-lock-closed"
@@ -247,7 +174,29 @@
           </button>
         </.form>
 
-        <p class="mt-3 text-center text-xs text-base-content/60">
+        <div class="mt-3 text-center text-xs">
+          <button
+            :if={@mode == "tenant"}
+            type="button"
+            class="link text-base-content/60 hover:text-[#00b86b]"
+            phx-click="switch-mode"
+            phx-value-mode="super"
+            id="super-login-link"
+          >
+            超级管理员登录 →
+          </button>
+          <button
+            :if={@mode == "super"}
+            type="button"
+            class="link text-base-content/60 hover:text-[#00b86b]"
+            phx-click="switch-mode"
+            phx-value-mode="tenant"
+            id="tenant-login-link"
+          >
+            ← 返回租户登录
+          </button>
+        </div>
+        <p :if={@mode == "tenant"} class="mt-2 text-center text-xs text-base-content/60">
           没有账号？请联系机构管理员分配。
         </p>
       </div>

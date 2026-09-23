@@ -2,11 +2,13 @@ defmodule TcmEduWeb.SessionController do
   @moduledoc """
   The single session entrance for the unified login page (`/login`).
 
-  The trigger-action form posts `login[tab]` (`student` | `teacher` |
-  `admin`) plus `login[sub]` (`super` | `tenant` for the admin tab) and
+  The trigger-action form posts `login[mode]` (`tenant` | `super`) plus
+  `login[role]` (`student` | `teacher` | `tenant_admin`) and
   `login[tenant]` (schema name, required for tenant users in the UI).
-  Each branch verifies credentials through the portal's auth module,
-  writes that portal's session and redirects to its home.
+  Legacy `login[tab]` (`student` | `teacher` | `admin`) + `login[sub]`
+  params are still honored. Each branch verifies credentials through
+  the portal's auth module, writes that portal's session and redirects
+  to its home.
 
   Legacy per-portal login URLs redirect here via `legacy_login/2`.
   """
@@ -17,53 +19,63 @@ defmodule TcmEduWeb.SessionController do
   alias TcmEduWeb.StudentAuth
   alias TcmEduWeb.TeacherAuth
 
-  def create(conn, %{"login" => %{"tab" => "teacher"} = params}) do
+  def create(conn, %{"login" => params}) do
     tenant = tenant_param(params)
+    identity = params["email"] || ""
+    password = params["password"] || ""
 
-    case TeacherAuth.authenticate(params["email"] || "", params["password"] || "", tenant) do
-      {:ok, teacher} ->
-        conn
-        |> put_session_values(TeacherAuth.build_session(teacher))
-        |> configure_session(renew: true)
-        |> put_flash(:info, "欢迎回来，#{teacher.name}")
-        |> redirect(to: "/teacher")
+    case login_kind(params) do
+      :super ->
+        case AdminAuth.authenticate(identity, password, "super") do
+          {:ok, admin} ->
+            conn
+            |> put_session_values(AdminAuth.build_session(admin))
+            |> configure_session(renew: true)
+            |> put_flash(:info, "欢迎回来，#{admin.name}")
+            |> redirect(to: "/admin")
 
-      {:error, :invalid_credentials} ->
-        deny(conn, "账号或密码错误", "teacher")
-    end
-  end
+          {:error, :invalid_credentials} ->
+            deny(conn, "账号或密码错误", :super)
+        end
 
-  def create(conn, %{"login" => %{"tab" => "admin"} = params}) do
-    sub = if params["sub"] == "tenant", do: "tenant", else: "super"
-    tenant = tenant_param(params)
+      :tenant_admin ->
+        case AdminAuth.authenticate(identity, password, "tenant", tenant) do
+          {:ok, admin} ->
+            conn
+            |> put_session_values(AdminAuth.build_session(admin))
+            |> configure_session(renew: true)
+            |> put_flash(:info, "欢迎回来，#{admin.name}")
+            |> redirect(to: "/admin")
 
-    case AdminAuth.authenticate(params["email"] || "", params["password"] || "", sub, tenant) do
-      {:ok, admin} ->
-        conn
-        |> put_session_values(AdminAuth.build_session(admin))
-        |> configure_session(renew: true)
-        |> put_flash(:info, "欢迎回来，#{admin.name}")
-        |> redirect(to: "/admin")
+          {:error, :invalid_credentials} ->
+            deny(conn, "账号或密码错误", :tenant_admin)
+        end
 
-      {:error, :invalid_credentials} ->
-        deny(conn, "账号或密码错误", "admin", sub)
-    end
-  end
+      :teacher ->
+        case TeacherAuth.authenticate(identity, password, tenant) do
+          {:ok, teacher} ->
+            conn
+            |> put_session_values(TeacherAuth.build_session(teacher))
+            |> configure_session(renew: true)
+            |> put_flash(:info, "欢迎回来，#{teacher.name}")
+            |> redirect(to: "/teacher")
 
-  def create(conn, %{"login" => %{"tab" => _} = params}) do
-    # Default tab: student.
-    tenant = tenant_param(params)
+          {:error, :invalid_credentials} ->
+            deny(conn, "账号或密码错误", :teacher)
+        end
 
-    case StudentAuth.authenticate(params["email"] || "", params["password"] || "", tenant) do
-      {:ok, student} ->
-        conn
-        |> put_session_values(StudentAuth.build_session(student))
-        |> configure_session(renew: true)
-        |> put_flash(:info, "欢迎回来，#{student.name}")
-        |> redirect(to: "/my-learning")
+      :student ->
+        case StudentAuth.authenticate(identity, password, tenant) do
+          {:ok, student} ->
+            conn
+            |> put_session_values(StudentAuth.build_session(student))
+            |> configure_session(renew: true)
+            |> put_flash(:info, "欢迎回来，#{student.name}")
+            |> redirect(to: "/my-learning")
 
-      {:error, :invalid_credentials} ->
-        deny(conn, "账号或密码错误", "student")
+          {:error, :invalid_credentials} ->
+            deny(conn, "账号或密码错误", :student)
+        end
     end
   end
 
@@ -92,12 +104,25 @@ defmodule TcmEduWeb.SessionController do
 
   defp tenant_param(_), do: nil
 
-  # 失败回跳保留 tab/sub（mount 会据此恢复选项卡），避免“输错一次就重置角色”。
-  defp deny(conn, message, tab \\ "student", sub \\ "super") do
+  # 新参数优先，旧 tab/sub 兼容。
+  defp login_kind(%{"mode" => "super"}), do: :super
+  defp login_kind(%{"role" => "tenant_admin"}), do: :tenant_admin
+  defp login_kind(%{"role" => "teacher"}), do: :teacher
+  defp login_kind(%{"role" => "student"}), do: :student
+  defp login_kind(%{"tab" => "teacher"}), do: :teacher
+  defp login_kind(%{"tab" => "admin", "sub" => "tenant"}), do: :tenant_admin
+  defp login_kind(%{"tab" => "admin"}), do: :super
+  defp login_kind(_), do: :student
+
+  # 失败回跳保留 mode/role，避免“输错一次就重置选项”。
+  defp deny(conn, message, kind \\ :student) do
     target =
-      if tab == "admin",
-        do: "/login?tab=admin&admin=#{sub}",
-        else: "/login?tab=#{tab}"
+      case kind do
+        :super -> "/login?mode=super"
+        :tenant_admin -> "/login?role=tenant_admin"
+        :teacher -> "/login?role=teacher"
+        _ -> "/login"
+      end
 
     conn
     |> put_flash(:error, message)

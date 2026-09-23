@@ -2,19 +2,22 @@ defmodule TcmEduWeb.LoginLive do
   @moduledoc """
   The single login entrance at `/login`.
 
-  Two login modes, isolated by tabs:
+  Two login modes:
 
-    * super admin (`admin` tab → `super` sub-tab): no tenant needed,
-      verified against `public.super_admins`;
-    * tenant users (`student` / `teacher` tabs, `admin` tab → `tenant`
-      sub-tab): must pick their organization first, credentials are
-      verified inside that tenant's schema.
+    * tenant mode (default): pick the organization FIRST (top selector),
+      then the role (`student` / `teacher` / `tenant_admin`), then
+      credentials. Verified inside that tenant's schema.
+    * super-admin mode (`/login?mode=super`, reached from the bottom link):
+      no tenant selector, verified against `public.super_admins`.
 
   On submit the credentials are verified inline: failures render an
-  inline error while the form (tab, tenant, identity AND password) stays
-  untouched. Only verified credentials trigger the native POST to
-  `SessionController.create/2` via `phx-trigger-action`, which re-verifies,
-  writes the portal session and redirects.
+  inline error while the form stays untouched. Only verified credentials
+  trigger the native POST to `SessionController.create/2` via
+  `phx-trigger-action`, which re-verifies, writes the portal session and
+  redirects.
+
+  Legacy `?tab=` / `?admin=` params are still honored and mapped onto the
+  new mode/role state.
 
   There is no self-registration: accounts are provisioned by super admins
   (admins) and admins (teachers/students) in the admin panel.
@@ -29,88 +32,96 @@ defmodule TcmEduWeb.LoginLive do
   alias TcmEduWeb.StudentAuth
   alias TcmEduWeb.TeacherAuth
 
-  @tabs ~w(student teacher admin)
-  @admin_subs ~w(super tenant)
+  @modes ~w(tenant super)
+  @roles ~w(student teacher tenant_admin)
 
   @impl true
   def mount(params, _session, socket) do
-    tab = if params["tab"] in @tabs, do: params["tab"], else: "student"
-    admin_sub = if params["admin"] in @admin_subs, do: params["admin"], else: "super"
+    {mode, role} = resolve_mode_role(params)
 
     {:ok,
      socket
      |> assign(:page_title, "登录")
-     |> assign(:tabs, @tabs)
-     |> assign(:tab, tab)
-     |> assign(:admin_sub, admin_sub)
+     |> assign(:mode, mode)
+     |> assign(:role, role)
+     |> assign(:roles, @roles)
      |> assign(:tenants, list_tenants())
      |> assign(:auth_error, nil)
-     |> assign(:student_form, StudentAuth.login_form())
-     |> assign(:teacher_form, TeacherAuth.login_form())
-     |> assign(:admin_form, AdminAuth.login_form())
+     |> assign(:login_form, login_form(mode, %{}))
      |> assign(:trigger_action, false)}
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
-    tab = if params["tab"] in @tabs, do: params["tab"], else: socket.assigns.tab
-    sub = if params["admin"] in @admin_subs, do: params["admin"], else: socket.assigns.admin_sub
-    {:noreply, socket |> assign(:tab, tab) |> assign(:admin_sub, sub)}
+    {mode, role} = resolve_mode_role(params, {socket.assigns.mode, socket.assigns.role})
+    {:noreply, socket |> assign(:mode, mode) |> assign(:role, role)}
   end
 
   @impl true
-  def handle_event("switch-tab", %{"tab" => tab}, socket) when tab in @tabs do
+  def handle_event("switch-mode", %{"mode" => mode}, socket) when mode in @modes do
+    role = if mode == "super", do: nil, else: socket.assigns.role || "student"
+
     {:noreply,
      socket
-     |> assign(:tab, tab)
+     |> assign(:mode, mode)
+     |> assign(:role, role)
+     |> assign(:login_form, login_form(mode, %{}))
      |> assign(:trigger_action, false)
      |> assign(:auth_error, nil)
-     |> push_patch(to: "/login?tab=#{tab}")}
+     |> push_patch(to: mode_path(mode, role))}
   end
 
-  def handle_event("switch-admin-sub", %{"sub" => sub}, socket) when sub in @admin_subs do
+  def handle_event("switch-role", %{"role" => role}, socket) when role in @roles do
     {:noreply,
      socket
-     |> assign(:admin_sub, sub)
+     |> assign(:role, role)
      |> assign(:trigger_action, false)
-     |> assign(:auth_error, nil)}
+     |> assign(:auth_error, nil)
+     |> push_patch(to: mode_path(socket.assigns.mode, role))}
   end
 
   def handle_event("validate", %{"login" => params}, socket) do
+    %{mode: mode, role: role} = socket.assigns
+
     {:noreply,
      socket
-     |> assign(form_assign(socket.assigns.tab), submit_form(socket.assigns, params))
+     |> assign(:login_form, submit_form(mode, params))
+     |> assign(:role, params["role"] || role)
      |> assign(:auth_error, nil)}
   end
 
   def handle_event("submit", %{"login" => params}, socket) do
-    %{tab: tab, admin_sub: sub} = socket.assigns
-    form = submit_form(socket.assigns, params)
+    %{mode: mode, role: role} = socket.assigns
+    role = params["role"] || role
+    form = submit_form(mode, params)
 
     if form.source.valid? do
       email = get_field(form.source, :email)
       password = get_field(form.source, :password)
       tenant = empty_to_nil(get_field(form.source, :tenant))
 
-      case verify_credentials(tab, sub, email, password, tenant) do
+      case verify_credentials(mode, role, email, password, tenant) do
         {:ok, _} ->
           {:noreply,
            socket
-           |> assign(form_assign(tab), form)
+           |> assign(:login_form, form)
+           |> assign(:role, role)
            |> assign(:trigger_action, true)
            |> assign(:auth_error, nil)}
 
         {:error, _} ->
           {:noreply,
            socket
-           |> assign(form_assign(tab), form)
+           |> assign(:login_form, form)
+           |> assign(:role, role)
            |> assign(:trigger_action, false)
            |> assign(:auth_error, "账号或密码错误，请检查后重试")}
       end
     else
       {:noreply,
        socket
-       |> assign(form_assign(tab), form)
+       |> assign(:login_form, form)
+       |> assign(:role, role)
        |> assign(:trigger_action, false)
        |> assign(:auth_error, nil)}
     end
@@ -191,51 +202,86 @@ defmodule TcmEduWeb.LoginLive do
     """
   end
 
-  defp tab_label("student"), do: "学员"
-  defp tab_label("teacher"), do: "教师"
-  defp tab_label("admin"), do: "管理"
+  defp role_label("student"), do: "学员"
+  defp role_label("teacher"), do: "教师"
+  defp role_label("tenant_admin"), do: "租户管理"
+  defp role_label(_), do: "学员"
 
-  defp tab_hint("student", _), do: "学员登录：选择所属机构后登录学习"
-  defp tab_hint("teacher", _), do: "教师登录：选择所属机构后备课授课"
-  defp tab_hint("admin", "super"), do: "超级管理员：跨租户运营"
-  defp tab_hint("admin", _), do: "租户管理员：选择所属机构后管理本机构用户"
+  defp role_hint("student"), do: "学员登录：先选机构，再登录学习"
+  defp role_hint("teacher"), do: "教师登录：先选机构，再备课授课"
+  defp role_hint("tenant_admin"), do: "租户管理：先选机构，再管理本机构用户"
+  defp role_hint(_), do: ""
+
+  defp submit_label("student"), do: "登录学习"
+  defp submit_label("teacher"), do: "进入教师端"
+  defp submit_label("tenant_admin"), do: "进入管理端"
+  defp submit_label(_), do: "登录"
+
+  defp mode_path("super", _role), do: "/login?mode=super"
+  defp mode_path(_mode, "student"), do: "/login"
+  defp mode_path(_mode, role), do: "/login?role=#{role}"
 
   defp tenant_options(tenants), do: Enum.map(tenants, &{&1.name, &1.schema_name})
 
-  defp form_assign("student"), do: :student_form
-  defp form_assign("teacher"), do: :teacher_form
-  defp form_assign(_), do: :admin_form
+  defp login_form("super", params), do: AdminAuth.login_form(params)
+  defp login_form(_mode, params), do: StudentAuth.login_form(params)
 
-  defp changeset_for("student", params), do: StudentAuth.login_changeset(params)
-  defp changeset_for("teacher", params), do: TeacherAuth.login_changeset(params)
-  defp changeset_for(_, params), do: AdminAuth.login_changeset(params)
-
-  defp submit_form(%{tab: tab, admin_sub: sub}, params) do
-    tab
-    |> changeset_for(params)
-    |> maybe_require_tenant(tab, sub)
+  defp submit_form("super", params) do
+    params
+    |> AdminAuth.login_changeset()
     |> Map.put(:action, :validate)
     |> to_form(as: "login")
   end
 
-  # 超管登录不需要选租户；其余都要，否则提交时给出明确提示而不是“没反应”。
-  defp maybe_require_tenant(changeset, "admin", "super"), do: changeset
+  defp submit_form(_mode, params) do
+    params
+    |> StudentAuth.login_changeset()
+    |> maybe_require_tenant()
+    |> Map.put(:action, :validate)
+    |> to_form(as: "login")
+  end
 
-  defp maybe_require_tenant(changeset, _tab, _sub) do
+  # 租户模式必须选机构，否则提交时给出明确提示而不是“没反应”。
+  defp maybe_require_tenant(changeset) do
     case empty_to_nil(get_field(changeset, :tenant)) do
       v when v in [nil, ""] -> add_error(changeset, :tenant, "请选择所属机构")
       _ -> changeset
     end
   end
 
-  defp verify_credentials("student", _sub, email, password, tenant),
-    do: StudentAuth.authenticate(email, password, tenant)
+  defp verify_credentials("super", _role, email, password, _tenant),
+    do: AdminAuth.authenticate(email, password, "super")
 
-  defp verify_credentials("teacher", _sub, email, password, tenant),
+  defp verify_credentials(_mode, "teacher", email, password, tenant),
     do: TeacherAuth.authenticate(email, password, tenant)
 
-  defp verify_credentials("admin", sub, email, password, tenant),
-    do: AdminAuth.authenticate(email, password, sub, tenant)
+  defp verify_credentials(_mode, "tenant_admin", email, password, tenant),
+    do: AdminAuth.authenticate(email, password, "tenant", tenant)
+
+  defp verify_credentials(_mode, _role, email, password, tenant),
+    do: StudentAuth.authenticate(email, password, tenant)
+
+  # 新参数 ?mode= / ?role= 优先；旧 ?tab= / ?admin= 映射兼容。
+  defp resolve_mode_role(params, default \\ {"tenant", "student"})
+  defp resolve_mode_role(%{"mode" => "super"}, _default), do: {"super", nil}
+
+  defp resolve_mode_role(%{"mode" => "tenant"} = params, _default),
+    do: {"tenant", role_from(params, "student")}
+
+  defp resolve_mode_role(%{"role" => role}, _default) when role in @roles,
+    do: {"tenant", role}
+
+  defp resolve_mode_role(%{"tab" => "teacher"}, _default), do: {"tenant", "teacher"}
+  defp resolve_mode_role(%{"tab" => "student"}, _default), do: {"tenant", "student"}
+
+  defp resolve_mode_role(%{"tab" => "admin", "admin" => "tenant"}, _default),
+    do: {"tenant", "tenant_admin"}
+
+  defp resolve_mode_role(%{"tab" => "admin"}, _default), do: {"super", nil}
+  defp resolve_mode_role(_params, default), do: default
+
+  defp role_from(%{"role" => role}, _default) when role in @roles, do: role
+  defp role_from(_params, default), do: default
 
   defp list_tenants do
     case Ash.read(Organization, authorize?: false) do

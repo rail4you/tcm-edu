@@ -103,13 +103,15 @@ defmodule TcmEduWeb.StudentPortalTest do
   end
 
   describe "unified login" do
-    test "single entrance lists all three roles, no registration", %{conn: conn} do
+    test "single entrance lists tenant login with all three roles, no registration", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/login")
 
       assert html =~ "统一登录"
       assert html =~ "学员"
       assert html =~ "教师"
-      assert html =~ "管理"
+      assert html =~ "租户管理"
+      assert html =~ "所属机构"
+      assert html =~ "超级管理员登录"
       assert html =~ "login-form"
       # Field names must nest under login[...] so the submit handler sees them.
       assert html =~ ~s(name="login[email]")
@@ -118,18 +120,25 @@ defmodule TcmEduWeb.StudentPortalTest do
       refute html =~ "password_confirmation"
     end
 
-    test "tab deep-link selects the teacher form", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/login?tab=teacher")
+    test "role deep-link selects the teacher form", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/login?role=teacher")
 
       assert html =~ "进入教师端"
     end
 
-    test "tab deep-link selects the admin form", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/login?tab=admin")
+    test "super-admin entry has no tenant selector", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/login?mode=super")
+
+      assert html =~ "超级管理员登录"
+      refute html =~ "所属机构"
+    end
+
+    test "tenant-admin role shows the admin entry", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/login?role=tenant_admin")
 
       assert html =~ "进入管理端"
-      assert html =~ "超级管理员"
-      assert html =~ "租户管理员"
+      assert html =~ "租户管理"
+      assert html =~ "所属机构"
     end
 
     test "invalid input shows errors", %{conn: conn} do
@@ -236,7 +245,7 @@ defmodule TcmEduWeb.StudentPortalTest do
           "login" => %{"tab" => "student", "email" => "nobody@example.com", "password" => "wrong"}
         })
 
-      assert redirected_to(conn) == "/login?tab=student"
+      assert redirected_to(conn) == "/login"
     end
 
     test "logout returns home as visitor", %{conn: conn, student: student} do
