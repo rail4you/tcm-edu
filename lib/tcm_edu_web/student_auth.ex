@@ -66,11 +66,17 @@ defmodule TcmEduWeb.StudentAuth do
     end
   end
 
-  @doc "Verifies student credentials across tenants."
-  def authenticate(email, password) when is_binary(email) and is_binary(password) do
-    email = String.trim(email)
+  @doc """
+  Verifies student credentials. When `tenant` (a schema name) is given,
+  only that tenant is checked; otherwise all tenants are scanned.
+  """
+  def authenticate(email, password, tenant \\ nil)
 
-    Enum.find_value(tenant_schemas(), {:error, :invalid_credentials}, fn schema ->
+  def authenticate(email, password, tenant) when is_binary(email) and is_binary(password) do
+    email = String.trim(email)
+    schemas = if tenant_present?(tenant), do: [tenant], else: tenant_schemas()
+
+    Enum.find_value(schemas, {:error, :invalid_credentials}, fn schema ->
       with {:ok, [user]} <-
              User
              |> Ash.Query.filter(email == ^email)
@@ -85,7 +91,7 @@ defmodule TcmEduWeb.StudentAuth do
     end)
   end
 
-  def authenticate(_email, _password), do: {:error, :invalid_credentials}
+  def authenticate(_, _, _), do: {:error, :invalid_credentials}
 
   @doc "Login form (live validation)."
   def login_form(params \\ %{}) do
@@ -93,7 +99,7 @@ defmodule TcmEduWeb.StudentAuth do
   end
 
   def login_changeset(params \\ %{}) do
-    types = %{email: :string, password: :string}
+    types = %{email: :string, password: :string, tenant: :string}
 
     {%{}, types}
     |> Ecto.Changeset.cast(params, Map.keys(types))
@@ -103,6 +109,12 @@ defmodule TcmEduWeb.StudentAuth do
   end
 
   # ── private ───────────────────────────────────────────────────────
+
+  defp tenant_present?(tenant) when is_binary(tenant) do
+    tenant |> String.trim() |> byte_size() |> Kernel.>(0)
+  end
+
+  defp tenant_present?(_), do: false
 
   defp tenant_schemas do
     case Ash.read(Organization, authorize?: false) do

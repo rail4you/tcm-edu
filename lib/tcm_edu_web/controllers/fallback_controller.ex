@@ -3,8 +3,8 @@ defmodule TcmEduWeb.FallbackController do
   Serves the course dashboard static page from
   `priv/static/course/index.html`.
 
-  The legacy Next.js SPA (`priv/app/`, `/app/*`, and the `/posts`,
-  `/courses`, … fallbacks) was fully replaced by LiveView pages in
+  The legacy Next.js SPA (`priv/app/`, `/app/*`, and the `/courses`,
+  … fallbacks) was fully replaced by LiveView pages in
   Phase 3 — this controller now only keeps the standalone static course
   page.
   """

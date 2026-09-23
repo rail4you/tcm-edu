@@ -122,7 +122,11 @@ defmodule TcmEdu.MixProject do
       {:ash_storage, github: "ash-project/ash_storage"},
       # Dev tooling: AGENTS.md / skill management from deps
       {:usage_rules, "~> 1.1", only: [:dev]},
-      {:igniter, "~> 0.6", only: [:dev]}
+      {:igniter, "~> 0.6", only: [:dev]},
+      # Tidewave MCP server for Phoenix (dev tooling: DB/EVAL/docs MCP tools).
+      # NOTE: must NOT carry `only: [:dev]` or it propagates an `:only` restriction
+      # onto `plug` that conflicts with ash_json_api's unrestricted plug dep.
+      {:tidewave, "~> 0.9"}
     ] ++ elixir_make_override()
   end
 

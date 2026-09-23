@@ -5,6 +5,7 @@
 //    variants; the drawer-toggle checkbox is purely a CSS switch.
 //  * ThemeController — persists the daisyUI theme choice and restores it
 //    after every LiveView patch / navigation.
+//  * PasswordToggle — login password visibility switch (eye / eye-off).
 
 const SidebarCollapse = {
   mounted() {
@@ -57,4 +58,23 @@ const ThemeController = {
   },
 };
 
-export { SidebarCollapse, ThemeController };
+const PasswordToggle = {
+  mounted() {
+    const root = this.el;
+    const input = root.querySelector("input");
+    const btn = root.querySelector("[data-pw-toggle]");
+    const eye = root.querySelector("[data-eye]");
+    const eyeOff = root.querySelector("[data-eye-off]");
+    if (!input || !btn) return;
+    btn.addEventListener("click", () => {
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      btn.setAttribute("aria-label", show ? "隐藏密码" : "显示密码");
+      if (eye) eye.classList.toggle("hidden", show);
+      if (eyeOff) eyeOff.classList.toggle("hidden", !show);
+      input.focus();
+    });
+  },
+};
+
+export { SidebarCollapse, ThemeController, PasswordToggle };

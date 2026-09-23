@@ -231,15 +231,7 @@ defmodule TcmEduWeb.StudentSimulatedPatientLive do
       <div class="card-body gap-3 p-4 sm:p-6">
         <div class="flex items-center justify-between gap-2">
           <p class="font-medium">教师布置的任务</p>
-          <div class="flex items-center gap-2">
-            <.link
-              navigate="/simulated-patient/report"
-              class="btn btn-soft btn-sm"
-            >
-              <.icon name="hero-chart-bar" class="size-4" /> 临床思维报告
-            </.link>
-            <span class="badge badge-soft badge-sm">{length(@assignments)} 条</span>
-          </div>
+          <span class="badge badge-soft badge-sm">{length(@assignments)} 条</span>
         </div>
 
         <p :if={@assignments == []} class="py-6 text-center text-sm text-base-content/60">

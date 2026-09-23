@@ -86,29 +86,29 @@ defmodule TcmEduWeb.AdminComponents do
 
       <div class="drawer-side z-40">
         <label for="admin-drawer" aria-label="关闭菜单" class="drawer-overlay"></label>
-        <aside class="flex min-h-full w-60 flex-col bg-base-100 transition-all duration-200 lg:is-drawer-open:w-64 lg:is-drawer-close:w-16">
-          <div class="flex h-16 shrink-0 items-center gap-2 border-b border-base-300 px-4 lg:is-drawer-close:justify-center lg:is-drawer-close:px-2">
+        <aside class="flex min-h-full w-60 flex-col bg-neutral text-neutral-content transition-all duration-200 lg:is-drawer-open:w-64 lg:is-drawer-close:w-16">
+          <div class="flex h-16 shrink-0 items-center gap-2 border-b border-white/10 px-4 lg:is-drawer-close:justify-center lg:is-drawer-close:px-2">
             <img
               src="/images/logo-mark.png"
               alt="杏宁树"
               class="size-8 shrink-0 rounded-full object-cover"
             />
             <div class="min-w-0 lg:is-drawer-close:hidden">
-              <p class="text-sm font-semibold leading-tight">杏宁树 · 中医教学</p>
-              <p class="text-xs text-base-content/60">管理端</p>
+              <p class="text-sm font-semibold leading-tight text-white">杏宁树 · 中医教学</p>
+              <p class="text-xs text-neutral-content/60">管理端</p>
             </div>
           </div>
           <.sidebar_menu current_admin={@current_admin} current_page={@current_page} />
-          <div class="mt-auto border-t border-base-300 p-4 lg:is-drawer-close:flex lg:is-drawer-close:justify-center lg:is-drawer-close:p-2">
+          <div class="mt-auto border-t border-white/10 p-4 lg:is-drawer-close:flex lg:is-drawer-close:justify-center lg:is-drawer-close:p-2">
             <div class="flex items-center gap-2">
               <span class="avatar avatar-placeholder shrink-0">
-                <span class="flex size-10 items-center justify-center rounded-full bg-neutral text-sm text-neutral-content">
+                <span class="flex size-10 items-center justify-center rounded-full bg-primary text-sm text-primary-content">
                   {admin_initial(@current_admin)}
                 </span>
               </span>
               <div class="min-w-0 lg:is-drawer-close:hidden">
-                <p class="truncate text-sm">{@current_admin.name}</p>
-                <p class="text-xs text-base-content/60">{role_label(@current_admin.role)}</p>
+                <p class="truncate text-sm text-white">{@current_admin.name}</p>
+                <p class="text-xs text-neutral-content/60">{role_label(@current_admin.role)}</p>
               </div>
             </div>
           </div>

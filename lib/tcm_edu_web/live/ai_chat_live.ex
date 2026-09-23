@@ -202,193 +202,238 @@ defmodule TcmEduWeb.AiChatLive do
 
   defp chat_body(assigns) do
     ~H"""
-    <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 md:flex-row">
-      <%!-- 会话侧栏：带轮廓的卡片 + 标准 menu 结构 --%>
-      <aside class="w-full shrink-0 md:w-64" aria-label="会话列表">
-        <div class="flex flex-col gap-2 rounded-box border border-base-300 bg-base-100 p-2">
-          <button
-            type="button"
-            id="new-session"
-            phx-click="new-session"
-            class="btn btn-primary btn-sm w-full"
-          >
-            <.icon name="hero-plus" class="size-4" /> 新建会话
-          </button>
-          <ul class="menu w-full gap-1">
-            <li class="menu-title flex items-center justify-between">
-              <span>会话列表</span>
-              <span class="badge badge-soft badge-xs">{length(@sessions)}</span>
-            </li>
-            <li :for={session <- @sessions} class="group relative">
-              <button
-                type="button"
-                id={"session-#{session.id}"}
-                phx-click="select-session"
-                phx-value-id={session.id}
-                class={[
-                  "w-full pe-8",
-                  session.id == (@chat_session && @chat_session.id) && "bg-primary/10"
-                ]}
-              >
-                <span class="flex w-full min-w-0 flex-col items-start gap-0.5">
-                  <span class={[
-                    "w-full truncate text-left text-sm",
-                    session.id == (@chat_session && @chat_session.id) && "font-medium text-primary"
-                  ]}>
-                    {session.title}
-                  </span>
-                  <span class="text-xs text-base-content/60">{format_date(session.updated_at)}</span>
-                </span>
-              </button>
-              <button
-                type="button"
-                id={"delete-session-#{session.id}"}
-                phx-click="delete-session"
-                phx-value-id={session.id}
-                data-confirm="确定删除这个会话及其聊天记录吗？"
-                class="btn btn-ghost btn-xs absolute end-1 top-1/2 z-10 -translate-y-1/2 text-error hover:bg-error/10 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
-                aria-label={"删除会话 #{session.title}"}
-              >
-                <.icon name="hero-trash" class="size-4" />
-              </button>
-            </li>
-          </ul>
-          <p :if={@sessions == []} class="px-2 py-6 text-center text-sm text-base-content/60">
-            还没有会话，点“新建会话”开始
-          </p>
-        </div>
-      </aside>
+    <%!-- 顶部 hero：与 AI 诊疗 / MDT 共用节奏 --%>
+    <div class="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
+      <.ai_chat_hero
+        sessions_count={length(@sessions)}
+        answering={@answering}
+        messages_count={length(@messages)}
+        current_title={(@chat_session && @chat_session.title) || "新的问答"}
+      />
 
-      <%!-- 主对话区：带轮廓的卡片，工具条 / 消息 / 输入分区展示 --%>
-      <div class="flex min-h-80 min-w-0 flex-1 flex-col rounded-box border border-base-300 bg-base-100">
-        <p class="px-4 pt-4 text-lg font-semibold md:hidden">AI 问答</p>
-
-        <div class="flex flex-wrap items-center gap-2 border-b border-base-300 px-4 py-2">
-          <span class="badge badge-soft badge-sm">qwen-flash</span>
-          <span class="text-sm text-base-content/60">多轮对话 · 按会话保存历史</span>
-          <span :if={@answering} class="badge badge-soft badge-info badge-sm gap-1">
-            <span class="loading loading-dots loading-xs" /> 思考中
-          </span>
-          <span :if={!@answering} class="badge badge-ghost badge-sm ms-auto">
-            {length(@messages)} 条消息
-          </span>
-        </div>
-
-        <div id="qa-messages" class="flex flex-1 flex-col gap-4 p-4" aria-live="polite">
-          <div
-            :if={@messages == [] and !@answering}
-            class="flex flex-col items-center gap-4 rounded-box bg-base-200/10 px-6 py-10 text-center"
-          >
-            <span class="flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <.icon name="hero-chat-bubble-left-right" class="size-8" />
-            </span>
-            <div class="flex flex-col gap-1">
-              <p class="text-base font-semibold">开始新的问答</p>
-              <p class="text-sm text-base-content/60">比如试试下面这些中医学习问题：</p>
-            </div>
-            <div class="flex flex-wrap items-center justify-center gap-2">
-              <button
-                :for={question <- @suggestions}
-                type="button"
-                phx-click="use-suggestion"
-                phx-value-content={question}
-                class="btn btn-soft btn-sm"
-              >
-                {question}
-              </button>
-            </div>
-          </div>
-
-          <div
-            :for={message <- @messages}
-            class={["flex items-start gap-2", message.role == "user" && "flex-row-reverse"]}
-          >
-            <div
-              :if={message.role == "user"}
-              class="flex size-8 shrink-0 items-center justify-center rounded-full bg-neutral text-sm text-neutral-content"
+      <div class="flex flex-col gap-4 md:h-[calc(100dvh-240px)] md:min-h-[36rem] md:flex-row">
+        <%!-- 会话侧栏 --%>
+        <aside class="w-full shrink-0 md:w-64" aria-label="会话列表">
+          <div class="flex h-full flex-col gap-2 rounded-box border border-base-300 bg-base-100 p-2">
+            <button
+              type="button"
+              id="new-session"
+              phx-click="new-session"
+              class="btn btn-primary btn-sm w-full"
             >
-              {sender_initial(@identity)}
-            </div>
-            <div
-              :if={message.role != "user"}
-              class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
-            >
-              <.icon name="hero-sparkles" class="size-4" />
-            </div>
-            <div class={[
-              "flex min-w-0 flex-col gap-1 md:max-w-xl",
-              message.role == "user" && "items-end"
-            ]}>
-              <div class={[
-                "w-fit max-w-full rounded-2xl px-4 py-2",
-                message.role == "user" && "bg-primary text-primary-content",
-                message.role != "user" && "bg-base-200"
-              ]}>
-                <p class="whitespace-pre-line text-sm">{message.content}</p>
-              </div>
-              <div :if={message.role != "user" and message.references not in [nil, []]}
-                class="flex flex-wrap items-center gap-1"
-              >
-                <span class="text-xs text-base-content/60">依据</span>
-                <span
-                  :for={ref <- message.references}
-                  class="badge badge-soft badge-info badge-sm"
+              <.icon name="hero-plus" class="size-4" /> 新建会话
+            </button>
+            <ul class="menu w-full gap-1 overflow-y-auto">
+              <li class="menu-title flex items-center justify-between">
+                <span>会话列表</span>
+                <span class="badge badge-soft badge-xs">{length(@sessions)}</span>
+              </li>
+              <li :for={session <- @sessions} class="group relative">
+                <button
+                  type="button"
+                  id={"session-#{session.id}"}
+                  phx-click="select-session"
+                  phx-value-id={session.id}
+                  class={[
+                    "w-full pe-8",
+                    session.id == (@chat_session && @chat_session.id) && "bg-primary/10"
+                  ]}
                 >
-                  <span class="truncate max-w-40">{ref.section || ref.title}</span>
-                </span>
-              </div>
-              <p class="text-xs text-base-content/60">
-                {if message.role == "user", do: "你", else: "AI 助手"}
-                <span :if={message.time != ""}> · {message.time}</span>
-              </p>
-            </div>
+                  <span class="flex w-full min-w-0 flex-col items-start gap-0.5">
+                    <span class={[
+                      "w-full truncate text-left text-sm",
+                      session.id == (@chat_session && @chat_session.id) && "font-medium text-primary"
+                    ]}>
+                      {session.title}
+                    </span>
+                    <span class="text-xs text-base-content/60">{format_date(session.updated_at)}</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  id={"delete-session-#{session.id}"}
+                  phx-click="delete-session"
+                  phx-value-id={session.id}
+                  data-confirm="确定删除这个会话及其聊天记录吗？"
+                  class="btn btn-ghost btn-xs absolute end-1 top-1/2 z-10 -translate-y-1/2 text-error hover:bg-error/10 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                  aria-label={"删除会话 #{session.title}"}
+                >
+                  <.icon name="hero-trash" class="size-4" />
+                </button>
+              </li>
+            </ul>
+            <p :if={@sessions == []} class="px-2 py-6 text-center text-sm text-base-content/60">
+              还没有会话，点“新建会话”开始
+            </p>
+          </div>
+        </aside>
+
+        <%!-- 主对话区 --%>
+        <div class="flex min-h-80 min-w-0 flex-1 flex-col overflow-hidden rounded-box border border-base-300 bg-base-100">
+          <div class="flex flex-wrap items-center gap-2 border-b border-base-300 px-4 py-2">
+            <span class="badge badge-soft badge-sm">qwen-flash</span>
+            <span class="text-sm text-base-content/60">多轮对话 · 按会话保存历史</span>
+            <span :if={@answering} class="badge badge-soft badge-info badge-sm gap-1">
+              <span class="loading loading-dots loading-xs" /> 思考中
+            </span>
+            <span :if={!@answering} class="badge badge-ghost badge-sm ms-auto">
+              {length(@messages)} 条消息
+            </span>
           </div>
 
-          <div :if={@answering} class="flex gap-2">
-            <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <.icon name="hero-sparkles" class="size-4" />
-            </div>
-            <div class="flex flex-col gap-2 pt-1">
-              <div class="skeleton h-4 w-48"></div>
-              <div class="skeleton h-4 w-32"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="sticky bottom-0 rounded-b-box border-t border-base-300 bg-base-100 px-4 py-2">
-          <.form
-            for={@form}
-            id="qa-form"
-            phx-change="validate"
-            phx-submit="send"
-            class="flex items-end gap-2"
-          >
-            <div class="min-w-0 flex-1">
-              <.input
-                field={@form[:content]}
-                type="text"
-                label="问 AI 一个问题"
-                placeholder="比如：什么是阴阳五行？"
-                autocomplete="off"
-                maxlength="2000"
-              />
-            </div>
-            <.button
-              type="submit"
-              id="qa-send"
-              aria-label="发送"
-              class="btn-circle btn-primary shrink-0"
-              disabled={@answering or is_nil(@chat_session)}
+          <div id="qa-messages" class="flex flex-1 flex-col gap-4 overflow-y-auto p-4" aria-live="polite">
+            <div
+              :if={@messages == [] and !@answering}
+              class="flex flex-col items-center gap-4 rounded-box bg-base-200/10 px-6 py-10 text-center"
             >
-              <span :if={!@answering} class="flex items-center justify-center">
-                <.icon name="hero-paper-airplane" class="size-5" />
-                <span class="sr-only">发送</span>
+              <span class="flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <.icon name="hero-chat-bubble-left-right" class="size-8" />
               </span>
-              <span :if={@answering} class="loading loading-spinner loading-sm" aria-hidden="true" />
-            </.button>
-          </.form>
+              <div class="flex flex-col gap-1">
+                <p class="text-base font-semibold">开始新的问答</p>
+                <p class="text-sm text-base-content/60">比如试试下面这些中医学习问题：</p>
+              </div>
+              <div class="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  :for={question <- @suggestions}
+                  type="button"
+                  phx-click="use-suggestion"
+                  phx-value-content={question}
+                  class="btn btn-soft btn-sm"
+                >
+                  {question}
+                </button>
+              </div>
+            </div>
+
+            <div
+              :for={message <- @messages}
+              class={["flex items-start gap-2", message.role == "user" && "flex-row-reverse"]}
+            >
+              <div
+                :if={message.role == "user"}
+                class="flex size-8 shrink-0 items-center justify-center rounded-full bg-neutral text-sm text-neutral-content"
+              >
+                {sender_initial(@identity)}
+              </div>
+              <div
+                :if={message.role != "user"}
+                class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+              >
+                <.icon name="hero-sparkles" class="size-4" />
+              </div>
+              <div class={[
+                "flex min-w-0 flex-col gap-1 md:max-w-xl",
+                message.role == "user" && "items-end"
+              ]}>
+                <div class={[
+                  "w-fit max-w-full rounded-2xl px-4 py-2",
+                  message.role == "user" && "bg-primary text-primary-content",
+                  message.role != "user" && "bg-base-200"
+                ]}>
+                  <p class="whitespace-pre-line text-sm">{message.content}</p>
+                </div>
+                <div :if={message.role != "user" and message.references not in [nil, []]}
+                  class="flex flex-wrap items-center gap-1"
+                >
+                  <span class="text-xs text-base-content/60">依据</span>
+                  <span
+                    :for={ref <- message.references}
+                    class="badge badge-soft badge-info badge-sm"
+                  >
+                    <span class="truncate max-w-40">{ref.section || ref.title}</span>
+                  </span>
+                </div>
+                <p class="text-xs text-base-content/60">
+                  {if message.role == "user", do: "你", else: "AI 助手"}
+                  <span :if={message.time != ""}> · {message.time}</span>
+                </p>
+              </div>
+            </div>
+
+            <div :if={@answering} class="flex gap-2">
+              <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <.icon name="hero-sparkles" class="size-4" />
+              </div>
+              <div class="flex flex-col gap-2 pt-1">
+                <div class="skeleton h-4 w-48"></div>
+                <div class="skeleton h-4 w-32"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-base-300 bg-base-100 px-4 py-2">
+            <.form
+              for={@form}
+              id="qa-form"
+              phx-change="validate"
+              phx-submit="send"
+              class="flex items-end gap-2"
+            >
+              <div class="min-w-0 flex-1">
+                <.input
+                  field={@form[:content]}
+                  type="text"
+                  label="问 AI 一个问题"
+                  placeholder="比如：什么是阴阳五行？"
+                  autocomplete="off"
+                  maxlength="2000"
+                />
+              </div>
+              <.button
+                type="submit"
+                id="qa-send"
+                aria-label="发送"
+                class="btn-circle btn-primary shrink-0"
+                disabled={@answering or is_nil(@chat_session)}
+              >
+                <span :if={!@answering} class="flex items-center justify-center">
+                  <.icon name="hero-paper-airplane" class="size-5" />
+                  <span class="sr-only">发送</span>
+                </span>
+                <span :if={@answering} class="loading loading-spinner loading-sm" aria-hidden="true" />
+              </.button>
+            </.form>
+          </div>
         </div>
       </div>
+    </div>
+    """
+  end
+
+  attr :sessions_count, :integer, required: true
+  attr :answering, :boolean, required: true
+  attr :messages_count, :integer, required: true
+  attr :current_title, :string, required: true
+
+  defp ai_chat_hero(assigns) do
+    ~H"""
+    <div class="rounded-box border border-base-300 bg-base-100 p-4 sm:p-6">
+      <div class="flex flex-wrap items-start gap-4">
+        <span class="flex size-12 shrink-0 items-center justify-center rounded-box bg-primary/10 text-primary">
+          <.icon name="hero-chat-bubble-left-right" class="size-6" />
+        </span>
+        <div class="min-w-0 flex-1">
+          <h1 class="text-lg font-semibold">AI 问答助手</h1>
+          <p class="mt-1 text-sm text-base-content/60">
+            基于通义千问的多轮对话，按会话保存历史，方便日后回看
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="badge badge-soft">
+            {@sessions_count} 个会话
+          </span>
+          <span :if={@answering} class="badge badge-soft badge-info gap-1">
+            <span class="loading loading-dots loading-xs" /> 思考中
+          </span>
+          <span :if={!@answering} class="badge badge-soft badge-ghost">
+            {@messages_count} 条消息
+          </span>
+        </div>
+      </div>
+      <p class="mt-3 truncate text-xs text-base-content/60">
+        当前会话：<span class="font-medium text-base-content/80">{@current_title}</span>
+      </p>
     </div>
     """
   end

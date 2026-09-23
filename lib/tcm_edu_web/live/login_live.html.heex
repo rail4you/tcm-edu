@@ -1,104 +1,256 @@
-  <Layouts.app flash={@flash} shell={:admin}>
-    <div class="flex min-h-screen items-center justify-center bg-base-200/10 p-4 sm:p-8">
-      <div class="card w-full max-w-md bg-base-100 shadow-sm">
-        <div class="card-body gap-2.5 p-6 sm:p-8">
-          <div class="flex items-center gap-2">
-            <span class="flex size-10 items-center justify-center rounded-full bg-primary text-primary-content">
-              <.icon name="hero-academic-cap" class="size-5" />
-            </span>
-            <div>
-              <p class="text-xl font-semibold">中医教学</p>
-              <p class="text-xs text-base-content/60">统一登录 · 选择你的身份</p>
-            </div>
-          </div>
-
-          <div role="tablist" class="tabs tabs-boxed mt-2" aria-label="选择身份">
-            <button
-              :for={tab <- @tabs}
-              role="tab"
-              class={["tab", @tab == tab && "tab-active"]}
-              phx-click="switch-tab"
-              phx-value-tab={tab}
-            >
-              {tab_label(tab)}
-            </button>
-          </div>
-
-          <p class="text-xs text-base-content/60">{tab_hint(@tab, @admin_sub)}</p>
-
-          <div :if={@tab == "admin"} class="join w-full" role="group" aria-label="管理员类型">
-            <button
-              :for={sub <- ["super", "tenant"]}
-              class={["btn join-item btn-sm flex-1", @admin_sub == sub && "btn-active"]}
-              phx-click="switch-admin-sub"
-              phx-value-sub={sub}
-            >
-              {if sub == "super", do: "超级管理员", else: "租户管理员"}
-            </button>
-          </div>
-
-          <.form
-            :if={@tab == "student"}
-            for={@student_form}
-            id="login-form"
-            action="/session"
-            method="post"
-            phx-change="validate"
-            phx-submit="submit"
-            phx-trigger-action={@trigger_action}
-            class="flex flex-col gap-2.5"
-          >
-            <input type="hidden" name="login[tab]" value="student" />
-            <.input field={@student_form[:email]} type="email" label="邮箱" placeholder="you@example.com" autocomplete="email" required />
-            <.input field={@student_form[:password]} type="password" label="密码" placeholder="请输入密码" autocomplete="current-password" required />
-            <.button type="submit" phx-disable-with="登录中..." class="btn-primary mt-2 w-full">
-              登录学习
-            </.button>
-          </.form>
-
-          <.form
-            :if={@tab == "teacher"}
-            for={@teacher_form}
-            id="login-form"
-            action="/session"
-            method="post"
-            phx-change="validate"
-            phx-submit="submit"
-            phx-trigger-action={@trigger_action}
-            class="flex flex-col gap-2.5"
-          >
-            <input type="hidden" name="login[tab]" value="teacher" />
-            <.input field={@teacher_form[:email]} type="email" label="邮箱" placeholder="teacher@example.com" autocomplete="email" required />
-            <.input field={@teacher_form[:password]} type="password" label="密码" placeholder="请输入密码" autocomplete="current-password" required />
-            <.button type="submit" phx-disable-with="登录中..." class="btn-primary mt-2 w-full">
-              进入教师端
-            </.button>
-          </.form>
-
-          <.form
-            :if={@tab == "admin"}
-            for={@admin_form}
-            id="login-form"
-            action="/session"
-            method="post"
-            phx-change="validate"
-            phx-submit="submit"
-            phx-trigger-action={@trigger_action}
-            class="flex flex-col gap-2.5"
-          >
-            <input type="hidden" name="login[tab]" value="admin" />
-            <input type="hidden" name="login[sub]" value={@admin_sub} />
-            <.input field={@admin_form[:email]} type="email" label="邮箱" placeholder="admin@example.com" autocomplete="email" required />
-            <.input field={@admin_form[:password]} type="password" label="密码" placeholder="请输入密码" autocomplete="current-password" required />
-            <.button type="submit" phx-disable-with="登录中..." class="btn-primary mt-2 w-full">
-              进入管理端
-            </.button>
-          </.form>
-
-          <p class="text-center text-xs text-base-content/60">
-            没有账号？请联系机构管理员分配。
-          </p>
-        </div>
-      </div>
+<Layouts.app flash={@flash} shell={:storefront}>
+  <div
+    data-theme="light"
+    class="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-[#0ea5a6] via-[#0bb07a] to-[#00b86b]"
+  >
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+      <div class="absolute -left-24 top-1/4 size-96 rounded-full bg-white/10 blur-2xl"></div>
+      <div class="absolute -right-24 bottom-0 size-[28rem] rounded-full bg-white/10 blur-2xl"></div>
+      <div class="absolute left-1/3 top-10 hidden size-40 rounded-full border-[24px] border-white/10 lg:block"></div>
     </div>
-  </Layouts.app>
+
+    <header class="relative z-10">
+      <div class="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
+        <div class="flex items-center gap-2.5">
+          <img
+            src="/images/logo-mark.png"
+            alt="杏宁树"
+            class="size-10 rounded-full bg-white/20 object-cover"
+          />
+          <div class="leading-tight text-white">
+            <p class="font-semibold">杏宁树 · 中医教学</p>
+            <p class="text-xs text-white/70">系统学中医，从这里开始</p>
+          </div>
+        </div>
+        <.link
+          navigate="/"
+          class="flex items-center gap-1.5 rounded-full bg-white px-5 py-2 text-sm font-medium text-[#009a63] shadow-sm transition hover:brightness-95"
+        >
+          <.icon name="hero-home" class="size-4" /> 返回首页
+        </.link>
+      </div>
+    </header>
+
+    <main class="relative z-10 mx-auto grid w-full max-w-5xl flex-1 items-center gap-10 px-4 pb-16 sm:px-6 lg:grid-cols-2">
+      <div class="text-center text-white lg:text-left">
+        <p class="text-xs font-medium tracking-[0.3em] text-white/70">杏宁树 · 中医教育数字化</p>
+        <h1 class="mt-4 text-4xl font-black leading-tight md:text-5xl">
+          系统学中医，<br />从这里开始
+        </h1>
+        <p class="mx-auto mt-4 max-w-md text-sm text-white/80 lg:mx-0">
+          选课学习、进度同步、AI 伴学，不同身份选择对应入口登录。
+        </p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+        <div class="flex items-center gap-2">
+          <span class="flex size-10 items-center justify-center rounded-full bg-[#00b86b] text-white">
+            <.icon name="hero-academic-cap" class="size-5" />
+          </span>
+          <div>
+            <p class="text-xl font-semibold">统一登录</p>
+            <p class="text-xs text-base-content/60">选择你的身份</p>
+          </div>
+        </div>
+
+        <div role="tablist" class="tabs tabs-boxed mt-4" aria-label="选择身份">
+          <button
+            :for={tab <- @tabs}
+            role="tab"
+            class={["tab", @tab == tab && "tab-active"]}
+            phx-click="switch-tab"
+            phx-value-tab={tab}
+          >
+            {tab_label(tab)}
+          </button>
+        </div>
+
+        <p class="mt-2 text-xs text-base-content/60">{tab_hint(@tab, @admin_sub)}</p>
+
+        <div :if={@auth_error} class="alert alert-soft alert-error mt-1" role="alert">
+          <.icon name="hero-exclamation-circle" class="size-5 shrink-0" />
+          <p class="text-sm">{@auth_error}</p>
+        </div>
+
+        <div :if={@tab == "admin"} class="join mt-2 w-full" role="group" aria-label="管理员类型">
+          <button
+            :for={sub <- ["super", "tenant"]}
+            class={["btn join-item btn-sm flex-1", @admin_sub == sub && "btn-active"]}
+            phx-click="switch-admin-sub"
+            phx-value-sub={sub}
+          >
+            {if sub == "super", do: "超级管理员", else: "租户管理员"}
+          </button>
+        </div>
+
+        <.form
+          :if={@tab == "student"}
+          for={@student_form}
+          id="login-form"
+          action="/session"
+          method="post"
+          phx-change="validate"
+          phx-submit="submit"
+          phx-trigger-action={@trigger_action}
+          class="mt-2 flex flex-col gap-2.5"
+        >
+          <input type="hidden" name="login[tab]" value="student" />
+          <.login_field
+            form={@student_form}
+            field={:tenant}
+            id="tenant-student"
+            label="所属机构"
+            type="select"
+            icon="hero-building-office-2"
+            options={tenant_options(@tenants)}
+            prompt="请选择机构"
+            required
+          />
+          <.login_field
+            form={@student_form}
+            field={:email}
+            id="email-student"
+            label="邮箱"
+            type="email"
+            icon="hero-user"
+            placeholder="you@example.com"
+            autocomplete="email"
+            required
+          />
+          <.login_field
+            form={@student_form}
+            field={:password}
+            id="pw-student"
+            label="密码"
+            type="password"
+            icon="hero-lock-closed"
+            placeholder="请输入密码"
+            autocomplete="current-password"
+            required
+          />
+          <button
+            type="submit"
+            phx-disable-with="登录中..."
+            class="btn mt-2 w-full border-none bg-[#00b86b] text-base text-white hover:bg-[#00a862]"
+          >
+            登录学习
+          </button>
+        </.form>
+
+        <.form
+          :if={@tab == "teacher"}
+          for={@teacher_form}
+          id="login-form"
+          action="/session"
+          method="post"
+          phx-change="validate"
+          phx-submit="submit"
+          phx-trigger-action={@trigger_action}
+          class="mt-2 flex flex-col gap-2.5"
+        >
+          <input type="hidden" name="login[tab]" value="teacher" />
+          <.login_field
+            form={@teacher_form}
+            field={:tenant}
+            id="tenant-teacher"
+            label="所属机构"
+            type="select"
+            icon="hero-building-office-2"
+            options={tenant_options(@tenants)}
+            prompt="请选择机构"
+            required
+          />
+          <.login_field
+            form={@teacher_form}
+            field={:email}
+            id="email-teacher"
+            label="邮箱"
+            type="email"
+            icon="hero-user"
+            placeholder="teacher@example.com"
+            autocomplete="email"
+            required
+          />
+          <.login_field
+            form={@teacher_form}
+            field={:password}
+            id="pw-teacher"
+            label="密码"
+            type="password"
+            icon="hero-lock-closed"
+            placeholder="请输入密码"
+            autocomplete="current-password"
+            required
+          />
+          <button
+            type="submit"
+            phx-disable-with="登录中..."
+            class="btn mt-2 w-full border-none bg-[#00b86b] text-base text-white hover:bg-[#00a862]"
+          >
+            进入教师端
+          </button>
+        </.form>
+
+        <.form
+          :if={@tab == "admin"}
+          for={@admin_form}
+          id="login-form"
+          action="/session"
+          method="post"
+          phx-change="validate"
+          phx-submit="submit"
+          phx-trigger-action={@trigger_action}
+          class="mt-2 flex flex-col gap-2.5"
+        >
+          <input type="hidden" name="login[tab]" value="admin" />
+          <input type="hidden" name="login[sub]" value={@admin_sub} />
+          <.login_field
+            :if={@admin_sub == "tenant"}
+            form={@admin_form}
+            field={:tenant}
+            id="tenant-admin"
+            label="所属机构"
+            type="select"
+            icon="hero-building-office-2"
+            options={tenant_options(@tenants)}
+            prompt="请选择机构"
+            required
+          />
+          <.login_field
+            form={@admin_form}
+            field={:email}
+            id="email-admin"
+            label="邮箱"
+            type="email"
+            icon="hero-user"
+            placeholder="admin@example.com"
+            autocomplete="email"
+            required
+          />
+          <.login_field
+            form={@admin_form}
+            field={:password}
+            id="pw-admin"
+            label="密码"
+            type="password"
+            icon="hero-lock-closed"
+            placeholder="请输入密码"
+            autocomplete="current-password"
+            required
+          />
+          <button
+            type="submit"
+            phx-disable-with="登录中..."
+            class="btn mt-2 w-full border-none bg-[#00b86b] text-base text-white hover:bg-[#00a862]"
+          >
+            进入管理端
+          </button>
+        </.form>
+
+        <p class="mt-3 text-center text-xs text-base-content/60">
+          没有账号？请联系机构管理员分配。
+        </p>
+      </div>
+    </main>
+  </div>
+</Layouts.app>

@@ -148,7 +148,7 @@ defmodule TcmEduWeb.TeacherPortalTest do
           "login" => %{"tab" => "teacher", "email" => @teacher_email, "password" => "wrong"}
         })
 
-      assert redirected_to(conn) == ~p"/login"
+      assert redirected_to(conn) == "/login?tab=teacher"
     end
   end
 end

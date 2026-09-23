@@ -54,7 +54,6 @@ defmodule TcmEduWeb.StudentComponents do
                 <.mobile_link navigate="/courses" label="精品课程" />
                 <.mobile_link navigate="/resources" label="资料下载" />
                 <.mobile_link navigate="/my-learning" label="我的学习" />
-                <.mobile_link navigate="/posts" label="交流社区" />
                 <.mobile_link navigate="/ai-chat" label="AI 聊天" />
                 <.mobile_link navigate="/simulated-patient" label="AI 诊疗" />
               </ul>
@@ -74,7 +73,6 @@ defmodule TcmEduWeb.StudentComponents do
             <.nav_link navigate="/courses" label="精品课程" active={@current_page in [:courses, :course]} />
             <.nav_link navigate="/resources" label="资料下载" active={@current_page == :resources} />
             <.nav_link navigate="/my-learning" label="我的学习" active={@current_page in [:my_learning, :mistakes]} />
-            <.nav_link navigate="/posts" label="交流" active={@current_page in [:posts, :post_new]} />
             <.nav_link navigate="/ai-chat" label="AI 聊天" active={@current_page == :ai_chat} />
             <.nav_link navigate="/simulated-patient" label="AI 诊疗" active={@current_page == :simulated_patient} />
             <.nav_link navigate="/mdt" label="MDT" active={@current_page in [:mdt, :mdt_room]} />
@@ -98,24 +96,31 @@ defmodule TcmEduWeb.StudentComponents do
                 </button>
                 <ul
                   tabindex="0"
-                  class="menu dropdown-content z-50 mt-2 w-52 rounded-box bg-base-100 p-2 shadow-md"
+                  class="menu dropdown-content z-50 mt-2 w-60 rounded-box border border-base-300 bg-base-100 p-2 shadow-md"
                 >
-                  <li class="menu-title">
-                    <span class="truncate">{@current_student.email}</span>
+                  <li class="menu-title px-2 pb-1">
+                    <span class="text-xs font-normal text-base-content/60">已登录为</span>
+                  </li>
+                  <li class="menu-title -mt-1 px-2 pb-2">
+                    <span class="truncate text-sm font-semibold text-base-content">
+                      {@current_student.email}
+                    </span>
                   </li>
                   <li>
-                    <.link navigate="/my-learning" class="w-full">
-                      <.icon name="hero-book-open" class="size-4" /> 我的学习
+                    <.link navigate="/my-learning" class="flex items-center gap-2">
+                      <.icon name="hero-book-open" class="size-4 shrink-0" />
+                      我的学习
                     </.link>
                   </li>
                   <li>
-                    <form action="/logout" method="post" id="student-logout-form" class="contents">
-                      <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
-                      <button type="submit" class="w-full text-error hover:bg-error/10">
-                        <.icon name="hero-arrow-right-start-on-rectangle" class="size-4" />
-                        退出登录
-                      </button>
-                    </form>
+                    <.link
+                      href="/logout"
+                      method="post"
+                      class="flex items-center gap-2 text-error hover:bg-error/10"
+                    >
+                      <.icon name="hero-arrow-right-start-on-rectangle" class="size-4 shrink-0" />
+                      退出登录
+                    </.link>
                   </li>
                 </ul>
               </div>
@@ -144,7 +149,6 @@ defmodule TcmEduWeb.StudentComponents do
           <div class="flex gap-6">
             <.link navigate="/courses" class="hover:text-[#00b86b]">精品课程</.link>
             <.link navigate="/resources" class="hover:text-[#00b86b]">资料下载</.link>
-            <.link navigate="/posts" class="hover:text-[#00b86b]">交流社区</.link>
             <.link navigate="/simulated-patient" class="hover:text-[#00b86b]">AI 诊疗</.link>
           </div>
           <p>系统学中医，从这里开始</p>

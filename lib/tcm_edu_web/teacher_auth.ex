@@ -60,12 +60,15 @@ defmodule TcmEduWeb.TeacherAuth do
   end
 
   @doc """
-  Verifies teacher credentials. Returns `{:ok, teacher_map}` or
-  `{:error, :invalid_credentials}`.
+  Verifies teacher credentials. When `tenant` (a schema name) is given,
+  only that tenant is checked; otherwise all tenants are scanned.
+  Returns `{:ok, teacher_map}` or `{:error, :invalid_credentials}`.
   """
-  def authenticate(email, password) when is_binary(email) and is_binary(password) do
+  def authenticate(email, password, tenant \\ nil)
+
+  def authenticate(email, password, tenant) when is_binary(email) and is_binary(password) do
     email = String.trim(email)
-    tenants = tenant_schemas()
+    tenants = if tenant_present?(tenant), do: [tenant], else: tenant_schemas()
 
     Enum.find_value(tenants, {:error, :invalid_credentials}, fn schema ->
       with {:ok, [user]} <-
@@ -83,7 +86,7 @@ defmodule TcmEduWeb.TeacherAuth do
     end)
   end
 
-  def authenticate(_email, _password), do: {:error, :invalid_credentials}
+  def authenticate(_, _, _), do: {:error, :invalid_credentials}
 
   @doc "Login form with live validation (mirrors `AdminAuth.login_form/1`)."
   def login_form(params \\ %{}) do
@@ -95,7 +98,7 @@ defmodule TcmEduWeb.TeacherAuth do
 
   @doc "Validation changeset backing the login form."
   def login_changeset(params \\ %{}) do
-    types = %{email: :string, password: :string}
+    types = %{email: :string, password: :string, tenant: :string}
 
     {%{}, types}
     |> Ecto.Changeset.cast(params, Map.keys(types))
@@ -105,6 +108,12 @@ defmodule TcmEduWeb.TeacherAuth do
   end
 
   # ── private ───────────────────────────────────────────────────────
+
+  defp tenant_present?(tenant) when is_binary(tenant) do
+    tenant |> String.trim() |> byte_size() |> Kernel.>(0)
+  end
+
+  defp tenant_present?(_), do: false
 
   defp tenant_schemas do
     case Ash.read(Organization, authorize?: false) do

@@ -91,7 +91,7 @@ defmodule TcmEduWeb.AdminPanelTest do
     test "unified session rejects bad credentials", %{conn: conn} do
       conn = post(conn, ~p"/session", login_params(@super_email, "wrong"))
 
-      assert redirected_to(conn) == ~p"/login"
+      assert redirected_to(conn) == "/login?tab=admin&admin=super"
     end
 
     test "unified session accepts valid credentials and logout clears it", %{

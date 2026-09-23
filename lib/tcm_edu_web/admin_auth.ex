@@ -98,20 +98,25 @@ defmodule TcmEduWeb.AdminAuth do
 
   @doc """
   Verifies admin credentials. `mode` is `"super"` or `"tenant"`.
-  Returns `{:ok, admin_map}` or `{:error, :invalid_credentials}`.
+  When `tenant` (a schema name) is given with `"tenant"` mode, only that
+  tenant is checked; otherwise all tenants are scanned. `"super"` mode
+  ignores `tenant`. Returns `{:ok, admin_map}` or
+  `{:error, :invalid_credentials}`.
   """
-  def authenticate(email, password, mode)
+  def authenticate(email, password, mode, tenant \\ nil)
+
+  def authenticate(email, password, mode, tenant)
       when is_binary(email) and is_binary(password) do
     email = String.trim(email)
 
     case mode do
       "super" -> authenticate_super_admin(email, password)
-      "tenant" -> authenticate_tenant_admin(email, password)
+      "tenant" -> authenticate_tenant_admin(email, password, tenant)
       _ -> {:error, :invalid_credentials}
     end
   end
 
-  def authenticate(_email, _password, _mode), do: {:error, :invalid_credentials}
+  def authenticate(_, _, _, _), do: {:error, :invalid_credentials}
 
   @doc """
   Login form with live validation.
@@ -130,7 +135,7 @@ defmodule TcmEduWeb.AdminAuth do
 
   @doc "Validation changeset backing the login form."
   def login_changeset(params \\ %{}) do
-    types = %{email: :string, password: :string, mode: :string}
+    types = %{email: :string, password: :string, mode: :string, tenant: :string}
 
     {%{mode: "super"}, types}
     |> Ecto.Changeset.cast(params, Map.keys(types))
@@ -193,14 +198,18 @@ defmodule TcmEduWeb.AdminAuth do
     end
   end
 
-  defp authenticate_tenant_admin(email, password) do
-    tenants =
-      case Ash.read(Organization, authorize?: false) do
-        {:ok, orgs} -> Enum.map(orgs, & &1.schema_name)
-        _ -> []
+  defp authenticate_tenant_admin(email, password, tenant) do
+    schemas =
+      if is_binary(tenant) and byte_size(String.trim(tenant)) > 0 do
+        [tenant]
+      else
+        case Ash.read(Organization, authorize?: false) do
+          {:ok, orgs} -> Enum.map(orgs, & &1.schema_name)
+          _ -> []
+        end
       end
 
-    Enum.find_value(tenants, {:error, :invalid_credentials}, fn schema ->
+    Enum.find_value(schemas, {:error, :invalid_credentials}, fn schema ->
       with {:ok, [user]} <-
              User
              |> Ash.Query.filter(email == ^email)

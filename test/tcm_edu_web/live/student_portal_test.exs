@@ -236,7 +236,7 @@ defmodule TcmEduWeb.StudentPortalTest do
           "login" => %{"tab" => "student", "email" => "nobody@example.com", "password" => "wrong"}
         })
 
-      assert redirected_to(conn) == ~p"/login"
+      assert redirected_to(conn) == "/login?tab=student"
     end
 
     test "logout returns home as visitor", %{conn: conn, student: student} do

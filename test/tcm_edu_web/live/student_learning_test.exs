@@ -122,10 +122,6 @@ defmodule TcmEduWeb.StudentLearningTest do
       assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/my-learning")
     end
 
-    test "posts redirects to login", %{conn: conn} do
-      assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/posts")
-    end
-
     test "chat redirects to login", %{conn: conn} do
       assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/chat")
     end
@@ -188,24 +184,8 @@ defmodule TcmEduWeb.StudentLearningTest do
     end
   end
 
-  describe "posts and notifications" do
+  describe "chat and notifications" do
     setup [:create_student]
-
-    test "posts page renders for students", %{conn: conn, student: student} do
-      conn = student_session(conn, student)
-      {:ok, _view, html} = live(conn, ~p"/posts")
-
-      assert html =~ "学习交流"
-      assert html =~ "new-post-btn"
-    end
-
-    test "new post page validates input", %{conn: conn, student: student} do
-      conn = student_session(conn, student)
-      {:ok, view, _html} = live(conn, ~p"/posts/new")
-
-      html = render_submit(view, "save", %{"post" => %{"title" => "", "body" => "x"}})
-      assert html =~ "new-post-form"
-    end
 
     test "chat page renders the input", %{conn: conn, student: student} do
       conn = student_session(conn, student)

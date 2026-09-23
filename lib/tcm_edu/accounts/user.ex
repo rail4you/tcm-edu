@@ -163,7 +163,8 @@ defmodule TcmEdu.Accounts.User do
       description("""
       Admin 创建租户内用户。
 
-        * 由 tenant_admin 调用（在自己的租户内）或 super_admin 调用
+        * 由超管调用（任意租户，可分配 tenant_admin）或 tenant_admin 调用
+          （自己的租户内，仅可分配 teacher / student）
         * 角色必须 ∈ `[:tenant_admin, :teacher, :student]`
       """)
 
@@ -174,6 +175,8 @@ defmodule TcmEdu.Accounts.User do
         sensitive?(true)
         constraints(min_length: 6)
       end
+
+      validate(TcmEdu.Accounts.Validations.RestrictTenantAdminRole)
 
       validate(fn changeset, _context ->
         password = Ash.Changeset.get_argument(changeset, :password)
@@ -196,7 +199,7 @@ defmodule TcmEdu.Accounts.User do
     end
 
     update :update_role do
-      description("Admin 改用户角色")
+      description("Admin 改用户角色（提权到 tenant_admin 仅超管）")
       require_atomic?(false)
       accept([])
 
@@ -205,6 +208,7 @@ defmodule TcmEdu.Accounts.User do
         constraints(one_of: [:tenant_admin, :teacher, :student])
       end
 
+      validate(TcmEdu.Accounts.Validations.RestrictTenantAdminRole)
       change(set_attribute(:role, arg(:role)))
     end
 

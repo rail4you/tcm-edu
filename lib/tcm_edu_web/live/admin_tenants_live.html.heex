@@ -16,6 +16,7 @@
                 <th>Schema</th>
                 <th>状态</th>
                 <th>套餐</th>
+                <th>管理员</th>
                 <th>联系邮箱</th>
                 <th class="text-right">操作</th>
               </tr>
@@ -37,6 +38,19 @@
                 <td><.status_badge status={org.status} /></td>
                 <td>
                   <span class="badge badge-soft">{plan_label(org.plan)}</span>
+                </td>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <span class="badge badge-soft badge-secondary">
+                      {Map.get(@admin_counts, org.id, 0)} 位
+                    </span>
+                    <.link
+                      navigate={"/admin/users?tenant=#{org.schema_name}"}
+                      class="link link-primary text-xs"
+                    >
+                      管理
+                    </.link>
+                  </div>
                 </td>
                 <td>{org.contact_email || "-"}</td>
                 <td>

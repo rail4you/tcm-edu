@@ -124,8 +124,7 @@ defmodule TcmEduWeb.Router do
   scope "/api", TcmEduWeb do
     pipe_through :api_upload
 
-    match :options, "/posts/:post_id/upload/:attachment_name", PostUploadController, :options
-    post "/posts/:post_id/upload/:attachment_name", PostUploadController, :upload
+    # Post upload routes were removed when the Post feature was dropped.
   end
 
   # ── AI endpoints (lesson plan / image / mistake explain) ────────
@@ -153,6 +152,9 @@ defmodule TcmEduWeb.Router do
 
     post "/session", SessionController, :create
     post "/logout", SessionController, :delete
+    # 直接在地址栏打开 /logout 也是 GET；退出只是清自己的 session，
+    # 幂等无副作用，所以同样放行（页面里的退出按钮仍走 POST）。
+    get "/logout", SessionController, :delete
     get "/admin/login", SessionController, :legacy_login
     get "/teacher/login", SessionController, :legacy_login
   end
@@ -185,6 +187,13 @@ defmodule TcmEduWeb.Router do
     pipe_through :browser
 
     get "/quiz/template", QuizTemplateController, :template
+  end
+
+  # ── Admin user-import template download ───────────────────────────
+  scope "/admin", TcmEduWeb do
+    pipe_through :browser
+
+    get "/users/template", AdminUserTemplateController, :template
   end
 
   # ── Teacher portal (LiveView + daisyUI, session auth) ─────────────
@@ -230,8 +239,6 @@ defmodule TcmEduWeb.Router do
       live "/learn", StudentLearnLive, :index
       live "/my-learning", StudentMyLearningLive, :index
       live "/my-learning/mistakes", StudentMistakesLive, :index
-      live "/posts", StudentPostsLive, :index
-      live "/posts/new", StudentPostNewLive, :index
       live "/chat", StudentChatLive, :index
       live "/ai-chat", AiChatLive, :index
       live "/notifications", StudentNotificationsLive, :index

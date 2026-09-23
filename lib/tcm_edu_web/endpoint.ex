@@ -31,6 +31,12 @@ defmodule TcmEduWeb.Endpoint do
   plug TcmEduWeb.Plugs.StorageServe,
     root: "priv/storage"
 
+  # Tidewave MCP server (dev tooling). Only mounted in dev to avoid
+  # exposing /tidewave in prod.
+  if code_reloading? and Code.ensure_loaded?(Tidewave) do
+    plug Tidewave
+  end
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do

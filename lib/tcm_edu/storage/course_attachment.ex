@@ -3,8 +3,9 @@ defmodule TcmEdu.Storage.CourseAttachment do
   Polymorphic attachment resource linking blobs to tenant-scoped records
   (currently `TcmEdu.Courses.Course` covers).
 
-  Unlike `TcmEdu.Storage.Attachment` (FK-bound to the global `Post`
-  resource), this resource declares no `belongs_to_resource`, so links are
+  Unlike a FK-bound attachment (e.g. an `Attachment` table with a
+  `belongs_to_resource` to a global record), this resource declares
+  no `belongs_to_resource`, so links are
   stored as `record_type` / `record_id` strings. This is required because
   courses live in per-tenant Postgres schemas while attachments live in
   `public` — a cross-schema foreign key is impossible.

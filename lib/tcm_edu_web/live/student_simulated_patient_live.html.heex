@@ -1,6 +1,29 @@
   <Layouts.app flash={@flash} shell={:storefront}>
     <.student_shell current_student={@current_student} current_page={:simulated_patient}>
       <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
+        <div class="rounded-box border border-base-300 bg-base-100 p-4 sm:p-6">
+          <div class="flex flex-wrap items-start gap-4">
+            <span class="flex size-12 shrink-0 items-center justify-center rounded-box bg-primary/10 text-primary">
+              <.icon name="hero-heart" class="size-6" />
+            </span>
+            <div class="min-w-0 flex-1">
+              <h1 class="text-lg font-semibold">AI 模拟诊疗</h1>
+              <p class="mt-1 text-sm text-base-content/60">
+                与 AI 患者对话，练习中医辨证论治，教师布置的任务会在此汇总
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <.link
+                navigate="/simulated-patient/report"
+                class="btn btn-soft btn-sm"
+              >
+                <.icon name="hero-chart-bar" class="size-4" /> 临床思维报告
+              </.link>
+              <span class="badge badge-soft">{length(@assignments)} 个任务</span>
+            </div>
+          </div>
+        </div>
+
         {tasks_section(assigns)}
         {history_section(assigns)}
       </div>

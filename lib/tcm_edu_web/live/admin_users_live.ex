@@ -15,6 +15,7 @@ defmodule TcmEduWeb.AdminUsersLive do
 
   alias TcmEdu.Accounts.User
   alias TcmEdu.System.Organization
+  alias TcmEduWeb.AdminUserImport
 
   @roles ~w(tenant_admin teacher student)
 
@@ -37,17 +38,46 @@ defmodule TcmEduWeb.AdminUsersLive do
      |> assign(:page_title, "用户管理")
      |> assign(:tenants, tenants)
      |> assign(:tenant, tenant)
+     |> assign(:role_filter, "all")
      |> assign(:modal, nil)
      |> assign(:role_editing, nil)
      |> assign(:deleting, nil)
      |> assign(:create_form, user_form(%{}))
      |> assign(:role_form, role_form(%{}))
+     |> assign(:import_modal, false)
+     |> assign(:import_result, nil)
+     |> allow_upload(:import_file,
+       accept: ~w(.xlsx),
+       max_entries: 1,
+       max_file_size: 10_000_000
+     )
      |> load_users()}
   end
 
   @impl true
+  def handle_params(%{"tenant" => schema}, _url, socket) when is_binary(schema) do
+    # 超管从租户页“管理”链接跳过来时，用 URL 预选租户；租户管理员固定自己的租户。
+    socket =
+      if socket.assigns.current_admin.role == "super_admin" and
+           Enum.any?(socket.assigns.tenants, &(&1.schema_name == schema)) do
+        assign(socket, :tenant, schema)
+      else
+        socket
+      end
+
+    {:noreply, load_users(socket)}
+  end
+
+  def handle_params(_params, _url, socket), do: {:noreply, socket}
+
+  @impl true
   def handle_event("select-tenant", %{"tenant" => tenant}, socket) do
-    {:noreply, socket |> assign(:tenant, tenant) |> load_users()}
+    {:noreply, push_patch(socket, to: "/admin/users?tenant=#{tenant}")}
+  end
+
+  def handle_event("filter-role", %{"role" => role}, socket)
+      when role in ["all" | @roles] do
+    {:noreply, socket |> assign(:role_filter, role) |> load_users()}
   end
 
   def handle_event("open-create", _params, socket) do
@@ -164,6 +194,60 @@ defmodule TcmEduWeb.AdminUsersLive do
     end
   end
 
+  def handle_event("open-import", _params, socket) do
+    if socket.assigns.tenant do
+      {:noreply, assign(socket, import_modal: true, import_result: nil)}
+    else
+      {:noreply, put_flash(socket, :error, "请先选择目标租户")}
+    end
+  end
+
+  def handle_event("close-import", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(import_modal: false, import_result: nil)
+     |> load_users()}
+  end
+
+  def handle_event("validate-import", _params, socket), do: {:noreply, socket}
+
+  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :import_file, ref)}
+  end
+
+  def handle_event("import", _params, socket) do
+    consumed =
+      consume_uploaded_entries(socket, :import_file, fn %{path: path}, entry ->
+        cond do
+          not String.ends_with?(String.downcase(entry.client_name), ".xlsx") ->
+            {:ok, {:file_error, "只支持 .xlsx 文件"}}
+
+          true ->
+            case AdminUserImport.import_file(path) do
+              {:ok, rows, errors} -> {:ok, {:rows, rows, errors}}
+              {:error, message} -> {:ok, {:file_error, message}}
+            end
+        end
+      end)
+
+    case consumed do
+      [] ->
+        {:noreply, put_flash(socket, :error, "请先选择要导入的 xlsx 文件")}
+
+      [{:file_error, message}] ->
+        {:noreply, assign(socket, :import_result, %{created: 0, failed: [{"—", message}]})}
+
+      [{:rows, rows, errors}] ->
+        tenant = socket.assigns.tenant
+        {created, failed} = create_imported_users(rows, errors, actor(socket), tenant)
+
+        {:noreply,
+         socket
+         |> assign(:import_result, %{created: created, failed: failed})
+         |> load_users()}
+    end
+  end
+
   attr :role, :atom, required: true
 
   defp user_initial(%{name: name}) when is_binary(name) and byte_size(name) > 0 do
@@ -176,6 +260,31 @@ defmodule TcmEduWeb.AdminUsersLive do
 
   defp user_initial(_), do: "U"
 
+  defp create_imported_users(rows, errors, actor, tenant) do
+    Enum.reduce(rows, {0, errors}, fn {row_number, attrs}, {created, failed} ->
+      case User
+           |> Ash.Changeset.for_create(:register_with_role, attrs, actor: actor, tenant: tenant)
+           |> Ash.create() do
+        {:ok, _} ->
+          {created + 1, failed}
+
+        {:error, error} ->
+          {created, failed ++ [{row_number, "创建失败：#{import_short_message(error)}"}]}
+      end
+    end)
+  end
+
+  defp import_short_message(error) do
+    error |> Exception.message() |> String.split("\n") |> hd() |> String.trim()
+  rescue
+    _ -> "未知错误"
+  end
+
+  defp upload_error_to_string(:too_large), do: "文件太大（最大 10MB）"
+  defp upload_error_to_string(:too_many_files), do: "一次只能上传 1 个文件"
+  defp upload_error_to_string(:not_accepted), do: "只支持 .xlsx 文件"
+  defp upload_error_to_string(_), do: "文件上传失败"
+
   defp role_badge(assigns) do
     ~H"""
     <span :if={@role == :tenant_admin} class="badge badge-soft badge-secondary">租户管理员</span>
@@ -187,8 +296,12 @@ defmodule TcmEduWeb.AdminUsersLive do
     """
   end
 
-  defp role_options,
+  defp role_options("super_admin"),
     do: [{"租户管理员", "tenant_admin"}, {"教师", "teacher"}, {"学生", "student"}]
+
+  # 租户管理员只能创建教师/学生（能否分配 tenant_admin 由后端守卫
+  # RestrictTenantAdminRole 最终把关）。
+  defp role_options(_), do: [{"教师", "teacher"}, {"学生", "student"}]
 
   defp actor(socket), do: socket.assigns.current_admin.actor
 
@@ -215,11 +328,15 @@ defmodule TcmEduWeb.AdminUsersLive do
   defp load_users(socket) do
     users =
       try do
-        User
-        |> Ash.Query.for_read(:list_users, %{},
-          actor: actor(socket),
-          tenant: socket.assigns.tenant
-        )
+        query =
+          User
+          |> Ash.Query.for_read(:list_users, %{},
+            actor: actor(socket),
+            tenant: socket.assigns.tenant
+          )
+          |> filter_by_role(socket.assigns[:role_filter] || "all")
+
+        query
         |> Ash.read!()
         |> Enum.sort_by(& &1.inserted_at, {:desc, DateTime})
       rescue
@@ -227,6 +344,12 @@ defmodule TcmEduWeb.AdminUsersLive do
       end
 
     assign(socket, :users, users)
+  end
+
+  defp filter_by_role(query, "all"), do: query
+
+  defp filter_by_role(query, role) when role in @roles do
+    Ash.Query.filter(query, role == ^String.to_existing_atom(role))
   end
 
   defp find_user(socket, id), do: Enum.find(socket.assigns.users, &(&1.id == id))

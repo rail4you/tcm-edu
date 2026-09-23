@@ -12,6 +12,7 @@ defmodule TcmEduWeb.AdminTenantsLive do
   import TcmEduWeb.AdminComponents, only: [admin_shell: 1]
 
   alias TcmEdu.System.Organization
+  alias TcmEdu.Accounts.User
 
   on_mount {TcmEduWeb.AdminAuth, :ensure_super_admin}
 
@@ -25,6 +26,7 @@ defmodule TcmEduWeb.AdminTenantsLive do
      |> assign(:modal, nil)
      |> assign(:editing, nil)
      |> assign(:deleting, nil)
+     |> assign(:admin_counts, %{})
      |> assign(:create_form, tenant_form(%{}))
      |> assign(:edit_form, tenant_form(%{}))
      |> load_orgs()}
@@ -66,7 +68,7 @@ defmodule TcmEduWeb.AdminTenantsLive do
           {:noreply, put_flash(socket, :error, message)}
       end
     else
-      {:noreply, assign(socket, :create_form, Phoenix.Component.to_form(changeset, as: "tenant"))}
+      {:noreply, assign(socket, :create_form, tenant_form(params))}
     end
   end
 
@@ -116,7 +118,7 @@ defmodule TcmEduWeb.AdminTenantsLive do
           {:noreply, put_flash(socket, :error, message)}
       end
     else
-      {:noreply, assign(socket, :edit_form, Phoenix.Component.to_form(changeset, as: "tenant"))}
+      {:noreply, assign(socket, :edit_form, tenant_form(params, :edit))}
     end
   end
 
@@ -192,7 +194,26 @@ defmodule TcmEduWeb.AdminTenantsLive do
         _ -> []
       end
 
-    assign(socket, :orgs, orgs)
+    socket
+    |> assign(:orgs, orgs)
+    |> assign(:admin_counts, admin_counts(orgs, actor(socket)))
+  end
+
+  # 每个租户的 tenant_admin 人数（超管一眼看到哪些租户还没配管理员）。
+  defp admin_counts(orgs, actor) do
+    Map.new(orgs, fn org ->
+      count =
+        try do
+          User
+          |> Ash.Query.for_read(:list_admins, %{}, actor: actor, tenant: org.schema_name)
+          |> Ash.read!()
+          |> length()
+        rescue
+          _ -> 0
+        end
+
+      {org.id, count}
+    end)
   end
 
   defp find_org(socket, id), do: Enum.find(socket.assigns.orgs, &(&1.id == id))
@@ -200,8 +221,15 @@ defmodule TcmEduWeb.AdminTenantsLive do
   defp tenant_form(params, kind \\ :create) do
     params
     |> changeset_for(kind)
+    |> put_validate_action(params)
     |> Phoenix.Component.to_form(as: "tenant")
   end
+
+  # 刚打开弹窗时 params 为空，不挂 action，避免“必填”错误提前冒出来；
+  # 用户交互后（validate/submit）再挂 :validate，否则 to_form 会丢弃全部错误、
+  # 非法提交时弹窗“毫无反应”（slug 如 "gz" 过短被打回却无任何提示）。
+  defp put_validate_action(changeset, params) when params == %{}, do: changeset
+  defp put_validate_action(changeset, _params), do: Map.put(changeset, :action, :validate)
 
   defp create_changeset(params), do: changeset_for(params, :create)
   defp edit_changeset(params), do: changeset_for(params, :edit)
@@ -219,6 +247,7 @@ defmodule TcmEduWeb.AdminTenantsLive do
     {%{plan: "free"}, types}
     |> Ecto.Changeset.cast(params, Map.keys(types))
     |> Ecto.Changeset.validate_required([:name, :plan])
+    |> Ecto.Changeset.update_change(:contact_email, &empty_to_nil/1)
     |> then(fn cs ->
       if kind == :create,
         do:

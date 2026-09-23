@@ -1,6 +1,6 @@
 defmodule TcmEdu.Storage do
   @moduledoc """
-  Ash domain hosting storage resources (Blob, Attachment).
+  Ash domain hosting storage resources (Blob, CourseAttachment).
   """
 
   use Ash.Domain,
@@ -8,7 +8,6 @@ defmodule TcmEdu.Storage do
 
   resources do
     resource TcmEdu.Storage.Blob
-    resource TcmEdu.Storage.Attachment
     resource TcmEdu.Storage.CourseAttachment
   end
 end
