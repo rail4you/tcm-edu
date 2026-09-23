@@ -6,6 +6,9 @@
 //  * ThemeController — persists the daisyUI theme choice and restores it
 //    after every LiveView patch / navigation.
 //  * PasswordToggle — login password visibility switch (eye / eye-off).
+//  * FlashAutoDismiss — auto-dismisses flash notices after a TTL
+//    (`data-flash-ttl` ms) by reusing the proven click-to-dismiss path
+//    (`lv:clear-flash` + hide), so server-side flash is cleared too.
 
 const SidebarCollapse = {
   mounted() {
@@ -77,4 +80,36 @@ const PasswordToggle = {
   },
 };
 
-export { SidebarCollapse, ThemeController, PasswordToggle };
+const FlashAutoDismiss = {
+  mounted() {
+    this.schedule();
+  },
+  updated() {
+    // Flash content re-rendered (e.g. a new message): restart the timer
+    // and make sure a previously hidden element is visible again.
+    this.el.style.display = "";
+    this.el.style.opacity = "";
+    this.schedule();
+  },
+  destroyed() {
+    this.clear();
+  },
+  clear() {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  },
+  schedule() {
+    this.clear();
+    const ttl = parseInt(this.el.dataset.flashTtl || "4000", 10);
+    if (!ttl || ttl <= 0) return;
+    this.timer = setTimeout(() => {
+      // Reuse the proven click-to-dismiss path (lv:clear-flash + hide),
+      // so the server-side flash is cleared and won't reappear.
+      if (document.contains(this.el)) this.el.click();
+    }, ttl);
+  },
+};
+
+export { SidebarCollapse, ThemeController, PasswordToggle, FlashAutoDismiss };

@@ -12,11 +12,14 @@ defmodule TcmEduWeb.CoreComponents do
   alias Phoenix.LiveView.JS
 
   @doc """
-  Renders flash notices.
+  Renders flash notices. Notices auto-dismiss after a few seconds via the
+  `FlashAutoDismiss` hook (`data-flash-ttl` ms; info 2s, error 8s) and can
+  still be dismissed immediately by clicking.
 
   ## Examples
 
       <.flash kind={:info} flash={@flash} />
+
       <.flash id="welcome-back" kind={:info} phx-mounted={show("#welcome-back")} hidden>
         Welcome Back!
       </.flash>
@@ -25,17 +28,25 @@ defmodule TcmEduWeb.CoreComponents do
   attr :flash, :map, default: %{}, doc: "the map of flash messages to display"
   attr :title, :string, default: nil
   attr :kind, :atom, values: [:info, :error], doc: "used for styling and flash lookup"
+  attr :ttl, :integer, default: nil, doc: "auto-dismiss delay in ms (nil = kind default)"
   attr :rest, :global, include: ~w(phx-click phx-value-key)
 
   slot :inner_block, doc: "the optional inner block that renders the flash message"
 
   def flash(assigns) do
-    assigns = assign_new(assigns, :id, fn -> "flash-#{assigns.kind}" end)
+    # NB: `attr :id, default: nil` keeps the key present, so `assign_new`
+    # would never fire — default explicitly instead.
+    id = assigns[:id] || "flash-#{assigns[:kind]}"
+    ttl = assigns[:ttl] || if assigns[:kind] == :error, do: 8_000, else: 2_000
+
+    assigns = assigns |> assign(:id, id) |> assign(:ttl, ttl)
 
     ~H"""
     <div
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
+      phx-hook="FlashAutoDismiss"
+      data-flash-ttl={@ttl}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
       class={[

@@ -95,6 +95,8 @@ defmodule TcmEduWeb.AdminUsersPasswordTest do
     |> fill_in("确认新密码", with: @new_password)
     |> click_button("#reset-password-form button[type='submit']", "保存新密码")
     |> assert_has("p", "已重置")
+    # Flash auto-dismisses via the hook instead of lingering until clicked.
+    |> assert_has("#flash-info[data-flash-ttl='2000']")
 
     assert {:error, :invalid_credentials} =
              TcmEduWeb.StudentAuth.authenticate(
