@@ -82,7 +82,7 @@
             <.link navigate="/courses" class="text-sm text-[#00b86b] hover:underline">更多课程 →</.link>
           </div>
           <div :if={@courses != []} class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <.course_card :for={course <- @courses} course={course} id={"home-course-#{course.id}"} />
+            <.course_card :for={course <- @courses} course={course} id={"home-course-#{course.id}"} preview?={@courses_preview?} />
           </div>
           <p :if={@courses == []} class="rounded bg-white px-6 py-12 text-center text-sm text-[#999] shadow-sm">
             课程正在筹备中，敬请期待。

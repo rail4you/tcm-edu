@@ -7,7 +7,7 @@ defmodule TcmEduWeb.AdminAuth do
     * `"super"` — SuperAdmin from the `public` schema, verified through the
       `sign_in_with_password` action.
     * `"tenant"` — tenant admin (`User` with `role == :tenant_admin`) looked
-      up by e-mail across all tenant schemas, password verified with Bcrypt.
+      up by email or username across all tenant schemas, password verified with Bcrypt.
 
   On success the session stores:
 
@@ -27,6 +27,7 @@ defmodule TcmEduWeb.AdminAuth do
   alias TcmEdu.Accounts.User
   alias TcmEdu.System.Organization
   alias TcmEdu.System.SuperAdmin
+  alias TcmEduWeb.LoginIdentity
 
   @session_keys ~w(admin_id admin_role admin_tenant admin_email admin_name)
 
@@ -103,15 +104,15 @@ defmodule TcmEduWeb.AdminAuth do
   ignores `tenant`. Returns `{:ok, admin_map}` or
   `{:error, :invalid_credentials}`.
   """
-  def authenticate(email, password, mode, tenant \\ nil)
+  def authenticate(identity, password, mode, tenant \\ nil)
 
-  def authenticate(email, password, mode, tenant)
-      when is_binary(email) and is_binary(password) do
-    email = String.trim(email)
+  def authenticate(identity, password, mode, tenant)
+      when is_binary(identity) and is_binary(password) do
+    identity = String.trim(identity)
 
     case mode do
-      "super" -> authenticate_super_admin(email, password)
-      "tenant" -> authenticate_tenant_admin(email, password, tenant)
+      "super" -> authenticate_super_admin(identity, password)
+      "tenant" -> authenticate_tenant_admin(identity, password, tenant)
       _ -> {:error, :invalid_credentials}
     end
   end
@@ -140,7 +141,7 @@ defmodule TcmEduWeb.AdminAuth do
     {%{mode: "super"}, types}
     |> Ecto.Changeset.cast(params, Map.keys(types))
     |> Ecto.Changeset.validate_required([:email, :password])
-    |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/, message: "邮箱格式不正确")
+    |> Ecto.Changeset.validate_length(:email, min: 1, message: "请输入邮箱或用户名")
     |> Ecto.Changeset.validate_length(:password, min: 1, message: "请输入密码")
   end
 
@@ -174,10 +175,10 @@ defmodule TcmEduWeb.AdminAuth do
     end
   end
 
-  defp authenticate_super_admin(email, password) do
+  defp authenticate_super_admin(identity, password) do
     input =
       Ash.ActionInput.for_action(SuperAdmin, :sign_in_with_password, %{
-        email: email,
+        identity: identity,
         password: password
       })
 
@@ -198,7 +199,7 @@ defmodule TcmEduWeb.AdminAuth do
     end
   end
 
-  defp authenticate_tenant_admin(email, password, tenant) do
+  defp authenticate_tenant_admin(identity, password, tenant) do
     schemas =
       if is_binary(tenant) and byte_size(String.trim(tenant)) > 0 do
         [tenant]
@@ -210,17 +211,16 @@ defmodule TcmEduWeb.AdminAuth do
       end
 
     Enum.find_value(schemas, {:error, :invalid_credentials}, fn schema ->
-      with {:ok, [user]} <-
-             User
-             |> Ash.Query.filter(email == ^email)
-             |> Ash.Query.limit(1)
-             |> Ash.read(tenant: schema, authorize?: false),
-           %User{role: :tenant_admin, status: :active} = user <- user,
-           true <- Bcrypt.verify_pass(password, user.hashed_password) do
-        {:ok, user_to_admin(user, schema)}
-      else
-        _ -> nil
-      end
+      LoginIdentity.lookup(User, identity, tenant: schema, authorize?: false)
+      |> Enum.find_value(fn
+        %User{role: :tenant_admin, status: :active} = user ->
+          if Bcrypt.verify_pass(password, user.hashed_password),
+            do: {:ok, user_to_admin(user, schema)},
+            else: nil
+
+        _ ->
+          nil
+      end)
     end)
   end
 

@@ -29,7 +29,7 @@ defmodule TcmEduWeb.SessionController do
         |> redirect(to: "/teacher")
 
       {:error, :invalid_credentials} ->
-        deny(conn, "邮箱或密码错误", "teacher")
+        deny(conn, "账号或密码错误", "teacher")
     end
   end
 
@@ -46,7 +46,7 @@ defmodule TcmEduWeb.SessionController do
         |> redirect(to: "/admin")
 
       {:error, :invalid_credentials} ->
-        deny(conn, "邮箱或密码错误", "admin", sub)
+        deny(conn, "账号或密码错误", "admin", sub)
     end
   end
 
@@ -63,7 +63,7 @@ defmodule TcmEduWeb.SessionController do
         |> redirect(to: "/my-learning")
 
       {:error, :invalid_credentials} ->
-        deny(conn, "邮箱或密码错误", "student")
+        deny(conn, "账号或密码错误", "student")
     end
   end
 

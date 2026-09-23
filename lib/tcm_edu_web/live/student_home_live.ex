@@ -23,6 +23,7 @@ defmodule TcmEduWeb.StudentHomeLive do
   @impl true
   def mount(_params, _session, socket) do
     student = socket.assigns.current_student
+    current_tenant = if student, do: student.tenant, else: @tenant
 
     courses = list_popular()
     teachers = list_teachers()
@@ -34,6 +35,8 @@ defmodule TcmEduWeb.StudentHomeLive do
      |> assign(:categories, list_categories())
      |> assign(:teachers, teachers)
      |> assign(:stats, build_all_stats(teachers))
+     |> assign(:current_tenant, current_tenant)
+     |> assign(:courses_preview?, current_tenant != @tenant)
      |> assign(:unread_count, unread_count(student))}
   end
 

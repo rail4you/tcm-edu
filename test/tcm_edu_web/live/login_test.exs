@@ -79,7 +79,7 @@ defmodule TcmEduWeb.LoginTest do
         }
       })
 
-    assert html =~ "邮箱或密码错误"
+    assert html =~ "账号或密码错误"
     # Tab, tenant, email and password are all preserved (no reset).
     assert html =~ "登录学习"
     assert html =~ ~s(value="#{org.schema_name}")
@@ -120,6 +120,72 @@ defmodule TcmEduWeb.LoginTest do
 
     assert redirected_to(conn) == "/my-learning"
     assert get_session(conn, "student_tenant") == org.schema_name
+  end
+
+  test "student can log in with username instead of email", %{
+    conn: conn,
+    org: org,
+    student: student
+  } do
+    conn =
+      post(conn, "/session", %{
+        "login" => %{
+          "tab" => "student",
+          "tenant" => org.schema_name,
+          "email" => student.name,
+          "password" => @password
+        }
+      })
+
+    assert redirected_to(conn) == "/my-learning"
+    assert get_session(conn, "student_id") == student.id
+  end
+
+  test "teacher can log in with username instead of email", %{conn: conn, org: org} do
+    name = "Login Teacher #{System.unique_integer([:positive])}"
+
+    teacher =
+      User
+      |> Ash.Changeset.for_create(
+        :register_with_role,
+        %{
+          email: "login-teacher-#{System.unique_integer([:positive])}@example.com",
+          name: name,
+          password: @password,
+          role: :teacher
+        },
+        tenant: org.schema_name,
+        authorize?: false
+      )
+      |> Ash.create!()
+
+    conn =
+      post(conn, "/session", %{
+        "login" => %{
+          "tab" => "teacher",
+          "tenant" => org.schema_name,
+          "email" => name,
+          "password" => @password
+        }
+      })
+
+    assert redirected_to(conn) == "/teacher"
+    assert get_session(conn, "teacher_id") == teacher.id
+  end
+
+  test "username with wrong password is denied", %{conn: conn, org: org, student: student} do
+    conn =
+      post(conn, "/session", %{
+        "login" => %{
+          "tab" => "student",
+          "tenant" => org.schema_name,
+          "email" => student.name,
+          "password" => "wrong-password"
+        }
+      })
+
+    assert redirected_to(conn) == "/login?tab=student"
+    assert get_session(conn, "student_id") == nil
   end
 
   test "session controller preserves tab/sub when denying", %{conn: conn} do

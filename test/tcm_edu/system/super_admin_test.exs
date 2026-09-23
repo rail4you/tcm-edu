@@ -4,9 +4,9 @@ defmodule TcmEdu.System.SuperAdminTest do
 
   Covers:
     * `register` action creates a SuperAdmin with bcrypt-hashed password
-    * `sign_in_with_password` returns token for valid credentials
+    * `sign_in_with_password` returns token for valid credentials (email or username)
     * `sign_in_with_password` returns :invalid_credentials for bad password
-    * `sign_in_with_password` returns :invalid_credentials for unknown email
+    * `sign_in_with_password` returns :invalid_credentials for unknown identity
     * touch_last_login updates last_login_at
   """
 
@@ -66,7 +66,7 @@ defmodule TcmEdu.System.SuperAdminTest do
     test "returns token + admin for valid credentials", %{admin: admin} do
       input =
         Ash.ActionInput.for_action(SuperAdmin, :sign_in_with_password, %{
-          email: to_string(admin.email),
+          identity: to_string(admin.email),
           password: "password123"
         })
 
@@ -83,20 +83,31 @@ defmodule TcmEdu.System.SuperAdminTest do
       assert claims["sub"] == "user?id=#{admin.id}"
     end
 
+    test "returns token + admin for valid username", %{admin: admin} do
+      input =
+        Ash.ActionInput.for_action(SuperAdmin, :sign_in_with_password, %{
+          identity: admin.name,
+          password: "password123"
+        })
+
+      assert {:ok, %{admin: returned}} = Ash.run_action(input, authorize?: false)
+      assert returned.id == admin.id
+    end
+
     test "returns :invalid_credentials for wrong password" do
       input =
         Ash.ActionInput.for_action(SuperAdmin, :sign_in_with_password, %{
-          email: "test-signin@example.com",
+          identity: "test-signin@example.com",
           password: "wrong-password"
         })
 
       assert {:error, _} = Ash.run_action(input, authorize?: false)
     end
 
-    test "returns :invalid_credentials for unknown email" do
+    test "returns :invalid_credentials for unknown identity" do
       input =
         Ash.ActionInput.for_action(SuperAdmin, :sign_in_with_password, %{
-          email: "nobody@example.com",
+          identity: "nobody@example.com",
           password: "password123"
         })
 

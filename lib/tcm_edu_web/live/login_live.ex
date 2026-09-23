@@ -11,7 +11,7 @@ defmodule TcmEduWeb.LoginLive do
       verified inside that tenant's schema.
 
   On submit the credentials are verified inline: failures render an
-  inline error while the form (tab, tenant, email AND password) stays
+  inline error while the form (tab, tenant, identity AND password) stays
   untouched. Only verified credentials trigger the native POST to
   `SessionController.create/2` via `phx-trigger-action`, which re-verifies,
   writes the portal session and redirects.
@@ -105,7 +105,7 @@ defmodule TcmEduWeb.LoginLive do
            socket
            |> assign(form_assign(tab), form)
            |> assign(:trigger_action, false)
-           |> assign(:auth_error, "邮箱或密码错误，请检查后重试")}
+           |> assign(:auth_error, "账号或密码错误，请检查后重试")}
       end
     else
       {:noreply,

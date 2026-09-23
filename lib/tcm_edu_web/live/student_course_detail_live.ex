@@ -26,11 +26,16 @@ defmodule TcmEduWeb.StudentCourseDetailLive do
      |> assign(:course_id, id)
      |> assign(:course, nil)
      |> assign(:not_found, false)
+     |> assign(:is_preview, false)
      |> assign(:enrolled?, false)
      |> load_course()}
   end
 
   @impl true
+  def handle_event("enroll", _params, %{assigns: %{is_preview: true}} = socket) do
+    {:noreply, put_flash(socket, :warning, "当前校区暂无此课程，仅供预览")}
+  end
+
   def handle_event("enroll", _params, %{assigns: %{current_student: nil}} = socket) do
     {:noreply, push_navigate(socket, to: "/login")}
   end
@@ -88,11 +93,49 @@ defmodule TcmEduWeb.StudentCourseDetailLive do
       socket
       |> assign(:course, %{course | chapters: chapters})
       |> assign(:not_found, false)
+      |> assign(:is_preview, false)
       |> assign(:enrolled?, enrolled?(student, socket.assigns.course_id))
     rescue
-      _ -> assign(socket, course: nil, not_found: true, enrolled?: false)
+      _ ->
+        # 当前租户读不到时，兜底从默认租户读一条做“仅预览”展示，
+        # 避免直接跳到详情页却只看到“课程不存在”。
+        case load_default_preview(socket.assigns.course_id, tenant) do
+          {:ok, preview_course} ->
+            socket
+            |> assign(:course, preview_course)
+            |> assign(:not_found, false)
+            |> assign(:is_preview, true)
+            |> assign(:enrolled?, false)
+
+          :error ->
+            assign(socket, course: nil, not_found: true, is_preview: false, enrolled?: false)
+        end
     end
   end
+
+  # 默认租户的课程给跨租户用户做仅预览（不走授权、不走当前租户）。
+  defp load_default_preview(course_id, current_tenant) when current_tenant != @tenant do
+    try do
+      course =
+        Course
+        |> Ash.Query.filter(id == ^course_id)
+        |> Ash.Query.load([
+          :cover_image_url,
+          :lesson_count,
+          :student_count,
+          :teacher,
+          chapters: [:lessons]
+        ])
+        |> Ash.read_one!(tenant: @tenant, authorize?: false)
+
+      chapters = (course.chapters || []) |> Enum.sort_by(&(&1.sort_order || 0))
+      {:ok, %{course | chapters: chapters}}
+    rescue
+      _ -> :error
+    end
+  end
+
+  defp load_default_preview(_course_id, _tenant), do: :error
 
   defp enrolled?(nil, _course_id), do: false
 

@@ -3,8 +3,8 @@ defmodule TcmEduWeb.TeacherAuth do
   Session-based authentication for the LiveView teacher portal (`/teacher/*`).
 
   Teachers and tenant admins (who may also teach) log in with their tenant
-  account. Like `AdminAuth`, the e-mail is looked up across all tenant
-  schemas and the password is verified with Bcrypt.
+  account. Like `AdminAuth`, the email or username is looked up across all
+  tenant schemas and the password is verified with Bcrypt.
 
   Session keys: `"teacher_id"` / `"teacher_role"` (`"teacher"` |
   `"tenant_admin"`) / `"teacher_tenant"` / `"teacher_email"` /
@@ -18,6 +18,7 @@ defmodule TcmEduWeb.TeacherAuth do
 
   alias TcmEdu.Accounts.User
   alias TcmEdu.System.Organization
+  alias TcmEduWeb.LoginIdentity
 
   @teacher_roles [:teacher, :tenant_admin]
 
@@ -60,29 +61,29 @@ defmodule TcmEduWeb.TeacherAuth do
   end
 
   @doc """
-  Verifies teacher credentials. When `tenant` (a schema name) is given,
-  only that tenant is checked; otherwise all tenants are scanned.
-  Returns `{:ok, teacher_map}` or `{:error, :invalid_credentials}`.
+  Verifies teacher credentials by email or username. When `tenant`
+  (a schema name) is given, only that tenant is checked; otherwise
+  all tenants are scanned. Returns `{:ok, teacher_map}` or
+  `{:error, :invalid_credentials}`.
   """
-  def authenticate(email, password, tenant \\ nil)
+  def authenticate(identity, password, tenant \\ nil)
 
-  def authenticate(email, password, tenant) when is_binary(email) and is_binary(password) do
-    email = String.trim(email)
+  def authenticate(identity, password, tenant)
+      when is_binary(identity) and is_binary(password) do
+    identity = String.trim(identity)
     tenants = if tenant_present?(tenant), do: [tenant], else: tenant_schemas()
 
     Enum.find_value(tenants, {:error, :invalid_credentials}, fn schema ->
-      with {:ok, [user]} <-
-             User
-             |> Ash.Query.filter(email == ^email)
-             |> Ash.Query.limit(1)
-             |> Ash.read(tenant: schema, authorize?: false),
-           %User{status: :active, role: role} = user <- user,
-           true <- role in @teacher_roles,
-           true <- Bcrypt.verify_pass(password, user.hashed_password) do
-        {:ok, teacher_map(user, schema)}
-      else
-        _ -> nil
-      end
+      LoginIdentity.lookup(User, identity, tenant: schema, authorize?: false)
+      |> Enum.find_value(fn
+        %User{status: :active, role: role} = user when role in @teacher_roles ->
+          if Bcrypt.verify_pass(password, user.hashed_password),
+            do: {:ok, teacher_map(user, schema)},
+            else: nil
+
+        _ ->
+          nil
+      end)
     end)
   end
 
@@ -103,7 +104,7 @@ defmodule TcmEduWeb.TeacherAuth do
     {%{}, types}
     |> Ecto.Changeset.cast(params, Map.keys(types))
     |> Ecto.Changeset.validate_required([:email, :password])
-    |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/, message: "邮箱格式不正确")
+    |> Ecto.Changeset.validate_length(:email, min: 1, message: "请输入邮箱或用户名")
     |> Ecto.Changeset.validate_length(:password, min: 1, message: "请输入密码")
   end
 

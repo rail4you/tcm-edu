@@ -106,8 +106,9 @@ defmodule TcmEdu.System.SuperAdmin do
     end
 
     action :sign_in_with_password, :map do
-      argument :email, :string do
+      argument :identity, :string do
         allow_nil?(false)
+        description("邮箱或用户名")
       end
 
       argument :password, :string do
@@ -119,11 +120,23 @@ defmodule TcmEdu.System.SuperAdmin do
         # NOTE: `__MODULE__` inside the action run block is the auto-generated
         # action module, not the resource. Use the fully-qualified resource name.
         require Ash.Query
-        query = Ash.Query.filter(TcmEdu.System.SuperAdmin, email == ^input.arguments.email)
+        identity = String.trim(input.arguments.identity)
+
+        query =
+          if String.contains?(identity, "@") do
+            Ash.Query.filter(TcmEdu.System.SuperAdmin, email == ^identity)
+          else
+            TcmEdu.System.SuperAdmin
+            |> Ash.Query.filter(name == ^identity)
+            |> Ash.Query.limit(5)
+          end
 
         case Ash.read(query, authorize?: false) do
-          {:ok, [admin]} ->
-            if Bcrypt.verify_pass(input.arguments.password, admin.hashed_password) do
+          {:ok, admins} when is_list(admins) ->
+            admin =
+              Enum.find(admins, &Bcrypt.verify_pass(input.arguments.password, &1.hashed_password))
+
+            if admin do
               # 更新最后登录时间（冝余保护：未来可加 Oban 队列）
               _ =
                 admin

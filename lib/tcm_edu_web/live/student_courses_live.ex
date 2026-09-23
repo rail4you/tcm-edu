@@ -20,6 +20,9 @@ defmodule TcmEduWeb.StudentCoursesLive do
 
   @impl true
   def mount(params, _session, socket) do
+    student = socket.assigns.current_student
+    current_tenant = if student, do: student.tenant, else: @tenant
+
     {:ok,
      socket
      |> assign(:page_title, "精品课程")
@@ -28,6 +31,8 @@ defmodule TcmEduWeb.StudentCoursesLive do
      |> assign(:level, "all")
      |> assign(:categories, list_categories())
      |> assign(:stats, load_stats())
+     |> assign(:current_tenant, current_tenant)
+     |> assign(:courses_preview?, current_tenant != @tenant)
      |> load_courses()}
   end
 

@@ -87,60 +87,69 @@ defmodule TcmEduWeb.AuthController do
   @doc """
   超管登录入口（不走 AshAuthentication 标准 flow）。
 
-  入参：`%{"email" => ..., "password" => ...}`
+  入参：`%{"identity" => ..., "password" => ...}`（`identity` 为邮箱或
+  用户名；旧版 `"email"` 键仍兼容）
   出参：成功返回 `{token, admin}`，失败返回 401。
   """
-  def super_admin_sign_in(conn, %{"email" => email, "password" => password}) do
-    input =
-      Ash.ActionInput.for_action(
-        SuperAdmin,
-        :sign_in_with_password,
-        %{email: email, password: password}
-      )
+  def super_admin_sign_in(conn, %{"password" => password} = params) do
+    identity = params["identity"] || params["email"]
 
-    case Ash.run_action(input, authorize?: false) do
-      {:ok, %{admin: admin, token: token}} ->
-        conn
-        |> put_status(200)
-        |> json(%{
-          authentication: %{
-            status: :success,
-            bearer: token,
-            tenant: "public",
-            role: "super_admin",
-            admin: %{
-              id: admin.id,
-              email: admin.email,
-              name: admin.name
-            }
-          }
-        })
+    if is_binary(identity) do
+      input =
+        Ash.ActionInput.for_action(
+          SuperAdmin,
+          :sign_in_with_password,
+          %{identity: identity, password: password}
+        )
 
-      {:error, err} when is_struct(err) ->
-        # 检查是不是 invalid_credentials 错误（Action 返回的 :invalid_credentials 被 Ash 包装为 UnknownError）
-        if inspect(err) =~ "invalid_credentials" do
+      case Ash.run_action(input, authorize?: false) do
+        {:ok, %{admin: admin, token: token}} ->
           conn
-          |> put_status(401)
+          |> put_status(200)
           |> json(%{
             authentication: %{
-              status: :failed,
-              reason: "invalid_credentials"
+              status: :success,
+              bearer: token,
+              tenant: "public",
+              role: "super_admin",
+              admin: %{
+                id: admin.id,
+                email: admin.email,
+                name: admin.name
+              }
             }
           })
-        else
-          Logger.error("super_admin_sign_in failed: #{inspect(err)}")
+
+        {:error, err} when is_struct(err) ->
+          # 检查是不是 invalid_credentials 错误（Action 返回的 :invalid_credentials 被 Ash 包装为 UnknownError）
+          if inspect(err) =~ "invalid_credentials" do
+            conn
+            |> put_status(401)
+            |> json(%{
+              authentication: %{
+                status: :failed,
+                reason: "invalid_credentials"
+              }
+            })
+          else
+            Logger.error("super_admin_sign_in failed: #{inspect(err)}")
+
+            conn
+            |> put_status(500)
+            |> json(%{error: "internal_error"})
+          end
+
+        {:error, reason} ->
+          Logger.error("super_admin_sign_in failed: #{inspect(reason)}")
 
           conn
           |> put_status(500)
           |> json(%{error: "internal_error"})
-        end
-
-      {:error, reason} ->
-        Logger.error("super_admin_sign_in failed: #{inspect(reason)}")
-
-        conn
-        |> put_status(500)
-        |> json(%{error: "internal_error"})
+      end
+    else
+      conn
+      |> put_status(400)
+      |> json(%{error: "missing_email_or_password"})
     end
   end
 

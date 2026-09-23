@@ -137,10 +137,10 @@ defmodule TcmEduWeb.StudentPortalTest do
 
       html =
         render_submit(view, "submit", %{
-          "login" => %{"tab" => "student", "email" => "bad", "password" => ""}
+          "login" => %{"tab" => "student", "email" => "someone", "password" => ""}
         })
 
-      assert html =~ "邮箱格式不正确"
+      assert html =~ "请输入密码"
     end
 
     test "public API registration stays closed", %{conn: conn} do

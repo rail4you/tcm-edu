@@ -79,16 +79,20 @@
                 <span class="text-[10px] opacity-80">{media_label(doc.media_kind)}</span>
               </span>
               <div class="min-w-0 flex-1">
-                <p class="truncate text-base">{doc.title}</p>
+                <p class="truncate text-base">
+                  {doc.title}
+                  <span :if={@docs_preview?} class="ml-2 rounded bg-black/60 px-1.5 py-0.5 align-middle text-[11px] font-medium text-white">仅预览</span>
+                </p>
                 <p class="mt-1.5 line-clamp-1 text-xs text-[#999]">
                   {doc.source_name || (doc.content && String.slice(doc.content, 0, 60) || "")}
                 </p>
                 <div class="mt-1.5 text-xs text-[#999]">
                   {doc_type_label(doc.doc_type)}　|　共 1 个资料
+                  <span :if={@docs_preview?}>　·　当前校区暂无此资料，仅供预览</span>
                 </div>
               </div>
               <a
-                :if={doc.asset_url}
+                :if={doc.asset_url && !@docs_preview?}
                 href={doc.asset_url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -96,8 +100,18 @@
               >
                 资料下载
               </a>
-              <span :if={!doc.asset_url} class="shrink-0 rounded bg-[#e5f8ef] px-4 py-2 text-sm text-[#00b86b]">
+              <span
+                :if={doc.asset_url && @docs_preview?}
+                title="当前校区暂无此资料，仅供预览"
+                class="shrink-0 cursor-not-allowed rounded bg-base-200 px-4 py-2 text-sm text-base-content/50"
+              >
+                仅预览
+              </span>
+              <span :if={!doc.asset_url && !@docs_preview?} class="shrink-0 rounded bg-[#e5f8ef] px-4 py-2 text-sm text-[#00b86b]">
                 资料下载
+              </span>
+              <span :if={!doc.asset_url && @docs_preview?} title="当前校区暂无此资料，仅供预览" class="shrink-0 cursor-not-allowed rounded bg-base-200 px-4 py-2 text-sm text-base-content/50">
+                仅预览
               </span>
             </div>
           </section>

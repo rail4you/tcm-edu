@@ -28,6 +28,9 @@ defmodule TcmEduWeb.StudentDownloadsLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    student = socket.assigns.current_student
+    current_tenant = if student, do: student.tenant, else: @tenant
+
     {:ok,
      socket
      |> assign(:page_title, "资料下载")
@@ -35,7 +38,9 @@ defmodule TcmEduWeb.StudentDownloadsLive do
      |> assign(:doc_type, "all")
      |> assign(:doc_types, @doc_types)
      |> assign(:doc_type_pills, Enum.drop(@doc_types, 1))
-     |> assign(:docs, list_docs())}
+     |> assign(:docs, list_docs())
+     |> assign(:current_tenant, current_tenant)
+     |> assign(:docs_preview?, current_tenant != @tenant)}
   end
 
   @impl true

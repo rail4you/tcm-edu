@@ -193,6 +193,56 @@ defmodule TcmEduWeb.StudentComponents do
   attr :id, :string, default: nil
   attr :progress_pct, :integer, default: nil
 
+  # 跨租户不可访问时只给预览：渲染成不可点击的 div，不再 navigate 到详情页
+  # （详情页在该租户下会直接报“课程不存在”）。
+  attr :preview?, :boolean, default: false
+
+  def course_card(%{preview?: true} = assigns) do
+    ~H"""
+    <div
+      id={@id}
+      title="当前校区暂无此课程，仅供预览"
+      aria-disabled="true"
+      class="group relative block overflow-hidden bg-white shadow-sm"
+    >
+      <figure class="relative h-32 overflow-hidden bg-[#1a2e2a]">
+        <img
+          src={cover_for(@course)}
+          alt={@course.title}
+          loading="lazy"
+          class="h-full w-full object-cover opacity-90"
+        />
+        <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent"></div>
+        <span class="absolute bottom-2 left-2 rounded bg-white/85 px-2 py-0.5 text-[11px] font-medium text-[#1a2e2a] backdrop-blur-sm">
+          {level_label(@course.level)}
+        </span>
+        <span class="absolute right-2 top-2 rounded bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
+          仅预览
+        </span>
+      </figure>
+      <div class="flex flex-1 flex-col p-3">
+        <p class="truncate text-base font-medium">{@course.title}</p>
+        <p class="mt-1 truncate text-xs text-[#999]">{@course.subtitle || "杏宁树中医课堂"}</p>
+        <div class="mt-2 flex flex-wrap items-center gap-1.5">
+          <span :if={category_name(@course.category)} class="inline-block border border-[#00c98a] px-2 py-0.5 text-xs text-[#00b86b]">
+            {category_name(@course.category)}
+          </span>
+          <span class="text-[11px] text-[#bbb]">{@course.lesson_count || 0} 课时</span>
+        </div>
+        <div :if={@progress_pct} class="mt-3 flex items-center gap-2">
+          <progress class="progress progress-success h-1.5 w-full" value={@progress_pct} max="100" />
+          <p class="text-xs tabular-nums text-[#999]">{@progress_pct}%</p>
+        </div>
+        <div class="mt-auto flex items-center justify-between pt-4">
+          <b :if={price_label(@course.price_cents)} class="text-xl leading-none text-[#ff4d2f]">{price_label(@course.price_cents)}</b>
+          <span class="ml-auto text-xs text-[#999]">{@course.student_count || @course.total_students || 0} 人在学</span>
+        </div>
+        <p class="mt-2 text-[11px] text-[#bbb]">当前校区暂无此课程，仅供预览</p>
+      </div>
+    </div>
+    """
+  end
+
   def course_card(assigns) do
     ~H"""
     <.link

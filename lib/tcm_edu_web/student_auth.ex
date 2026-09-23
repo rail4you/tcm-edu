@@ -16,6 +16,7 @@ defmodule TcmEduWeb.StudentAuth do
 
   alias TcmEdu.Accounts.User
   alias TcmEdu.System.Organization
+  alias TcmEduWeb.LoginIdentity
 
   @default_tenant "tenant_default"
 
@@ -67,27 +68,28 @@ defmodule TcmEduWeb.StudentAuth do
   end
 
   @doc """
-  Verifies student credentials. When `tenant` (a schema name) is given,
-  only that tenant is checked; otherwise all tenants are scanned.
+  Verifies student credentials by email or username. When `tenant`
+  (a schema name) is given, only that tenant is checked; otherwise
+  all tenants are scanned.
   """
-  def authenticate(email, password, tenant \\ nil)
+  def authenticate(identity, password, tenant \\ nil)
 
-  def authenticate(email, password, tenant) when is_binary(email) and is_binary(password) do
-    email = String.trim(email)
+  def authenticate(identity, password, tenant)
+      when is_binary(identity) and is_binary(password) do
+    identity = String.trim(identity)
     schemas = if tenant_present?(tenant), do: [tenant], else: tenant_schemas()
 
     Enum.find_value(schemas, {:error, :invalid_credentials}, fn schema ->
-      with {:ok, [user]} <-
-             User
-             |> Ash.Query.filter(email == ^email)
-             |> Ash.Query.limit(1)
-             |> Ash.read(tenant: schema, authorize?: false),
-           %User{role: :student, status: :active} = user <- user,
-           true <- Bcrypt.verify_pass(password, user.hashed_password) do
-        {:ok, student_map(user, schema)}
-      else
-        _ -> nil
-      end
+      LoginIdentity.lookup(User, identity, tenant: schema, authorize?: false)
+      |> Enum.find_value(fn
+        %User{role: :student, status: :active} = user ->
+          if Bcrypt.verify_pass(password, user.hashed_password),
+            do: {:ok, student_map(user, schema)},
+            else: nil
+
+        _ ->
+          nil
+      end)
     end)
   end
 
@@ -104,7 +106,7 @@ defmodule TcmEduWeb.StudentAuth do
     {%{}, types}
     |> Ecto.Changeset.cast(params, Map.keys(types))
     |> Ecto.Changeset.validate_required([:email, :password])
-    |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/, message: "邮箱格式不正确")
+    |> Ecto.Changeset.validate_length(:email, min: 1, message: "请输入邮箱或用户名")
     |> Ecto.Changeset.validate_length(:password, min: 1, message: "请输入密码")
   end
 

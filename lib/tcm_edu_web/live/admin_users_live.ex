@@ -42,8 +42,10 @@ defmodule TcmEduWeb.AdminUsersLive do
      |> assign(:modal, nil)
      |> assign(:role_editing, nil)
      |> assign(:deleting, nil)
+     |> assign(:password_editing, nil)
      |> assign(:create_form, user_form(%{}))
      |> assign(:role_form, role_form(%{}))
+     |> assign(:password_form, password_form(%{}))
      |> assign(:import_modal, false)
      |> assign(:import_result, nil)
      |> allow_upload(:import_file,
@@ -85,7 +87,8 @@ defmodule TcmEduWeb.AdminUsersLive do
   end
 
   def handle_event("close-modal", _params, socket) do
-    {:noreply, assign(socket, modal: nil, role_editing: nil, deleting: nil)}
+    {:noreply,
+     assign(socket, modal: nil, role_editing: nil, deleting: nil, password_editing: nil)}
   end
 
   def handle_event("validate-create", %{"user" => params}, socket) do
@@ -168,6 +171,62 @@ defmodule TcmEduWeb.AdminUsersLive do
     else
       nil -> {:noreply, put_flash(socket, :error, "用户不存在")}
       {:error, error} -> {:noreply, put_flash(socket, :error, ash_message(error))}
+    end
+  end
+
+  def handle_event("open-password", %{"id" => id}, socket) do
+    # 重置密码仅超管可用；其他角色后端 policy 会拒绝，这里先拦一道。
+    if socket.assigns.current_admin.role != "super_admin" do
+      {:noreply, put_flash(socket, :error, "仅超级管理员可重置密码")}
+    else
+      case find_user(socket, id) do
+        nil ->
+          {:noreply, put_flash(socket, :error, "用户不存在")}
+
+        user ->
+          {:noreply,
+           assign(socket,
+             modal: :password,
+             password_editing: user,
+             password_form: password_form(%{})
+           )}
+      end
+    end
+  end
+
+  def handle_event("validate-password", %{"user" => params}, socket) do
+    {:noreply, assign(socket, :password_form, password_form(params))}
+  end
+
+  def handle_event("save-password", %{"user" => params}, socket) do
+    changeset = password_changeset(params)
+
+    if changeset.valid? do
+      user = socket.assigns.password_editing
+
+      attrs = %{
+        password: get_field(changeset, :password),
+        password_confirmation: get_field(changeset, :password_confirmation)
+      }
+
+      case user
+           |> Ash.Changeset.for_update(:reset_password, attrs,
+             actor: actor(socket),
+             tenant: socket.assigns.tenant
+           )
+           |> Ash.update() do
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> assign(modal: nil, password_editing: nil)
+           |> put_flash(:info, "已重置 #{user.email} 的密码")
+           |> load_users()}
+
+        {:error, error} ->
+          {:noreply, put_flash(socket, :error, ash_message(error))}
+      end
+    else
+      {:noreply, assign(socket, :password_form, password_form(params))}
     end
   end
 
@@ -363,6 +422,21 @@ defmodule TcmEduWeb.AdminUsersLive do
     |> Ecto.Changeset.cast(params, [:role])
     |> Ecto.Changeset.validate_inclusion(:role, @roles)
     |> Phoenix.Component.to_form(as: "user")
+  end
+
+  defp password_form(params) do
+    params
+    |> password_changeset()
+    |> Map.put(:action, :validate)
+    |> Phoenix.Component.to_form(as: "user")
+  end
+
+  defp password_changeset(params) do
+    {%{}, %{password: :string, password_confirmation: :string}}
+    |> Ecto.Changeset.cast(params, [:password, :password_confirmation])
+    |> Ecto.Changeset.validate_required([:password, :password_confirmation])
+    |> Ecto.Changeset.validate_length(:password, min: 6, message: "至少 6 位")
+    |> Ecto.Changeset.validate_confirmation(:password, message: "两次输入不一致")
   end
 
   defp create_changeset(params) do

@@ -248,6 +248,24 @@ defmodule TcmEdu.Accounts.User do
 
       change({AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password})
     end
+
+    update :reset_password do
+      description("超管直接重置用户密码（无需原密码，仅超管可用）")
+      require_atomic?(false)
+      accept([])
+
+      argument(:password, :string,
+        sensitive?: true,
+        allow_nil?: false,
+        constraints: [min_length: 6]
+      )
+
+      argument(:password_confirmation, :string, sensitive?: true, allow_nil?: false)
+
+      validate(confirm(:password, :password_confirmation))
+
+      change({AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password})
+    end
   end
 
   postgres do
@@ -351,5 +369,7 @@ defmodule TcmEdu.Accounts.User do
     end
 
     # 未匹配任何 policy 的动作 Ash 默认拒绝，无需显式 deny。
+    # 注意：:reset_password 故意不配 policy——仅顶部 SuperAdmin bypass
+    # 能放行，租户管理员/教师/学生调用都会被拒绝。
   end
 end

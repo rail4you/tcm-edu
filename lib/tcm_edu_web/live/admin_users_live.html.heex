@@ -100,6 +100,15 @@
                       改角色
                     </button>
                     <button
+                      :if={@current_admin.role == "super_admin"}
+                      class="btn btn-ghost btn-sm"
+                      id={"reset-password-#{user.id}"}
+                      phx-click="open-password"
+                      phx-value-id={user.id}
+                    >
+                      重置密码
+                    </button>
+                    <button
                       :if={user.status == :active}
                       class="btn btn-ghost btn-sm"
                       phx-click="set-status"
@@ -188,6 +197,41 @@
           <div class="modal-action">
             <button type="button" class="btn btn-soft" phx-click="close-modal">取消</button>
             <.button type="submit" phx-disable-with="保存中..." class="btn-primary">保存</.button>
+          </div>
+        </.form>
+      </div>
+      <div class="modal-backdrop" phx-click="close-modal"></div>
+    </div>
+
+    <div :if={@modal == :password} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-lg font-medium">重置密码：{(@password_editing && @password_editing.email) || ""}</p>
+            <p class="mt-1 text-xs text-base-content/60">新密码即刻生效，该用户需用新密码重新登录。</p>
+          </div>
+          <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-modal" aria-label="关闭">
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </div>
+        <.form
+          for={@password_form}
+          id="reset-password-form"
+          phx-change="validate-password"
+          phx-submit="save-password"
+          class="mt-4 flex flex-col gap-3"
+        >
+          <.input field={@password_form[:password]} type="password" label="新密码" placeholder="至少 6 位" required />
+          <.input
+            field={@password_form[:password_confirmation]}
+            type="password"
+            label="确认新密码"
+            placeholder="再次输入新密码"
+            required
+          />
+          <div class="modal-action">
+            <button type="button" class="btn btn-soft" phx-click="close-modal">取消</button>
+            <.button type="submit" phx-disable-with="保存中..." class="btn-primary">保存新密码</.button>
           </div>
         </.form>
       </div>
