@@ -1158,96 +1158,96 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
           还没有病人档案。点击右上角「新建病人档案」开始。
         </p>
 
-        <div :if={@patients != []} class="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          <article
-            :for={patient <- @patients}
-            id={"patient-#{patient.id}"}
-            class="card border border-base-300 bg-base-100"
-          >
-            <div class="card-body gap-2 p-4">
-              <div class="flex items-start justify-between gap-2">
-                <div class="flex flex-col gap-0.5">
-                  <p class="text-base font-semibold">{patient.name}</p>
+        <div :if={@patients != []} class="overflow-x-auto">
+          <table class="table table-sm table-zebra w-full">
+            <thead>
+              <tr>
+                <th>姓名 / 学科</th>
+                <th>场景 / 主诉</th>
+                <th class="text-right tabular-nums">难度</th>
+                <th class="text-right tabular-nums">评分点</th>
+                <th class="text-right tabular-nums">轮次</th>
+                <th>状态</th>
+                <th class="text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={patient <- @patients} id={"patient-#{patient.id}"}>
+                <td>
+                  <p class="font-medium">{patient.name}</p>
                   <p class="text-xs text-base-content/60">{subject_label(patient.subject)}</p>
-                </div>
-                <span class={["badge badge-soft", status_badge(patient.status)]}>
-                  {status_text(patient.status)}
-                </span>
-              </div>
-
-              <p :if={patient.scenario_title} class="text-sm font-medium">
-                {patient.scenario_title}
-              </p>
-              <p class="line-clamp-3 text-sm text-base-content/80">
-                <span class="text-base-content/60">主诉：</span>
-                {patient.complaint}
-              </p>
-
-              <div class="mt-1 flex flex-wrap items-center gap-1 text-xs">
-                <span class="badge badge-soft badge-sm">
-                  难度 {patient.difficulty}/5
-                </span>
-                <span class="badge badge-soft badge-sm">
-                  {length(patient.key_points || [])} 个评分点
-                </span>
-                <span class="badge badge-soft badge-sm">
-                  {patient.min_questions}-{patient.max_turns} 轮
-                </span>
-              </div>
-
-              <div class="mt-2 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  id={"edit-patient-#{patient.id}"}
-                  phx-click="edit-patient"
-                  phx-value-id={patient.id}
-                  class="btn btn-ghost btn-xs"
-                >
-                  <.icon name="hero-pencil-square" class="size-3.5" /> 编辑
-                </button>
-                <button
-                  :if={patient.status == :draft}
-                  type="button"
-                  id={"publish-patient-#{patient.id}"}
-                  phx-click="publish-patient"
-                  phx-value-id={patient.id}
-                  class="btn btn-ghost btn-xs text-success"
-                >
-                  <.icon name="hero-check-circle" class="size-3.5" /> 发布
-                </button>
-                <button
-                  :if={patient.status != :archived}
-                  type="button"
-                  id={"archive-patient-#{patient.id}"}
-                  phx-click="archive-patient"
-                  phx-value-id={patient.id}
-                  class="btn btn-ghost btn-xs"
-                >
-                  <.icon name="hero-archive-box" class="size-3.5" /> 归档
-                </button>
-                <button
-                  :if={patient.status == :published}
-                  type="button"
-                  id={"assign-patient-#{patient.id}"}
-                  phx-click="open-assign"
-                  phx-value-patient_id={patient.id}
-                  class="btn btn-primary btn-xs"
-                >
-                  <.icon name="hero-user-plus" class="size-3.5" /> 分配给学生
-                </button>
-                <button
-                  type="button"
-                  id={"delete-patient-#{patient.id}"}
-                  phx-click="delete-patient"
-                  phx-value-id={patient.id}
-                  data-confirm="确定删除该病人档案吗？相关分配与历史评分会保留但不可继续分配。"
-                  class="btn btn-ghost btn-xs ms-auto text-error"
-                >
-                  <.icon name="hero-trash" class="size-3.5" />
-                </button>
-              </div>
-            </div>
-          </article>
+                </td>
+                <td class="max-w-72">
+                  <p :if={patient.scenario_title} class="font-medium">{patient.scenario_title}</p>
+                  <p class="truncate text-sm text-base-content/80" title={patient.complaint}>
+                    <span class="text-base-content/60">主诉：</span>{patient.complaint}
+                  </p>
+                </td>
+                <td class="text-right tabular-nums">{patient.difficulty}/5</td>
+                <td class="text-right tabular-nums">{length(patient.key_points || [])}</td>
+                <td class="whitespace-nowrap text-right tabular-nums">{patient.min_questions}-{patient.max_turns}</td>
+                <td>
+                  <span class={["badge badge-soft badge-xs", status_badge(patient.status)]}>
+                    {status_text(patient.status)}
+                  </span>
+                </td>
+                <td>
+                  <div class="flex justify-end gap-1">
+                    <button
+                      type="button"
+                      id={"edit-patient-#{patient.id}"}
+                      phx-click="edit-patient"
+                      phx-value-id={patient.id}
+                      class="btn btn-ghost btn-xs"
+                    >
+                      <.icon name="hero-pencil-square" class="size-3.5" /> 编辑
+                    </button>
+                    <button
+                      :if={patient.status == :draft}
+                      type="button"
+                      id={"publish-patient-#{patient.id}"}
+                      phx-click="publish-patient"
+                      phx-value-id={patient.id}
+                      class="btn btn-ghost btn-xs text-success"
+                    >
+                      <.icon name="hero-check-circle" class="size-3.5" /> 发布
+                    </button>
+                    <button
+                      :if={patient.status != :archived}
+                      type="button"
+                      id={"archive-patient-#{patient.id}"}
+                      phx-click="archive-patient"
+                      phx-value-id={patient.id}
+                      class="btn btn-ghost btn-xs"
+                    >
+                      <.icon name="hero-archive-box" class="size-3.5" /> 归档
+                    </button>
+                    <button
+                      :if={patient.status == :published}
+                      type="button"
+                      id={"assign-patient-#{patient.id}"}
+                      phx-click="open-assign"
+                      phx-value-patient_id={patient.id}
+                      class="btn btn-primary btn-xs"
+                    >
+                      <.icon name="hero-user-plus" class="size-3.5" /> 分配给学生
+                    </button>
+                    <button
+                      type="button"
+                      id={"delete-patient-#{patient.id}"}
+                      phx-click="delete-patient"
+                      phx-value-id={patient.id}
+                      data-confirm="确定删除该病人档案吗？相关分配与历史评分会保留但不可继续分配。"
+                      class="btn btn-ghost btn-xs text-error"
+                      aria-label={"删除 #{patient.name}"}
+                    >
+                      <.icon name="hero-trash" class="size-3.5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1314,57 +1314,60 @@ defmodule TcmEduWeb.TeacherAISimulatedPatientLive do
         <p :if={@sessions == []} class="py-10 text-center text-sm text-base-content/60">
           暂无对话记录。
         </p>
-        <div :if={@sessions != []} class="grid items-start gap-4 lg:grid-cols-2">
-          <article
-            :for={session <- @sessions}
-            id={"session-#{session.id}"}
-            class="card border border-base-300 bg-base-100"
-          >
-            <div class="card-body gap-2 p-4">
-              <div class="flex items-start justify-between gap-2">
-                <div class="flex flex-col gap-0.5">
-                  <p class="text-base font-semibold">
+        <div :if={@sessions != []} class="overflow-x-auto">
+          <table class="table table-sm table-zebra w-full">
+            <thead>
+              <tr>
+                <th>病人 / 学生</th>
+                <th class="text-right tabular-nums">轮次</th>
+                <th>评分状态</th>
+                <th>评分详情</th>
+                <th>会话状态</th>
+                <th>时间</th>
+                <th class="text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={session <- @sessions} id={"session-#{session.id}"}>
+                <td>
+                  <p class="font-medium">
                     {(session.patient && session.patient.name) || session.patient_id}
                   </p>
                   <p class="text-xs text-base-content/60">
-                    学生：{student_name(@students, session.student_id)} · 轮次：{session.turn_count}
+                    学生：{student_name(@students, session.student_id)}
                   </p>
-                </div>
-                <span class={["badge badge-soft", evaluation_status_badge(session.evaluation_status)]}>
-                  {evaluation_status_text(session.evaluation_status)}
-                </span>
-              </div>
-
-              {eval_summary(assigns, session)}
-
-              <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                <span class="text-base-content/60">
-                  会话状态：{session_status_text(session.status)}
-                </span>
-                <span :if={session.ended_reason} class="text-base-content/60">
-                  · {session.ended_reason}
-                </span>
-                <span class="ms-auto">{format_date(session.inserted_at)}</span>
-              </div>
-
-              <div :if={session.evaluation_error} class="alert alert-warning alert-soft text-xs">
-                <span>{truncate(session.evaluation_error, 200)}</span>
-              </div>
-
-              <div class="mt-2 flex flex-wrap items-center gap-2">
-                <button
-                  :if={session.evaluation_status == :failed}
-                  type="button"
-                  id={"retry-eval-#{session.id}"}
-                  phx-click="retry-evaluation"
-                  phx-value-id={session.id}
-                  class="btn btn-primary btn-xs"
-                >
-                  <.icon name="hero-arrow-path" class="size-3.5" /> 重试评分
-                </button>
-              </div>
-            </div>
-          </article>
+                </td>
+                <td class="text-right tabular-nums">{session.turn_count}</td>
+                <td>
+                  <span class={["badge badge-soft badge-xs", evaluation_status_badge(session.evaluation_status)]}>
+                    {evaluation_status_text(session.evaluation_status)}
+                  </span>
+                  <div :if={session.evaluation_error} class="mt-1 max-w-48 truncate text-xs text-warning" title={session.evaluation_error}>
+                    {truncate(session.evaluation_error, 200)}
+                  </div>
+                </td>
+                <td class="min-w-64 max-w-96">{eval_summary(assigns, session)}</td>
+                <td class="whitespace-nowrap text-xs text-base-content/60">
+                  {session_status_text(session.status)}<span :if={session.ended_reason}> · {session.ended_reason}</span>
+                </td>
+                <td class="whitespace-nowrap text-xs text-base-content/60">{format_date(session.inserted_at)}</td>
+                <td>
+                  <div class="flex justify-end">
+                    <button
+                      :if={session.evaluation_status == :failed}
+                      type="button"
+                      id={"retry-eval-#{session.id}"}
+                      phx-click="retry-evaluation"
+                      phx-value-id={session.id}
+                      class="btn btn-primary btn-xs"
+                    >
+                      <.icon name="hero-arrow-path" class="size-3.5" /> 重试评分
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
