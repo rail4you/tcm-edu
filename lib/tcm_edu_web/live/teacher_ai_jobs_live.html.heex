@@ -2,15 +2,8 @@
   <.teacher_shell
     current_teacher={@current_teacher}
     current_page={:ai_jobs}
-    page_title="任务管理"
-    page_subtitle="AI 出题任务与 Oban 执行状态跟踪"
+    page_title="AI 任务管理"
   >
-    <:page_actions>
-      <.link navigate="/teacher/ai/quiz" class="btn btn-primary btn-sm" id="goto-ai-quiz-btn">
-        <.icon name="hero-sparkles" class="size-4" /> 新建出题任务
-      </.link>
-    </:page_actions>
-
     <div class="card rounded-box border border-base-300 bg-base-100">
       <div class="card-body gap-3 p-4 sm:p-6">
         <form

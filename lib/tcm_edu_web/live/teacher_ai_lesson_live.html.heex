@@ -5,64 +5,101 @@
     page_title="AI 备课"
     page_subtitle="输入主题，AI 生成结构化教案，可一键存为课程草稿"
   >
-    <div class="grid items-start gap-6 xl:grid-cols-5">
-      <div class="card border border-base-300 bg-base-100 xl:col-span-2">
-        <div class="card-body gap-3 p-4 sm:p-6">
-          <p class="font-medium">备课需求</p>
-          <.form
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <p :if={@plan_topic} class="text-sm text-base-content/60">
+        主题：<span class="font-medium text-base-content">{@plan_topic}</span>
+      </p>
+      <div class="flex gap-2">
+        <button class="btn btn-primary btn-sm" phx-click="open-form">
+          <.icon name="hero-pencil-square" class="size-4" />
+          {if @plan, do: "修改备课需求", else: "填写备课需求"}
+        </button>
+        <button
+          :if={@plan}
+          class="btn btn-primary btn-sm"
+          phx-click="save-draft"
+          phx-disable-with="保存中..."
+        >
+          <.icon name="hero-plus" class="size-4" /> 存为课程草稿
+        </button>
+      </div>
+    </div>
+
+    <div class="card border border-base-300 bg-base-100">
+      <div class="card-body gap-3 p-4 sm:p-6">
+        <p class="font-medium">生成结果</p>
+        <div :if={@generating} class="flex flex-col gap-3 py-6">
+          <div class="skeleton h-4 w-3/4" />
+          <div class="skeleton h-4 w-full" />
+          <div class="skeleton h-4 w-5/6" />
+          <p class="mt-2 flex items-center gap-2 text-sm text-base-content/60">
+            <span class="loading loading-dots loading-sm" /> AI 正在撰写教案…
+          </p>
+        </div>
+        <p :if={!@generating and !@plan} class="py-8 text-center text-sm text-base-content/60">
+          点击「填写备课需求」开始生成
+        </p>
+        <div :if={@plan} class="overflow-x-auto">
+          <table class="table table-zebra w-full text-sm">
+            <thead>
+              <tr>
+                <th class="w-12">序号</th>
+                <th class="w-32">模块</th>
+                <th>内容</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={{row, idx} <- Enum.with_index(plan_rows(@plan), 1)}>
+                <td class="tabular-nums text-base-content/60">{idx}</td>
+                <td class="whitespace-nowrap font-medium">{row.module}</td>
+                <td class="whitespace-pre-line leading-7">{row.content}</td>
+              </tr>
+            </tbody>
+          </table>
+          <details class="collapse collapse-arrow mt-3 border border-base-300 bg-base-200/50">
+            <summary class="collapse-title text-sm font-medium">查看原文</summary>
+            <div class="collapse-content">
+              <p class="whitespace-pre-line text-sm leading-7">{@plan}</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <div :if={@show_form} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-bold">备课需求</h3>
+          <button class="btn btn-ghost btn-sm btn-circle" phx-click="close-form" aria-label="关闭">
+            <.icon name="hero-x-mark" class="size-5" />
+          </button>
+        </div>
+        <.form
           for={@form}
           id="ai-lesson-form"
           phx-change="validate"
           phx-submit="generate"
-          class="flex flex-col gap-3"
+          class="mt-4 flex flex-col gap-3"
         >
           <.input field={@form[:topic]} type="text" label="主题" placeholder="如：手太阴肺经腧穴" maxlength="100" required />
           <.input field={@form[:subject]} type="text" label="学科" placeholder="如：中医基础（可选）" maxlength="50" />
           <.input field={@form[:level]} type="select" label="学段" options={level_options()} />
           <.input field={@form[:audience]} type="text" label="授课对象" placeholder="如：大二本科生（可选）" maxlength="100" />
-          <.button
-            type="submit"
-            phx-disable-with="生成中..."
-            class="btn-primary mt-2 w-full"
-            disabled={@generating}
-          >
-            <.icon name="hero-sparkles" class="size-4" /> 生成教案
-          </.button>
-        </.form>
-          <p class="label">生成约需十几秒，请耐心等待；需要配置大模型 Key 才能使用</p>
-        </div>
-      </div>
-
-      <div class="card border border-base-300 bg-base-100 xl:col-span-3">
-        <div class="card-body gap-3 p-4 sm:p-6">
-          <div class="flex items-center justify-between gap-2">
-            <p class="font-medium">生成结果</p>
-            <button
-              :if={@plan}
-              class="btn btn-primary btn-sm"
-              phx-click="save-draft"
-              phx-disable-with="保存中..."
+          <div class="modal-action">
+            <button type="button" class="btn btn-ghost" phx-click="close-form">取消</button>
+            <.button
+              type="submit"
+              phx-disable-with="生成中..."
+              class="btn-primary"
+              disabled={@generating}
             >
-              <.icon name="hero-plus" class="size-4" /> 存为课程草稿
-            </button>
+              <.icon name="hero-sparkles" class="size-4" /> 生成教案
+            </.button>
           </div>
-          <div :if={@generating} class="flex flex-col gap-3 py-6">
-            <div class="skeleton h-4 w-3/4" />
-            <div class="skeleton h-4 w-full" />
-            <div class="skeleton h-4 w-5/6" />
-            <div class="skeleton h-4 w-2/3" />
-            <p class="mt-2 flex items-center gap-2 text-sm text-base-content/60">
-              <span class="loading loading-dots loading-sm" /> AI 正在撰写教案…
-            </p>
-          </div>
-          <p :if={!@generating and !@plan} class="py-8 text-center text-sm text-base-content/60">
-            在左侧填写主题后点击生成
-          </p>
-          <article :if={@plan} class="max-w-none text-sm">
-            <p class="whitespace-pre-line leading-7">{@plan}</p>
-          </article>
-        </div>
+        </.form>
+        <p class="label mt-2">生成约需十几秒，请耐心等待；需要配置大模型 Key 才能使用</p>
       </div>
+      <div class="modal-backdrop" phx-click="close-form"></div>
     </div>
   </.teacher_shell>
 </Layouts.app>

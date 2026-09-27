@@ -24,6 +24,8 @@ defmodule TcmEduWeb.TeacherExamResultsLive do
      |> assign(:page_title, "考试结果")
      |> assign(:grading, nil)
      |> assign(:grade_form, %{})
+     |> assign(:grade_tab, "essay")
+     |> assign(:max_scores, %{})
      |> load_exam()
      |> load_assignments()}
   end
@@ -37,6 +39,7 @@ defmodule TcmEduWeb.TeacherExamResultsLive do
         ExamAssignment
         |> Ash.Query.filter(id == ^assignment_id)
         |> Ash.Query.load(responses: [:question])
+        |> Ash.Query.load(:student)
         |> Ash.read_one!(actor: teacher.actor, tenant: teacher.tenant)
       rescue
         _ -> nil
@@ -46,7 +49,9 @@ defmodule TcmEduWeb.TeacherExamResultsLive do
       {:noreply,
        socket
        |> assign(:grading, assignment)
-       |> assign(:grade_form, essay_form(assignment))}
+       |> assign(:grade_form, essay_form(assignment))
+       |> assign(:grade_tab, "essay")
+       |> assign(:max_scores, max_scores(socket.assigns.exam_id, teacher))}
     else
       {:noreply, put_flash(socket, :error, "该作答尚未交卷，无法批改")}
     end
@@ -60,34 +65,70 @@ defmodule TcmEduWeb.TeacherExamResultsLive do
     {:noreply, socket}
   end
 
+  def handle_event("switch-grade-tab", %{"tab" => tab}, socket)
+      when tab in ["objective", "essay"] do
+    {:noreply, assign(socket, :grade_tab, tab)}
+  end
+
+  def handle_event("save-all-essays", %{"scores" => scores}, socket) do
+    teacher = socket.assigns.current_teacher
+    max_scores = socket.assigns.max_scores || %{}
+
+    with {:ok, entries} <- parse_all_scores(socket, scores, max_scores) do
+      results =
+        Enum.map(entries, fn {response, score, comment} ->
+          response
+          |> Ash.Changeset.for_update(
+            :grade_essay,
+            %{score: score, comment: comment},
+            actor: teacher.actor,
+            tenant: teacher.tenant
+          )
+          |> Ash.update()
+        end)
+
+      errors = Enum.filter(results, &match?({:error, _}, &1))
+
+      if errors == [] do
+        {:noreply,
+         socket
+         |> put_flash(:info, "评分已保存，成绩已更新")
+         |> assign(:grading, nil)
+         |> assign(:grade_form, %{})
+         |> load_assignments()}
+      else
+        {:noreply, put_flash(socket, :error, "部分保存失败，请重试")}
+      end
+    else
+      {:error, message} -> {:noreply, put_flash(socket, :error, message)}
+    end
+  end
+
+  def handle_event("save-all-essays", _params, socket) do
+    {:noreply, put_flash(socket, :error, "请填写每题得分")}
+  end
+
   def handle_event("save-essay", %{"grade" => params}, socket) do
     teacher = socket.assigns.current_teacher
     response_id = params["response_id"]
 
-    score =
-      case Float.parse(to_string(params["score"] || "")) do
-        {value, _} -> value
-        :error -> nil
-      end
+    case find_response(socket, response_id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "作答记录不存在")}
 
-    cond do
-      is_nil(response_id) ->
-        {:noreply, put_flash(socket, :error, "缺少作答记录")}
+      response ->
+        max = max_for(socket.assigns.max_scores || %{}, response.question_id)
 
-      is_nil(score) or score < 0 ->
-        {:noreply, put_flash(socket, :error, "请填写有效的得分")}
+        case parse_score(params["score"], max) do
+          {:error, message} ->
+            {:noreply, put_flash(socket, :error, message)}
 
-      true ->
-        case find_response(socket, response_id) do
-          nil ->
-            {:noreply, put_flash(socket, :error, "作答记录不存在")}
-
-          response ->
+          {:ok, score} ->
             case response
                  |> Ash.Changeset.for_update(
                    :grade_essay,
                    %{
-                     score: Decimal.new(score),
+                     score: score,
                      comment: empty_to_nil(params["comment"])
                    },
                    actor: teacher.actor,
@@ -97,7 +138,7 @@ defmodule TcmEduWeb.TeacherExamResultsLive do
               {:ok, _} ->
                 {:noreply,
                  socket
-                 |> put_flash(:info, "已评分")
+                 |> put_flash(:info, "已评分，成绩已更新")
                  |> reload_grading()
                  |> load_assignments()}
 
@@ -184,6 +225,7 @@ defmodule TcmEduWeb.TeacherExamResultsLive do
           ExamAssignment
           |> Ash.Query.filter(id == ^socket.assigns.grading.id)
           |> Ash.Query.load(responses: [:question])
+          |> Ash.Query.load(:student)
           |> Ash.read_one!(actor: teacher.actor, tenant: teacher.tenant)
         rescue
           _ -> nil
@@ -208,10 +250,103 @@ defmodule TcmEduWeb.TeacherExamResultsLive do
 
   # ── helpers ───────────────────────────────────────────────
 
+  defp essay_response?(%{question: %{type: :essay}}), do: true
+  defp essay_response?(_), do: false
+
+  defp objective_questions(%ExamAssignment{} = assignment) do
+    (assignment.responses || [])
+    |> Enum.reject(&essay_response?/1)
+    |> Enum.sort_by(& &1.inserted_at)
+  end
+
+  defp response_correct_text(%{is_correct: true}), do: "正确"
+  defp response_correct_text(%{is_correct: false}), do: "错误"
+  defp response_correct_text(_), do: "—"
+
   defp essay_questions(%ExamAssignment{} = assignment) do
     (assignment.responses || [])
-    |> Enum.filter(&(&1.question.type == :essay))
+    |> Enum.filter(&essay_response?/1)
     |> Enum.sort_by(& &1.inserted_at)
+  end
+
+  defp max_scores(exam_id, teacher) do
+    try do
+      alias TcmEdu.Exam.ExamQuestion
+
+      ExamQuestion
+      |> Ash.Query.for_read(:read, %{},
+        actor: teacher.actor,
+        tenant: teacher.tenant
+      )
+      |> Ash.Query.filter(exam_id == ^exam_id)
+      |> Ash.read!()
+      |> Map.new(fn eq -> {eq.question_id, eq.score || Decimal.new(0)} end)
+    rescue
+      _ -> %{}
+    end
+  end
+
+  defp max_for(max_scores, question_id) do
+    Map.get(max_scores, question_id, Decimal.new(100))
+  end
+
+  defp parse_score(raw, max) do
+    max_f =
+      try do
+        Decimal.to_float(max)
+      rescue
+        _ -> 100.0
+      end
+
+    case Float.parse(to_string(raw || "") |> String.trim()) do
+      {value, _} when value < 0 ->
+        {:error, "得分不能为负数"}
+
+      {value, _} when value > max_f ->
+        {:error, "得分不能高于本题满分（#{fmt_score(max)} 分）"}
+
+      {value, _} ->
+        rounded = Float.round(value * 2) / 2
+
+        if abs(value - rounded) > 1.0e-9 do
+          {:error, "得分最小步长为 0.5 分"}
+        else
+          {:ok, rounded |> Decimal.from_float() |> Decimal.round(1)}
+        end
+
+      :error ->
+        {:error, "请填写有效的得分（0～#{fmt_score(max)}，步长 0.5）"}
+    end
+  end
+
+  defp parse_all_scores(socket, scores, max_scores) do
+    responses =
+      case socket.assigns.grading do
+        %ExamAssignment{} = grading ->
+          (grading.responses || [])
+          |> Enum.filter(&essay_response?/1)
+          |> Enum.sort_by(& &1.inserted_at)
+
+        _ ->
+          []
+      end
+
+    Enum.reduce_while(responses, {:ok, []}, fn response, {:ok, acc} ->
+      params = Map.get(scores, response.id, %{})
+      max = max_for(max_scores, response.question_id)
+
+      case parse_score(params["score"], max) do
+        {:ok, score} ->
+          {:cont, {:ok, [{response, score, empty_to_nil(params["comment"])} | acc]}}
+
+        {:error, message} ->
+          {:halt, {:error, message}}
+      end
+    end)
+    |> case do
+      {:ok, entries} -> {:ok, Enum.reverse(entries)}
+      error -> error
+    end
   end
 
   defp essay_form(assignment) do
@@ -237,8 +372,15 @@ defmodule TcmEduWeb.TeacherExamResultsLive do
   defp status_text(_), do: "未知"
 
   defp fmt_score(nil), do: "-"
-  defp fmt_score(%Decimal{} = d), do: Decimal.to_string(d)
+  defp fmt_score(%Decimal{} = d), do: fmt_decimal(d)
+  defp fmt_score(n) when is_float(n), do: fmt_decimal(Decimal.from_float(n))
+  defp fmt_score(n) when is_integer(n), do: to_string(n)
   defp fmt_score(n), do: to_string(n)
+
+  defp fmt_decimal(d) do
+    rounded = Decimal.round(d, 1) |> Decimal.normalize()
+    Decimal.to_string(rounded, :normal)
+  end
 
   defp format_time(nil), do: "-"
   defp format_time(%DateTime{} = dt), do: Calendar.strftime(dt, "%m-%d %H:%M")
@@ -253,10 +395,14 @@ defmodule TcmEduWeb.TeacherExamResultsLive do
 
   defp student_initial(_), do: "S"
 
+  defp student_name(%{student: %Ash.NotLoaded{}}), do: "—"
+
   defp student_name(assignment) do
     (assignment.student && (assignment.student.name || to_string(assignment.student.email))) ||
       "—"
   end
+
+  defp student_email(%{student: %Ash.NotLoaded{}}), do: "—"
 
   defp student_email(assignment) do
     (assignment.student && to_string(assignment.student.email)) || "—"
@@ -279,7 +425,7 @@ defmodule TcmEduWeb.TeacherExamResultsLive do
   defp fmt_avg(nil), do: "-"
 
   defp fmt_avg(%Decimal{} = d) do
-    d |> Decimal.round(1) |> Decimal.to_string()
+    d |> Decimal.round(1) |> fmt_decimal()
   end
 
   defp empty_to_nil(nil), do: nil

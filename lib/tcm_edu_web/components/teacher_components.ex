@@ -183,7 +183,7 @@ defmodule TcmEduWeb.TeacherComponents do
                 <details open>
                   <summary>
                     <.icon name="hero-sparkles" class="size-4" />
-                    <span>智能备课</span>
+                    <span>智能医疗</span>
                   </summary>
                   <ul>
                     <li>
@@ -215,15 +215,6 @@ defmodule TcmEduWeb.TeacherComponents do
                     </li>
                     <li>
                       <.link
-                        navigate="/teacher/ai/jobs"
-                        class={["w-full", @current_page == :ai_jobs && "menu-active"]}
-                      >
-                        <.icon name="hero-queue-list" class="size-4" />
-                        任务管理
-                      </.link>
-                    </li>
-                    <li>
-                      <.link
                         navigate="/teacher/ai/chat"
                         class={["w-full", @current_page == :ai_chat && "menu-active"]}
                       >
@@ -247,6 +238,15 @@ defmodule TcmEduWeb.TeacherComponents do
                       >
                         <.icon name="hero-chat-bubble-oval-left-ellipsis" class="size-4" />
                         MDT 会诊
+                      </.link>
+                    </li>
+                    <li>
+                      <.link
+                        navigate="/teacher/ai/jobs"
+                        class={["w-full", @current_page == :ai_jobs && "menu-active"]}
+                      >
+                        <.icon name="hero-queue-list" class="size-4" />
+                        AI 任务管理
                       </.link>
                     </li>
                   </ul>
@@ -360,7 +360,7 @@ defmodule TcmEduWeb.TeacherComponents do
                 <.link
                   navigate="/teacher/ai/jobs"
                   class={["tooltip tooltip-right w-full", @current_page == :ai_jobs && "menu-active"]}
-                  data-tip="任务管理"
+                  data-tip="AI 任务管理"
                 >
                   <.icon name="hero-queue-list" class="size-4" />
                 </.link>

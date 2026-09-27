@@ -35,8 +35,7 @@ defmodule TcmEduWeb.TeacherAIJobsLive do
 
     {:ok,
      socket
-     |> assign(:page_title, "任务管理")
-     |> assign(:page_subtitle, "AI 出题任务与 Oban 执行状态跟踪")
+     |> assign(:page_title, "AI 任务管理")
      |> assign(:status_filter, "all")
      |> assign(:mine_only, true)
      |> assign(:confirming, nil)

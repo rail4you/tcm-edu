@@ -130,7 +130,7 @@ defmodule TcmEduWeb.AiChatLiveTest do
     |> visit("/teacher/ai/chat")
     |> assert_has("#qa-form")
     |> assert_has("#new-session", "新建会话")
-    |> assert_has("nav", "智能备课")
+    |> assert_has("nav", "智能医疗")
     |> assert_has("nav a[href='/teacher/ai/chat']", "AI 问答")
   end
 

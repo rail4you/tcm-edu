@@ -207,11 +207,6 @@ defmodule TcmEduWeb.LoginLive do
   defp role_label("tenant_admin"), do: "租户管理"
   defp role_label(_), do: "学员"
 
-  defp role_hint("student"), do: "学员登录：先选机构，再登录学习"
-  defp role_hint("teacher"), do: "教师登录：先选机构，再备课授课"
-  defp role_hint("tenant_admin"), do: "租户管理：先选机构，再管理本机构用户"
-  defp role_hint(_), do: ""
-
   defp submit_label("student"), do: "登录学习"
   defp submit_label("teacher"), do: "进入教师端"
   defp submit_label("tenant_admin"), do: "进入管理端"

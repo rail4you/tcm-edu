@@ -49,9 +49,6 @@
           </span>
           <div>
             <p class="text-xl font-semibold">{if @mode == "super", do: "超级管理员登录", else: "统一登录"}</p>
-            <p class="text-xs text-base-content/60">
-              {if @mode == "super", do: "跨租户运营，无需选择机构", else: "先选机构，再选身份"}
-            </p>
           </div>
         </div>
 
@@ -86,7 +83,7 @@
           />
           <div>
             <span class="label-text mb-1 block text-sm">选择身份</span>
-            <div role="tablist" class="tabs tabs-boxed" aria-label="选择身份">
+            <div role="tablist" class="tabs tabs-box" aria-label="选择身份">
               <button
                 :for={role <- @roles}
                 type="button"
@@ -98,7 +95,6 @@
                 {role_label(role)}
               </button>
             </div>
-            <p class="mt-2 text-xs text-base-content/60">{role_hint(@role)}</p>
           </div>
           <.login_field
             form={@login_form}

@@ -138,11 +138,64 @@
           </button>
         </div>
 
-        <div :if={essay_questions(@grading) == []} class="rounded-box bg-base-200/30 px-4 py-8 text-center mt-4">
+        <div class="mt-3 flex items-center justify-between gap-2">
+          <div role="tablist" class="tabs tabs-box" aria-label="作答分类">
+            <button
+              type="button"
+              role="tab"
+              class={["tab", @grade_tab == "objective" && "tab-active"]}
+              phx-click="switch-grade-tab"
+              phx-value-tab="objective"
+            >
+              客观题
+              <span class={["badge badge-xs ms-1", @grade_tab == "objective" && "badge-primary", @grade_tab != "objective" && "badge-ghost"]}>
+                {length(objective_questions(@grading))}
+              </span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class={["tab", @grade_tab == "essay" && "tab-active"]}
+              phx-click="switch-grade-tab"
+              phx-value-tab="essay"
+            >
+              主观题
+              <span class={["badge badge-xs ms-1", @grade_tab == "essay" && "badge-primary", @grade_tab != "essay" && "badge-ghost"]}>
+                {length(essay_questions(@grading))}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div :if={@grade_tab == "objective"} class="mt-4 flex flex-col gap-3">
+          <div
+            :for={response <- objective_questions(@grading)}
+            class="rounded-box border border-base-300 bg-base-100 p-3"
+            id={"objective-response-#{response.id}"}
+          >
+            <div class="flex items-start justify-between gap-2">
+              <p class="text-sm font-medium">{response.question.stem}</p>
+              <span class="badge badge-soft badge-xs shrink-0">{response_correct_text(response)}</span>
+            </div>
+            <div class="mt-2 rounded-box bg-base-200/50 p-2">
+              <p class="text-xs text-base-content/60">学生作答</p>
+              <p class="mt-1 whitespace-pre-line text-sm">{response.answer || "（未作答）"}</p>
+            </div>
+            <p class="mt-2 text-right text-sm tabular-nums">
+              得分 <span class="font-medium">{fmt_score(response.score)}</span>
+              <span class="text-base-content/60"> / 满分 {fmt_score(max_for(@max_scores, response.question_id))}</span>
+            </p>
+          </div>
+          <p :if={objective_questions(@grading) == []} class="rounded-box bg-base-200/30 px-4 py-8 text-center text-sm text-base-content/60">
+            这份作答没有客观题
+          </p>
+        </div>
+
+        <div :if={@grade_tab == "essay" and essay_questions(@grading) == []} class="rounded-box bg-base-200/30 px-4 py-8 text-center mt-4">
           <p class="text-sm text-base-content/60">这份试卷没有简答题，或该生未作答</p>
         </div>
 
-        <div :if={essay_questions(@grading) != []} class="mt-4 flex flex-col gap-4">
+        <form :if={@grade_tab == "essay" and essay_questions(@grading) != []} phx-submit="save-all-essays" class="mt-4 flex flex-col gap-4">
           <div
             :for={response <- essay_questions(@grading)}
             class="rounded-box border border-base-300 bg-base-100 p-3"
@@ -158,42 +211,46 @@
               <p class="mt-1 whitespace-pre-line text-sm text-base-content/80">{response.question.answer}</p>
             </div>
 
-            <form phx-change="validate-grade" phx-submit="save-essay" class="mt-3 flex flex-wrap items-end gap-2">
-              <input type="hidden" name="grade[response_id]" value={response.id} />
+            <div class="mt-3 flex flex-wrap items-end gap-2">
               <label class="form-control">
-                <span class="label-text text-xs">得分</span>
+                <span class="label-text text-xs">
+                  得分（满分 {fmt_score(max_for(@max_scores, response.question_id))}）
+                </span>
                 <input
                   type="number"
-                  name="grade[score]"
+                  name={"scores[#{response.id}][score]"}
                   min="0"
+                  max={fmt_score(max_for(@max_scores, response.question_id))}
                   step="0.5"
                   value={@grade_form[response.id]["score"]}
                   class="input input-sm w-24 input-bordered"
                   aria-label="得分"
+                  required
                 />
               </label>
               <label class="form-control min-w-0 flex-1">
                 <span class="label-text text-xs">批注</span>
                 <input
                   type="text"
-                  name="grade[comment]"
+                  name={"scores[#{response.id}][comment]"}
                   value={@grade_form[response.id]["comment"]}
                   placeholder="可选"
                   class="input input-sm w-full input-bordered"
                 />
               </label>
-              <button type="submit" class="btn btn-primary btn-sm" id={"save-essay-#{response.id}"}>
-                {if response.graded, do: "更新评分", else: "保存评分"}
-              </button>
-            </form>
+            </div>
           </div>
 
-          <div class="flex items-center justify-between border-t border-base-300 pt-3">
-            <p :if={@grading.status == :submitted} class="text-xs text-base-content/60">
-              批完简答题后可一键完成整份批改
+          <div class="flex flex-wrap items-center justify-end gap-2 border-t border-base-300 pt-3">
+            <p :if={@grading.status == :submitted} class="mr-auto text-xs text-base-content/60">
+              输入每题得分后统一保存，成绩自动更新；再点完成批改结束
             </p>
+            <button type="submit" class="btn btn-primary btn-sm" id="save-all-essays-btn">
+              保存全部评分
+            </button>
             <button
               :if={@grading.status == :submitted}
+              type="button"
               class="btn btn-soft btn-sm"
               phx-click="finish-grading"
               phx-value-id={@grading.id}
@@ -202,7 +259,7 @@
               <.icon name="hero-check-circle" class="size-4" /> 完成批改
             </button>
           </div>
-        </div>
+        </form>
       </div>
       <div class="modal-backdrop" phx-click="close-grade"></div>
     </div>

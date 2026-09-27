@@ -65,10 +65,6 @@ defmodule TcmEdu.MixProject do
     ]
   end
 
-  defp elixir_make_override do
-    [{:elixir_make, "~> 0.9.0", override: true}]
-  end
-
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
@@ -130,8 +126,14 @@ defmodule TcmEdu.MixProject do
       # Tidewave MCP server for Phoenix (dev tooling: DB/EVAL/docs MCP tools).
       # NOTE: must NOT carry `only: [:dev]` or it propagates an `:only` restriction
       # onto `plug` that conflicts with ash_json_api's unrestricted plug dep.
-      {:tidewave, "~> 0.9"}
-    ] ++ elixir_make_override()
+      {:tidewave, "~> 0.9"},
+      # Allow lazy_html to override the elixir_make version pinned by mix.lock.
+      # Phoenix LiveView's test helpers require lazy_html, which in turn requires
+      # elixir_make ~> 0.9.0; the lock had 0.10.0 (transitively from picosat_elixir)
+      # and Hex refuses to downgrade automatically. Kept inline so Igniter can
+      # still locate the `deps/0` literal list.
+      {:elixir_make, "~> 0.9.0", override: true}
+    ]
   end
 
   # Aliases are shortcuts or tasks specific to the current project.

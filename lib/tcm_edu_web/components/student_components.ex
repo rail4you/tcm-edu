@@ -57,6 +57,7 @@ defmodule TcmEduWeb.StudentComponents do
                 <.mobile_link navigate="/exams" label="我的考试" />
                 <.mobile_link navigate="/ai-chat" label="AI 聊天" />
                 <.mobile_link navigate="/simulated-patient" label="AI 诊疗" />
+                <.mobile_link navigate="/mdt" label="多学科会诊" />
               </ul>
             </div>
             <.link navigate="/" class="flex items-center" aria-label="杏宁树首页">
@@ -77,7 +78,7 @@ defmodule TcmEduWeb.StudentComponents do
             <.nav_link navigate="/exams" label="我的考试" active={@current_page == :exams} />
             <.nav_link navigate="/ai-chat" label="AI 聊天" active={@current_page == :ai_chat} />
             <.nav_link navigate="/simulated-patient" label="AI 诊疗" active={@current_page == :simulated_patient} />
-            <.nav_link navigate="/mdt" label="MDT" active={@current_page in [:mdt, :mdt_room]} />
+            <.nav_link navigate="/mdt" label="多学科会诊" active={@current_page in [:mdt, :mdt_room]} />
           </nav>
 
           <div class="flex items-center gap-2">

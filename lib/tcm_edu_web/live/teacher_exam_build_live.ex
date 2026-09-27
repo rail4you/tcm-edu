@@ -156,7 +156,7 @@ defmodule TcmEduWeb.TeacherExamBuildLive do
 
   defp move(socket, id, direction) do
     teacher = socket.assigns.current_teacher
-    ordered = ordered_questions(socket)
+    ordered = ordered_questions(socket.assigns.exam)
 
     case Enum.find_index(ordered, &(&1.id == id)) do
       nil ->
