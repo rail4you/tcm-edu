@@ -262,7 +262,18 @@ defmodule TcmEdu.Accounts.User do
 
       argument(:password_confirmation, :string, sensitive?: true, allow_nil?: false)
 
-      validate(confirm(:password, :password_confirmation))
+      # 不用 Ash 内置 confirm —— 它写死英文 message("confirmation did not match value"),
+      # 改用 validate 块返回中文,让 AshPhoenix.Form.errors/2 直接读出。
+      validate(fn changeset, _ctx ->
+        pwd = Ash.Changeset.get_argument(changeset, :password)
+        confirm = Ash.Changeset.get_argument(changeset, :password_confirmation)
+
+        if pwd && confirm && pwd == confirm do
+          :ok
+        else
+          {:error, field: :password_confirmation, message: "两次输入不一致"}
+        end
+      end)
 
       change({AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password})
     end

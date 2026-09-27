@@ -303,11 +303,11 @@
           </div>
           <div class="grid gap-3 sm:grid-cols-2">
             <.input
-              field={@create_form[:price_yuan]}
+              field={@create_form[:price_cents]}
               type="number"
-              label="价格（元，0 = 免费）"
+              label="价格（分，0 = 免费）"
               min="0"
-              step="0.01"
+              step="1"
             />
             <div class="flex flex-col gap-2">
               <span class="label">课程封面 <span class="text-base-content/50">（可选，≤ 5MB）</span></span>
@@ -381,11 +381,11 @@
           </div>
           <div class="grid gap-3 sm:grid-cols-2">
             <.input
-              field={@edit_form[:price_yuan]}
+              field={@edit_form[:price_cents]}
               type="number"
-              label="价格（元，0 = 免费）"
+              label="价格（分，0 = 免费）"
               min="0"
-              step="0.01"
+              step="1"
             />
             <div class="flex flex-col gap-2">
               <span class="label">课程封面 <span class="text-base-content/50">（JPG / PNG / WebP，≤ 5MB）</span></span>

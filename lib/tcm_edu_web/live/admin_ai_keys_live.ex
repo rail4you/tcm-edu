@@ -5,6 +5,9 @@ defmodule TcmEduWeb.AdminAIKeysLive do
   LiveView replacement for the React `admin/ai-keys` page: keys are stored
   in `TcmEdu.System.ApiKeyConfig` (DB, effective at runtime, no restart).
   Secrets are never rendered back in plaintext.
+
+  表单走 `AshPhoenix.Form.for_create/3`:`ApiKeyConfig.upsert` action 配
+  `upsert? true`,表单成功创建或按 provider 更新,无需手写 changeset。
   """
 
   use TcmEduWeb, :live_view
@@ -15,50 +18,40 @@ defmodule TcmEduWeb.AdminAIKeysLive do
 
   on_mount {TcmEduWeb.AdminAuth, :ensure_super_admin}
 
-  @providers ~w(qwen dashscope deepseek)
-
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(:page_title, "AI Key 管理")
-     |> assign(:form, key_form(%{"provider" => "qwen", "is_active" => true}))
+     |> assign(:form, key_form(socket, %{"provider" => "qwen", "is_active" => true}))
      |> assign(:saving, false)
      |> load_keys()}
   end
 
   @impl true
   def handle_event("validate", %{"key" => params}, socket) do
-    {:noreply, assign(socket, :form, key_form(params))}
+    {:noreply, assign(socket, :form, AshPhoenix.Form.validate(socket.assigns.form, params))}
   end
 
   def handle_event("save", %{"key" => params}, socket) do
-    changeset = key_changeset(params)
+    form = AshPhoenix.Form.validate(socket.assigns.form, params)
 
-    if changeset.valid? do
-      get = &Ecto.Changeset.get_field(changeset, &1)
+    case AshPhoenix.Form.submit(form, params: params) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Key 已保存（运行时生效，无需重启）")
+         |> assign(
+           :form,
+           key_form(socket, %{
+             "provider" => AshPhoenix.Form.value(form, :provider),
+             "is_active" => true
+           })
+         )
+         |> load_keys()}
 
-      attrs = %{
-        provider: String.to_existing_atom(get.(:provider)),
-        api_key: get.(:api_key) |> to_string() |> String.trim(),
-        base_url: empty_to_nil(get.(:base_url)),
-        model: empty_to_nil(get.(:model)),
-        is_active: get.(:is_active) != false
-      }
-
-      case ApiKeyConfig.set_api_key_config(attrs, actor: actor(socket)) do
-        {:ok, _} ->
-          {:noreply,
-           socket
-           |> put_flash(:info, "Key 已保存（运行时生效，无需重启）")
-           |> assign(:form, key_form(%{"provider" => get.(:provider), "is_active" => true}))
-           |> load_keys()}
-
-        {:error, error} ->
-          {:noreply, put_flash(socket, :error, ash_message(error))}
-      end
-    else
-      {:noreply, assign(socket, :form, Phoenix.Component.to_form(changeset, as: "key"))}
+      {:error, form} ->
+        {:noreply, assign(socket, :form, form)}
     end
   end
 
@@ -121,29 +114,18 @@ defmodule TcmEduWeb.AdminAIKeysLive do
     assign(socket, :configs, configs)
   end
 
-  defp key_form(params) do
-    params |> key_changeset() |> Phoenix.Component.to_form(as: "key")
+  # 走 `:upsert` action(provider 一致时覆盖,否则新建),表单字段来自资源
+  # attribute constraints(`one_of: [:qwen, :dashscope, :deepseek]` +
+  # `allow_nil? false`),无需手写 validate_inclusion / validate_required。
+  defp key_form(socket, params) do
+    ApiKeyConfig
+    |> AshPhoenix.Form.for_create(:upsert,
+      actor: actor(socket),
+      as: "key",
+      params: params
+    )
+    |> to_form()
   end
-
-  defp key_changeset(params) do
-    {%{provider: "qwen", is_active: true},
-     %{
-       provider: :string,
-       api_key: :string,
-       base_url: :string,
-       model: :string,
-       is_active: :boolean
-     }}
-    |> Ecto.Changeset.cast(params, [:provider, :api_key, :base_url, :model, :is_active])
-    |> Ecto.Changeset.validate_required([:provider, :api_key])
-    |> Ecto.Changeset.validate_inclusion(:provider, @providers)
-    |> Ecto.Changeset.validate_length(:api_key, min: 4, max: 500)
-  end
-
-  defp empty_to_nil(nil), do: nil
-  defp empty_to_nil(""), do: nil
-  defp empty_to_nil(value) when is_binary(value), do: String.trim(value)
-  defp empty_to_nil(value), do: value
 
   defp ash_message(error) do
     Exception.message(error)

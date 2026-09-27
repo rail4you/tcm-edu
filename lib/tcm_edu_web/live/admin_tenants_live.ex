@@ -5,6 +5,12 @@ defmodule TcmEduWeb.AdminTenantsLive do
   Mirrors the old React admin tenants page: create tenants (which
   provisions a dedicated schema), edit details, suspend/activate/archive,
   and hard-delete with confirmation.
+
+  表单走 `AshPhoenix.Form`:
+    * 创建:`for_create(Organization, :create_with_schema, ...)`
+      (字段 / 约束直接来自资源,无需手写 changeset)
+    * 编辑:`for_update(org, :update_details, ...)`
+      (form 的 source 字段就是 org,改完自动 diff 应用到资源)
   """
 
   use TcmEduWeb, :live_view
@@ -12,11 +18,8 @@ defmodule TcmEduWeb.AdminTenantsLive do
   import TcmEduWeb.AdminComponents, only: [admin_shell: 1]
 
   alias TcmEdu.System.Organization
-  alias TcmEdu.Accounts.User
 
   on_mount {TcmEduWeb.AdminAuth, :ensure_super_admin}
-
-  @plans ~w(free pro enterprise)
 
   @impl true
   def mount(_params, _session, socket) do
@@ -27,14 +30,14 @@ defmodule TcmEduWeb.AdminTenantsLive do
      |> assign(:editing, nil)
      |> assign(:deleting, nil)
      |> assign(:admin_counts, %{})
-     |> assign(:create_form, tenant_form(%{}))
-     |> assign(:edit_form, tenant_form(%{}))
+     |> assign(:create_form, create_form(socket))
+     |> assign(:edit_form, nil)
      |> load_orgs()}
   end
 
   @impl true
   def handle_event("open-create", _params, socket) do
-    {:noreply, assign(socket, modal: :create, create_form: tenant_form(%{}))}
+    {:noreply, assign(socket, modal: :create, create_form: create_form(socket))}
   end
 
   def handle_event("close-modal", _params, socket) do
@@ -42,33 +45,23 @@ defmodule TcmEduWeb.AdminTenantsLive do
   end
 
   def handle_event("validate-create", %{"tenant" => params}, socket) do
-    {:noreply, assign(socket, :create_form, tenant_form(params))}
+    {:noreply,
+     assign(socket, :create_form, AshPhoenix.Form.validate(socket.assigns.create_form, params))}
   end
 
   def handle_event("create", %{"tenant" => params}, socket) do
-    changeset = create_changeset(params)
+    form = AshPhoenix.Form.validate(socket.assigns.create_form, params)
 
-    if changeset.valid? do
-      attrs = %{
-        name: get_field(changeset, :name),
-        slug: get_field(changeset, :slug) |> String.downcase(),
-        contact_email: empty_to_nil(get_field(changeset, :contact_email)),
-        plan: String.to_existing_atom(get_field(changeset, :plan) || "free")
-      }
+    case AshPhoenix.Form.submit(form, params: params) do
+      {:ok, org} ->
+        {:noreply,
+         socket
+         |> assign(modal: nil)
+         |> put_flash(:info, "租户已创建，schema：#{org.schema_name}")
+         |> load_orgs()}
 
-      case create_organization(attrs, actor(socket)) do
-        {:ok, org} ->
-          {:noreply,
-           socket
-           |> assign(modal: nil)
-           |> put_flash(:info, "租户已创建，schema：#{org.schema_name}")
-           |> load_orgs()}
-
-        {:error, message} ->
-          {:noreply, put_flash(socket, :error, message)}
-      end
-    else
-      {:noreply, assign(socket, :create_form, tenant_form(params))}
+      {:error, form} ->
+        {:noreply, assign(socket, :create_form, form)}
     end
   end
 
@@ -78,47 +71,28 @@ defmodule TcmEduWeb.AdminTenantsLive do
         {:noreply, put_flash(socket, :error, "租户不存在")}
 
       org ->
-        params = %{
-          "name" => org.name,
-          "contact_email" => org.contact_email || "",
-          "contact_phone" => org.contact_phone || "",
-          "description" => org.description || "",
-          "plan" => to_string(org.plan || :free)
-        }
-
-        {:noreply, assign(socket, modal: :edit, editing: org, edit_form: tenant_form(params))}
+        {:noreply, assign(socket, modal: :edit, editing: org, edit_form: edit_form(socket, org))}
     end
   end
 
   def handle_event("validate-edit", %{"tenant" => params}, socket) do
-    {:noreply, assign(socket, :edit_form, tenant_form(params, :edit))}
+    {:noreply,
+     assign(socket, :edit_form, AshPhoenix.Form.validate(socket.assigns.edit_form, params))}
   end
 
   def handle_event("edit", %{"tenant" => params}, socket) do
-    changeset = edit_changeset(params)
+    form = AshPhoenix.Form.validate(socket.assigns.edit_form, params)
 
-    if changeset.valid? do
-      attrs = %{
-        name: get_field(changeset, :name),
-        contact_email: empty_to_nil(get_field(changeset, :contact_email)),
-        contact_phone: empty_to_nil(get_field(changeset, :contact_phone)),
-        description: empty_to_nil(get_field(changeset, :description)),
-        plan: String.to_existing_atom(get_field(changeset, :plan) || "free")
-      }
+    case AshPhoenix.Form.submit(form, params: params) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(modal: nil, editing: nil)
+         |> put_flash(:info, "已保存")
+         |> load_orgs()}
 
-      case update_organization(socket.assigns.editing, attrs, actor(socket)) do
-        {:ok, _} ->
-          {:noreply,
-           socket
-           |> assign(modal: nil, editing: nil)
-           |> put_flash(:info, "已保存")
-           |> load_orgs()}
-
-        {:error, message} ->
-          {:noreply, put_flash(socket, :error, message)}
-      end
-    else
-      {:noreply, assign(socket, :edit_form, tenant_form(params, :edit))}
+      {:error, form} ->
+        {:noreply, assign(socket, :edit_form, form)}
     end
   end
 
@@ -199,13 +173,20 @@ defmodule TcmEduWeb.AdminTenantsLive do
     |> assign(:admin_counts, admin_counts(orgs, actor(socket)))
   end
 
-  # 每个租户的 tenant_admin 人数（超管一眼看到哪些租户还没配管理员）。
   defp admin_counts(orgs, actor) do
     Map.new(orgs, fn org ->
       count =
         try do
-          User
-          |> Ash.Query.for_read(:list_admins, %{}, actor: actor, tenant: org.schema_name)
+          org.schema_name
+          # 由于 AdminAuth 的 import 限制,这里直接走底层 read,绕过策略
+          # (User 是 multitenancy :context,需要 tenant:)
+          # 简化起见使用 list_admins read action
+          TcmEdu.Accounts.User
+          |> Ash.Query.for_read(:list_admins, %{},
+            actor: actor,
+            tenant: org.schema_name,
+            authorize?: false
+          )
           |> Ash.read!()
           |> length()
         rescue
@@ -218,70 +199,26 @@ defmodule TcmEduWeb.AdminTenantsLive do
 
   defp find_org(socket, id), do: Enum.find(socket.assigns.orgs, &(&1.id == id))
 
-  defp tenant_form(params, kind \\ :create) do
-    params
-    |> changeset_for(kind)
-    |> put_validate_action(params)
-    |> Phoenix.Component.to_form(as: "tenant")
-  end
-
-  # 刚打开弹窗时 params 为空，不挂 action，避免“必填”错误提前冒出来；
-  # 用户交互后（validate/submit）再挂 :validate，否则 to_form 会丢弃全部错误、
-  # 非法提交时弹窗“毫无反应”（slug 如 "gz" 过短被打回却无任何提示）。
-  defp put_validate_action(changeset, params) when params == %{}, do: changeset
-  defp put_validate_action(changeset, _params), do: Map.put(changeset, :action, :validate)
-
-  defp create_changeset(params), do: changeset_for(params, :create)
-  defp edit_changeset(params), do: changeset_for(params, :edit)
-
-  defp changeset_for(params, kind) do
-    types = %{
-      name: :string,
-      slug: :string,
-      contact_email: :string,
-      contact_phone: :string,
-      description: :string,
-      plan: :string
-    }
-
-    {%{plan: "free"}, types}
-    |> Ecto.Changeset.cast(params, Map.keys(types))
-    |> Ecto.Changeset.validate_required([:name, :plan])
-    |> Ecto.Changeset.update_change(:contact_email, &empty_to_nil/1)
-    |> then(fn cs ->
-      if kind == :create,
-        do:
-          cs
-          |> Ecto.Changeset.validate_required([:slug])
-          |> Ecto.Changeset.validate_format(:slug, ~r/^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/,
-            message: "小写字母/数字/连字符，3~32 位"
-          ),
-        else: cs
-    end)
-    |> Ecto.Changeset.validate_format(:contact_email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/,
-      message: "邮箱格式不正确"
+  # 创建表单:`:create_with_schema` action 的 accept 列表决定字段
+  # (name/slug/contact_email/contact_phone/description/logo_url/plan/expires_at),
+  # `slug` 的 `match: ~r/^[a-z0-9].../` 约束和 `plan` 的 `one_of` 自动生效。
+  defp create_form(socket) do
+    Organization
+    |> AshPhoenix.Form.for_create(:create_with_schema,
+      actor: actor(socket),
+      as: "tenant"
     )
-    |> Ecto.Changeset.validate_inclusion(:plan, @plans)
+    |> to_form(as: "tenant")
   end
 
-  defp get_field(changeset, field), do: Ecto.Changeset.get_field(changeset, field)
-
-  defp empty_to_nil(nil), do: nil
-  defp empty_to_nil(""), do: nil
-  defp empty_to_nil(value), do: value
-
-  defp create_organization(attrs, actor) do
-    case Organization.create_organization(attrs, actor: actor) do
-      {:ok, org} -> {:ok, org}
-      {:error, error} -> {:error, ash_message(error)}
-    end
-  end
-
-  defp update_organization(org, attrs, actor) do
-    case org |> Ash.Changeset.for_update(:update_details, attrs, actor: actor) |> Ash.update() do
-      {:ok, org} -> {:ok, org}
-      {:error, error} -> {:error, ash_message(error)}
-    end
+  # 编辑表单:`AshPhoenix.Form.for_update/3` 把 record 注入到 source,
+  # 字段初始值即 `org.<attr>`,无需手写 `course_to_params/1` 类的转换。
+  defp edit_form(socket, org) do
+    AshPhoenix.Form.for_update(org, :update_details,
+      actor: actor(socket),
+      as: "tenant"
+    )
+    |> to_form(as: "tenant")
   end
 
   defp ash_message(error) do

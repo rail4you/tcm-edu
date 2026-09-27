@@ -1,0 +1,346 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.teacher_shell
+    current_teacher={@current_teacher}
+    current_page={:exams}
+    page_title="考试管理"
+    page_subtitle="组卷、发布、分配与批改"
+  >
+    <:page_actions>
+      <button class="btn btn-soft btn-sm" phx-click="open-ai" id="ai-compose-btn">
+        <.icon name="hero-sparkles" class="size-4" /> AI 智能组卷
+      </button>
+      <button class="btn btn-primary btn-sm" phx-click="open-create" id="new-exam-btn">
+        <.icon name="hero-plus" class="size-4" /> 新建试卷
+      </button>
+    </:page_actions>
+
+    <div :if={@banner_job} class="alert alert-soft alert-success">
+      <div class="flex flex-1 items-center gap-3">
+        <.icon name="hero-sparkles" class="size-5" />
+        <div>
+          <p class="text-sm font-medium">AI 组卷完成：《{@banner_job.name}》</p>
+          <p class="text-xs text-base-content/60">可在下方列表中发布并分配学生</p>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" phx-click="dismiss-banner" aria-label="关闭横幅">
+        <.icon name="hero-x-mark" class="size-4" />
+      </button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body gap-1 p-4">
+          <p class="text-sm text-base-content/60">试卷总数</p>
+          <p class="text-2xl font-semibold tabular-nums">{length(@exams)}</p>
+        </div>
+      </div>
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body gap-1 p-4">
+          <p class="text-sm text-base-content/60">已发布</p>
+          <p class="text-2xl font-semibold tabular-nums text-success">{metric(@exams, :published)}</p>
+        </div>
+      </div>
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body gap-1 p-4">
+          <p class="text-sm text-base-content/60">草稿中</p>
+          <p class="text-2xl font-semibold tabular-nums">{metric(@exams, :draft)}</p>
+        </div>
+      </div>
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body gap-1 p-4">
+          <p class="text-sm text-base-content/60">已分配人次</p>
+          <p class="text-2xl font-semibold tabular-nums text-primary">{assigned_count(@exams)}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body gap-3 p-4 sm:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p class="font-medium">试卷列表</p>
+            <p class="text-xs text-base-content/60">发布后的试卷才能分配给学生</p>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-box border border-base-300">
+          <table class="table table-sm table-zebra table-pin-rows">
+            <thead>
+              <tr>
+                <th>试卷</th>
+                <th>组卷</th>
+                <th>状态</th>
+                <th class="text-center tabular-nums">题数</th>
+                <th class="text-right tabular-nums">总分</th>
+                <th class="text-right tabular-nums">时长</th>
+                <th class="text-right tabular-nums">已分配</th>
+                <th class="text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={exam <- @exams} class="transition-colors hover:bg-base-200" id={"exam-#{exam.id}"}>
+                <td>
+                  <p class="max-w-56 truncate font-medium" title={exam.name}>{exam.name}</p>
+                  <p class="text-xs text-base-content/60">{subject_label(exam.subject)}</p>
+                </td>
+                <td>
+                  <span :if={exam.source == :ai} class="badge badge-soft badge-xs badge-primary">AI 组卷</span>
+                  <span :if={exam.source != :ai} class="badge badge-soft badge-xs">手工组卷</span>
+                </td>
+                <td>
+                  <span class={["badge badge-soft badge-xs", status_badge(exam.status)]}>
+                    {status_text(exam.status)}
+                  </span>
+                </td>
+                <td class="text-center tabular-nums">{exam.total_questions || 0}</td>
+                <td class="text-right tabular-nums">{fmt_score(exam.total_score)}</td>
+                <td class="text-right tabular-nums">{exam.duration_minutes} 分</td>
+                <td class="text-right tabular-nums">{exam.assigned_count || 0}</td>
+                <td>
+                  <div class="flex justify-end gap-1">
+                    <.link
+                      :if={exam.status != :closed}
+                      navigate={"/teacher/exams/#{exam.id}/build"}
+                      class="btn btn-ghost btn-xs"
+                      id={"build-exam-#{exam.id}"}
+                    >
+                      组卷
+                    </.link>
+                    <button
+                      :if={exam.status == :draft}
+                      class="btn btn-ghost btn-xs text-success"
+                      phx-click="publish"
+                      phx-value-id={exam.id}
+                      id={"publish-exam-#{exam.id}"}
+                    >
+                      发布
+                    </button>
+                    <button
+                      :if={exam.status == :published}
+                      class="btn btn-ghost btn-xs text-warning"
+                      phx-click="close"
+                      phx-value-id={exam.id}
+                      id={"close-exam-#{exam.id}"}
+                    >
+                      关闭
+                    </button>
+                    <.link
+                      :if={exam.status == :published}
+                      navigate={"/teacher/exams/#{exam.id}/assign"}
+                      class="btn btn-ghost btn-xs text-primary"
+                      id={"assign-exam-#{exam.id}"}
+                    >
+                      分配
+                    </.link>
+                    <.link
+                      :if={exam.status in [:published, :closed]}
+                      navigate={"/teacher/exams/#{exam.id}/results"}
+                      class="btn btn-ghost btn-xs"
+                      id={"results-exam-#{exam.id}"}
+                    >
+                      结果
+                    </.link>
+                    <button
+                      :if={exam.status == :draft}
+                      class="btn btn-ghost btn-xs text-error"
+                      phx-click="confirm-delete"
+                      phx-value-id={exam.id}
+                      id={"delete-exam-#{exam.id}"}
+                    >
+                      删除
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr :if={@exams == []}>
+                <td colspan="100%">
+                  <div class="flex flex-col items-center gap-2 py-10">
+                    <.icon name="hero-clipboard-document-list" class="size-8 text-base-content/40" />
+                    <p class="text-sm text-base-content/60">还没有试卷，先新建或 AI 组卷一份</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div :if={@jobs != []} class="card bg-base-100 shadow-sm">
+      <div class="card-body gap-3 p-4 sm:p-6">
+        <p class="font-medium">AI 组卷任务</p>
+        <div class="overflow-x-auto">
+          <table class="table table-sm table-zebra">
+            <thead>
+              <tr>
+                <th>试卷名</th>
+                <th>题库</th>
+                <th>题数</th>
+                <th>状态</th>
+                <th class="text-right tabular-nums">提交时间</th>
+                <th class="text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={job <- @jobs} class="transition-colors hover:bg-base-200">
+                <td class="max-w-48 truncate font-medium">{job.name}</td>
+                <td class="max-w-40 truncate text-xs text-base-content/60">{bank_name(@socket, job.bank_id)}</td>
+                <td class="tabular-nums">{job.question_count}</td>
+                <td>
+                  <span class={["badge badge-soft badge-xs", job_status_badge(job.status)]}>
+                    {job_status_text(job.status)}
+                  </span>
+                </td>
+                <td class="text-right tabular-nums text-base-content/60">{format_time(job.inserted_at)}</td>
+                <td>
+                  <div class="flex justify-end">
+                    <button
+                      :if={job.status == :failed}
+                      class="btn btn-ghost btn-xs"
+                      phx-click="retry-ai"
+                      phx-value-id={job.id}
+                    >
+                      重试
+                    </button>
+                    <span :if={job.status in [:pending, :running]} class="loading loading-spinner loading-xs" />
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div :if={@create_modal} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-lg font-medium">新建试卷</p>
+            <p class="mt-1 text-xs text-base-content/60">先创建草稿，再进入组卷页面选题</p>
+          </div>
+          <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-create" aria-label="关闭">
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </div>
+        <.form
+          for={@create_form}
+          id="create-exam-form"
+          phx-change="validate-create"
+          phx-submit="create-exam"
+          class="mt-4 flex flex-col gap-3"
+        >
+          <.input field={@create_form[:name]} type="text" label="试卷名称" placeholder="如：中医基础期中考试" required />
+          <.input field={@create_form[:subject]} type="select" label="学科" options={subject_options()} required />
+          <.input field={@create_form[:duration_minutes]} type="select" label="时长（分钟）" options={duration_options()} required />
+          <.input field={@create_form[:description]} type="textarea" label="试卷说明" rows="2" />
+          <div class="modal-action">
+            <button type="button" class="btn btn-soft" phx-click="close-create">取消</button>
+            <.button type="submit" phx-disable-with="创建中..." class="btn-primary">创建</.button>
+          </div>
+        </.form>
+      </div>
+      <div class="modal-backdrop" phx-click="close-create"></div>
+    </div>
+
+    <div :if={@ai_modal} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box max-w-2xl">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-lg font-medium">AI 智能组卷</p>
+            <p class="mt-1 text-xs text-base-content/60">从题库选题生成试卷（后台任务，可离开页面）</p>
+          </div>
+          <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-ai" aria-label="关闭">
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </div>
+        <.form
+          for={@ai_form}
+          id="ai-compose-form"
+          phx-change="validate-ai"
+          phx-submit="submit-ai"
+          class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2"
+        >
+          <div class="md:col-span-2">
+            <.input field={@ai_form[:name]} type="text" label="试卷名称" placeholder="如：肺经腧穴随堂测验" required />
+          </div>
+          <.input
+            field={@ai_form[:bank_id]}
+            type="select"
+            label="目标题库"
+            options={Enum.map(@banks, &{&1.name, &1.id})}
+            required
+          />
+          <.input field={@ai_form[:subject]} type="text" label="学科" placeholder="如：中医基础" />
+          <div class="md:col-span-2">
+            <.input field={@ai_form[:topic]} type="text" label="组卷主题 / 侧重" placeholder="如：手太阴肺经腧穴，气血运行" />
+          </div>
+          <.input
+            field={@ai_form[:question_count]}
+            type="select"
+            label="题数"
+            options={Enum.map(5..30//5, &{"#{&1} 题", &1})}
+            required
+          />
+          <.input
+            field={@ai_form[:difficulty]}
+            type="select"
+            label="难度（1-5）"
+            options={difficulty_options()}
+            required
+          />
+          <.input
+            field={@ai_form[:total_score]}
+            type="select"
+            label="试卷总分"
+            options={[{"100 分", 100}, {"50 分", 50}, {"150 分", 150}]}
+            required
+          />
+          <div class="md:col-span-2">
+            <.input field={@ai_form[:knowledge_points]} type="text" label="知识点（逗号分隔）" placeholder="如：肺经，腧穴，五行" />
+          </div>
+          <div class="md:col-span-2">
+            <div class="rounded-box border border-base-300 bg-base-200/30 p-3">
+              <p class="text-sm font-medium">题型</p>
+              <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <label :for={opt <- type_options()} class="label cursor-pointer justify-start gap-2">
+                  <input
+                    type="checkbox"
+                    name="exam[question_types][]"
+                    value={elem(opt, 1)}
+                    checked={elem(opt, 1) in (@ai_form[:question_types].value || [])}
+                    class="checkbox checkbox-primary checkbox-sm"
+                  />
+                  <span class="text-sm">{elem(opt, 0)}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="modal-action md:col-span-2">
+            <button type="button" class="btn btn-soft" phx-click="close-ai">取消</button>
+            <.button type="submit" phx-disable-with="提交中..." class="btn-primary" id="submit-ai-compose">
+              <span :if={@ai_submitting} class="loading loading-spinner loading-xs" />
+              开始组卷
+            </.button>
+          </div>
+        </.form>
+      </div>
+      <div class="modal-backdrop" phx-click="close-ai"></div>
+    </div>
+
+    <div :if={@deleting} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <p class="text-lg font-medium">删除《{@deleting.name}》？</p>
+        <div class="alert alert-soft alert-error mt-3">
+          <.icon name="hero-exclamation-triangle" class="size-5" />
+          <p class="text-sm">删除后不可恢复。</p>
+        </div>
+        <div class="modal-action">
+          <button type="button" class="btn btn-soft" phx-click="close-delete">取消</button>
+          <button type="button" class="btn btn-error" phx-click="delete" id="confirm-delete-exam-btn">确认删除</button>
+        </div>
+      </div>
+      <div class="modal-backdrop" phx-click="close-delete"></div>
+    </div>
+  </.teacher_shell>
+</Layouts.app>

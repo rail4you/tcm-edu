@@ -92,6 +92,10 @@ defmodule TcmEdu.MixProject do
       # Ash framework
       {:ash, "~> 3.0"},
       {:ash_postgres, "~> 2.0"},
+      # Ash + Phoenix form/LiveView integration (AshPhoenix.Form, AshPhoenix.LiveView).
+      # 已经是 ash_ai / ash_authentication_phoenix 的传递依赖,这里显式声明以便
+      # 在 domain 上启用 `extensions: [AshPhoenix]` 并自动生成 form_to_<action>。
+      {:ash_phoenix, "~> 2.3"},
       # SAT solver required by Ash.Policy.Authorizer
       {:picosat_elixir, "~> 0.2"},
       # Authentication

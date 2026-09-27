@@ -15,7 +15,8 @@ defmodule TcmEdu.Accounts do
   """
 
   use Ash.Domain,
-    otp_app: :tcm_edu
+    otp_app: :tcm_edu,
+    extensions: [AshPhoenix]
 
   resources do
     resource TcmEdu.Accounts.User

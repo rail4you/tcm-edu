@@ -20,8 +20,6 @@ defmodule TcmEduWeb.TeacherQuizLive do
 
   on_mount {TcmEduWeb.TeacherAuth, :ensure_teacher}
 
-  @subjects ~w(traditional_chinese_medicine western_medicine anatomy physiology pathology pharmacology clinical nursing public_health other)
-  @types ~w(single multi judge essay)
   @per_page 10
 
   @impl true
@@ -32,9 +30,12 @@ defmodule TcmEduWeb.TeacherQuizLive do
      |> assign(:page_subtitle, "先建题库，再往里加题")
      |> assign(:selected_bank_id, nil)
      |> assign(:bank_modal, false)
-     |> assign(:bank_form, bank_form(%{}))
+     |> assign(:bank_form, bank_form(socket.assigns.current_teacher, %{}))
      |> assign(:question_modal, false)
-     |> assign(:question_form, question_form(%{}))
+     |> assign(
+       :question_form,
+       question_form(socket.assigns.current_teacher, %{}, default_options(), nil, nil)
+     )
      |> assign(:question_type, "single")
      |> assign(:question_options, default_options())
      |> assign(:option_error, nil)
@@ -60,7 +61,8 @@ defmodule TcmEduWeb.TeacherQuizLive do
   end
 
   def handle_event("open-bank", _params, socket) do
-    {:noreply, assign(socket, bank_modal: true, bank_form: bank_form(%{}))}
+    {:noreply,
+     assign(socket, bank_modal: true, bank_form: bank_form(socket.assigns.current_teacher, %{}))}
   end
 
   def handle_event("close-bank", _params, socket) do
@@ -68,40 +70,24 @@ defmodule TcmEduWeb.TeacherQuizLive do
   end
 
   def handle_event("validate-bank", %{"bank" => params}, socket) do
-    {:noreply, assign(socket, :bank_form, bank_form(params))}
+    {:noreply,
+     assign(socket, :bank_form, AshPhoenix.Form.validate(socket.assigns.bank_form, params))}
   end
 
   def handle_event("create-bank", %{"bank" => params}, socket) do
-    changeset = bank_changeset(params)
+    form = AshPhoenix.Form.validate(socket.assigns.bank_form, params)
 
-    if changeset.valid? do
-      get = &Ecto.Changeset.get_field(changeset, &1)
-      teacher = socket.assigns.current_teacher
+    case AshPhoenix.Form.submit(form, params: params) do
+      {:ok, bank} ->
+        {:noreply,
+         socket
+         |> assign(bank_modal: false, selected_bank_id: bank.id)
+         |> put_flash(:info, "题库《#{bank.name}》已创建")
+         |> load_banks()
+         |> load_questions()}
 
-      attrs = %{
-        name: get.(:name) |> to_string() |> String.trim(),
-        subject: String.to_existing_atom(get.(:subject) || "traditional_chinese_medicine"),
-        description: empty_to_nil(get.(:description)),
-        is_public: get.(:is_public) == true
-      }
-
-      case QuestionBank.create_question_bank(attrs,
-             actor: teacher.actor,
-             tenant: teacher.tenant
-           ) do
-        {:ok, bank} ->
-          {:noreply,
-           socket
-           |> assign(bank_modal: false, selected_bank_id: bank.id)
-           |> put_flash(:info, "题库《#{bank.name}》已创建")
-           |> load_banks()
-           |> load_questions()}
-
-        {:error, error} ->
-          {:noreply, put_flash(socket, :error, ash_message(error))}
-      end
-    else
-      {:noreply, assign(socket, :bank_form, Phoenix.Component.to_form(changeset, as: "bank"))}
+      {:error, form} ->
+        {:noreply, assign(socket, :bank_form, form)}
     end
   end
 
@@ -111,7 +97,14 @@ defmodule TcmEduWeb.TeacherQuizLive do
        assign(socket,
          question_modal: true,
          editing: nil,
-         question_form: question_form(%{}),
+         question_form:
+           question_form(
+             socket.assigns.current_teacher,
+             %{},
+             default_options(),
+             socket.assigns.selected_bank_id,
+             nil
+           ),
          question_type: "single",
          question_options: default_options(),
          option_error: nil
@@ -131,13 +124,23 @@ defmodule TcmEduWeb.TeacherQuizLive do
         {:noreply, put_flash(socket, :error, "题目不存在")}
 
       question ->
+        opts = options_from_record(question)
+        teacher = socket.assigns.current_teacher
+
         {:noreply,
          assign(socket,
            question_modal: true,
            editing: question,
-           question_form: question_form(question_to_params(question)),
+           question_form:
+             question_form(
+               teacher,
+               question_to_params(question),
+               opts,
+               socket.assigns.selected_bank_id,
+               question
+             ),
            question_type: to_string(question.type || :single),
-           question_options: options_from_record(question),
+           question_options: opts,
            option_error: nil
          )}
     end
@@ -255,9 +258,18 @@ defmodule TcmEduWeb.TeacherQuizLive do
         parsed -> parsed
       end
 
+    teacher = socket.assigns.current_teacher
+
     {:noreply,
      assign(socket,
-       question_form: question_form(params),
+       question_form:
+         question_form(
+           teacher,
+           params,
+           options,
+           socket.assigns.selected_bank_id,
+           socket.assigns.editing
+         ),
        question_type: params["type"] || "single",
        question_options: options,
        option_error: nil
@@ -273,9 +285,18 @@ defmodule TcmEduWeb.TeacherQuizLive do
         parsed -> parsed
       end
 
+    teacher = socket.assigns.current_teacher
+
     socket =
       assign(socket,
-        question_form: question_form(qparams),
+        question_form:
+          question_form(
+            teacher,
+            qparams,
+            options,
+            socket.assigns.selected_bank_id,
+            socket.assigns.editing
+          ),
         question_type: qparams["type"] || "single",
         question_options: options,
         option_error: nil
@@ -330,23 +351,22 @@ defmodule TcmEduWeb.TeacherQuizLive do
   defp upload_error_to_string(_), do: "文件上传失败"
 
   defp save_question(socket, qparams, options) do
-    changeset = question_changeset(qparams)
     type = qparams["type"] || "single"
 
-    with true <- changeset.valid?,
-         :ok <- validate_options(type, options) do
-      get = &Ecto.Changeset.get_field(changeset, &1)
+    with :ok <- validate_options(type, options) do
+      # options 来自 socket(动态列表),不在 form 字段里。
+      # 走 `AshPhoenix.Form.submit/2` 但提前在 params 上拼接 options,
+      # 让 submit 同时校验 stem/type 等字段 + 注入 options。
+      form_params =
+        qparams
+        |> Map.put("options", build_options(options))
 
-      attrs = %{
-        type: String.to_existing_atom(type),
-        difficulty: get.(:difficulty) || 3,
-        stem: get.(:stem) |> to_string() |> String.trim(),
-        options: build_options(options),
-        answer: empty_to_nil(get.(:answer)),
-        explanation: empty_to_nil(get.(:explanation))
-      }
+      # 编辑时 form 是 `for_update(question, :update, ...)`(在 open-edit 里设置),
+      # 新建时 form 是 `for_create(Question, :create, ...)`。
+      form = socket.assigns.question_form
+      form = AshPhoenix.Form.validate(form, form_params)
 
-      case persist_question(socket.assigns.editing, attrs, socket) do
+      case AshPhoenix.Form.submit(form, params: form_params) do
         {:ok, _} ->
           message = if socket.assigns.editing, do: "题目已更新", else: "题目已添加"
 
@@ -357,37 +377,13 @@ defmodule TcmEduWeb.TeacherQuizLive do
            |> load_banks()
            |> load_questions()}
 
-        {:error, error} ->
-          {:noreply, put_flash(socket, :error, ash_message(error))}
+        {:error, form} ->
+          {:noreply, assign(socket, :question_form, form)}
       end
     else
-      false ->
-        {:noreply,
-         assign(socket, :question_form, Phoenix.Component.to_form(changeset, as: "question"))}
-
       {:error, message} ->
-        {:noreply,
-         socket
-         |> assign(:question_form, Phoenix.Component.to_form(changeset, as: "question"))
-         |> assign(:option_error, message)}
+        {:noreply, assign(socket, :option_error, message)}
     end
-  end
-
-  defp persist_question(nil, attrs, socket) do
-    teacher = socket.assigns.current_teacher
-
-    Question.create_question(Map.put(attrs, :bank_id, socket.assigns.selected_bank_id),
-      actor: teacher.actor,
-      tenant: teacher.tenant
-    )
-  end
-
-  defp persist_question(question, attrs, socket) do
-    teacher = socket.assigns.current_teacher
-
-    question
-    |> Ash.Changeset.for_update(:update, attrs, actor: teacher.actor, tenant: teacher.tenant)
-    |> Ash.update()
   end
 
   defp subject_label(:traditional_chinese_medicine), do: "中医"
@@ -538,40 +534,49 @@ defmodule TcmEduWeb.TeacherQuizLive do
     end
   end
 
-  defp bank_form(params) do
-    params |> bank_changeset() |> Phoenix.Component.to_form(as: "bank")
-  end
-
-  defp bank_changeset(params) do
-    {%{subject: "traditional_chinese_medicine", is_public: false},
-     %{name: :string, subject: :string, description: :string, is_public: :boolean}}
-    |> Ecto.Changeset.cast(params, [:name, :subject, :description, :is_public])
-    |> Ecto.Changeset.validate_required([:name, :subject])
-    |> Ecto.Changeset.validate_length(:name, max: 100)
-    |> Ecto.Changeset.validate_inclusion(:subject, @subjects)
-  end
-
-  defp question_form(params) do
-    params |> question_changeset() |> Phoenix.Component.to_form(as: "question")
-  end
-
-  defp question_changeset(params) do
-    {%{type: "single", difficulty: 3},
-     %{
-       type: :string,
-       difficulty: :integer,
-       stem: :string,
-       answer: :string,
-       explanation: :string
-     }}
-    |> Ecto.Changeset.cast(params, [:type, :difficulty, :stem, :answer, :explanation])
-    |> Ecto.Changeset.validate_required([:type, :stem])
-    |> Ecto.Changeset.validate_inclusion(:type, @types)
-    |> Ecto.Changeset.validate_number(:difficulty,
-      greater_than_or_equal_to: 1,
-      less_than_or_equal_to: 5
+  # bank_form / question_form 都从 Ash 资源派生:
+  #   * `:create` / `:update` action 的 accept 列表决定字段
+  #   * `subject` `type` 由 attribute constraints (one_of: [...]) 自动校验
+  #   * `difficulty` 由 constraints (min: 1, max: 5) 自动校验
+  # `bank_form` 直接创建;`question_form` 区分新建/编辑(传入 editing 时改用
+  # `for_update/3`),`options` 由 socket 单独管理,通过 `save_question/3` 在
+  # 提交时合并到 form_params。
+  defp bank_form(teacher, params) do
+    QuestionBank
+    |> AshPhoenix.Form.for_create(:create,
+      actor: teacher.actor,
+      tenant: teacher.tenant,
+      as: "bank",
+      params: params
     )
-    |> Ecto.Changeset.validate_length(:stem, max: 2000)
+    |> to_form()
+  end
+
+  defp question_form(teacher, params, _options, bank_id, editing)
+
+  defp question_form(teacher, params, _options, bank_id, nil) do
+    Question
+    |> AshPhoenix.Form.for_create(:create,
+      actor: teacher.actor,
+      tenant: teacher.tenant,
+      as: "question",
+      params: params,
+      prepare_source: fn changeset ->
+        # bank_id 从 socket 注入,不在表单字段中展示。
+        Ash.Changeset.force_change_attribute(changeset, :bank_id, bank_id)
+      end
+    )
+    |> to_form()
+  end
+
+  defp question_form(teacher, params, _options, _bank_id, %Question{} = question) do
+    AshPhoenix.Form.for_update(question, :update,
+      actor: teacher.actor,
+      tenant: teacher.tenant,
+      as: "question",
+      params: params
+    )
+    |> to_form()
   end
 
   defp blank_option, do: %{"text" => "", "correct" => false}
@@ -645,11 +650,6 @@ defmodule TcmEduWeb.TeacherQuizLive do
   end
 
   defp options_text(_), do: "-"
-
-  defp empty_to_nil(nil), do: nil
-  defp empty_to_nil(""), do: nil
-  defp empty_to_nil(value) when is_binary(value), do: String.trim(value)
-  defp empty_to_nil(value), do: value
 
   defp ash_message(error) do
     Exception.message(error)

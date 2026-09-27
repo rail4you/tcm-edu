@@ -52,7 +52,8 @@ defmodule TcmEdu.System.Organization do
       allow_nil?(false)
       public?(true)
       description("URL-safe 短标识，作为 schema 名后缀（tenant_<slug>）")
-      constraints(match: ~r/^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/)
+      # 不用 constraints(match:) — 它的错误是英文 "must match the pattern %{regex}",
+      # 而业务需要中文提示。改由 :create_with_schema action 上的 validate 块提供。
     end
 
     attribute :schema_name, :string do
@@ -145,6 +146,24 @@ defmodule TcmEdu.System.Organization do
         :plan,
         :expires_at
       ])
+
+      # 自定义错误文案,沿用旧 Ecto changeset 的友好提示(否则 Ash 默认输出
+      # `must match the pattern %{regex}`,对中文用户不友好)。
+      validate(fn changeset, _ctx ->
+        slug = Ash.Changeset.get_attribute(changeset, :slug)
+
+        case slug do
+          nil ->
+            :ok
+
+          slug ->
+            if Regex.match?(~r/^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/, slug) do
+              :ok
+            else
+              {:error, field: :slug, message: "小写字母/数字/连字符，3~32 位"}
+            end
+        end
+      end)
 
       change(fn changeset, _context ->
         slug = Ash.Changeset.get_attribute(changeset, :slug)

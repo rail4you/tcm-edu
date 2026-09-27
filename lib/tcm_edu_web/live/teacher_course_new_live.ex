@@ -2,6 +2,12 @@ defmodule TcmEduWeb.TeacherCourseNewLive do
   @moduledoc """
   New course at `/teacher/courses/new`. Sectioned fieldset form; on
   success navigates back to the course list.
+
+  Form is built from the Ash resource via `AshPhoenix.Form.for_create/3`,
+  so field types / validations / accept list come from the
+  `:create_course` action in `TcmEdu.Courses.Course` (no hand-rolled
+  Ecto changesets). `teacher_id` is injected server-side via
+  `prepare_source` so it never reaches the client.
   """
 
   use TcmEduWeb, :live_view
@@ -14,8 +20,6 @@ defmodule TcmEduWeb.TeacherCourseNewLive do
 
   on_mount {TcmEduWeb.TeacherAuth, :ensure_teacher}
 
-  @levels ~w(beginner intermediate advanced)
-
   @impl true
   def mount(_params, _session, socket) do
     teacher = socket.assigns.current_teacher
@@ -25,13 +29,13 @@ defmodule TcmEduWeb.TeacherCourseNewLive do
      |> assign(:page_title, "创建课程")
      |> assign(:page_subtitle, "先填基本信息，可顺手上传封面")
      |> assign(:categories, list_categories(teacher))
-     |> assign(:form, course_form(%{}))
+     |> assign(:form, course_form(teacher, %{}))
      |> CourseCover.allow_cover_upload()}
   end
 
   @impl true
   def handle_event("validate", %{"course" => params}, socket) do
-    {:noreply, assign(socket, :form, course_form(params))}
+    {:noreply, assign(socket, :form, AshPhoenix.Form.validate(socket.assigns.form, params))}
   end
 
   def handle_event("cancel-cover", %{"ref" => ref}, socket) do
@@ -40,44 +44,32 @@ defmodule TcmEduWeb.TeacherCourseNewLive do
 
   def handle_event("save", %{"course" => params}, socket) do
     teacher = socket.assigns.current_teacher
-    changeset = course_changeset(params)
 
-    if changeset.valid? do
-      attrs = %{
-        title: get_string(changeset, :title),
-        subtitle: get_optional(changeset, :subtitle),
-        description: get_optional(changeset, :description),
-        level: get_atom(changeset, :level, :beginner),
-        price_cents: get_price_cents(changeset),
-        teacher_id: teacher.id,
-        category_id: get_optional(changeset, :category_id)
-      }
+    # 提前校验一次,使 form 上的 errors 字段反映本次输入(否则只在 submit 失败后才更新)。
+    form = AshPhoenix.Form.validate(socket.assigns.form, params)
 
-      case Course.create_course(attrs, actor: teacher.actor, tenant: teacher.tenant) do
-        {:ok, course} ->
-          socket =
-            case CourseCover.consume_cover(socket, course, teacher) do
-              {:ok, _url} ->
-                put_flash(socket, :info, "课程已创建，封面已上传")
+    case AshPhoenix.Form.submit(form, params: params) do
+      {:ok, course} ->
+        socket =
+          case CourseCover.consume_cover(socket, course, teacher) do
+            {:ok, _url} ->
+              put_flash(socket, :info, "课程已创建，封面已上传")
 
-              {:error, message} ->
-                put_flash(
-                  socket,
-                  :info,
-                  "课程已创建，但封面上传失败（#{message}），可在课程列表编辑中重试"
-                )
+            {:error, message} ->
+              put_flash(
+                socket,
+                :info,
+                "课程已创建，但封面上传失败（#{message}），可在课程列表编辑中重试"
+              )
 
-              :no_entry ->
-                put_flash(socket, :info, "课程已创建")
-            end
+            :no_entry ->
+              put_flash(socket, :info, "课程已创建")
+          end
 
-          {:noreply, push_navigate(socket, to: "/teacher/courses")}
+        {:noreply, push_navigate(socket, to: "/teacher/courses")}
 
-        {:error, error} ->
-          {:noreply, put_flash(socket, :error, ash_message(error))}
-      end
-    else
-      {:noreply, assign(socket, :form, Phoenix.Component.to_form(changeset, as: "course"))}
+      {:error, form} ->
+        {:noreply, assign(socket, :form, form)}
     end
   end
 
@@ -92,60 +84,21 @@ defmodule TcmEduWeb.TeacherCourseNewLive do
     end
   end
 
-  defp course_form(params) do
-    params |> course_changeset() |> Phoenix.Component.to_form(as: "course")
-  end
-
-  defp course_changeset(params) do
-    types = %{
-      title: :string,
-      subtitle: :string,
-      description: :string,
-      level: :string,
-      price_yuan: :float,
-      category_id: :string
-    }
-
-    {%{level: "beginner"}, types}
-    |> Ecto.Changeset.cast(params, Map.keys(types))
-    |> Ecto.Changeset.validate_required([:title])
-    |> Ecto.Changeset.validate_length(:title, max: 100)
-    |> Ecto.Changeset.validate_inclusion(:level, @levels)
-    |> Ecto.Changeset.validate_number(:price_yuan, greater_than_or_equal_to: 0)
-  end
-
-  defp get_string(changeset, field) do
-    changeset |> Ecto.Changeset.get_field(field) |> to_string() |> String.trim()
-  end
-
-  defp get_optional(changeset, field) do
-    case Ecto.Changeset.get_field(changeset, field) do
-      nil -> nil
-      "" -> nil
-      value when is_binary(value) -> String.trim(value)
-      value -> value
-    end
-  end
-
-  defp get_atom(changeset, field, default) do
-    case Ecto.Changeset.get_field(changeset, field) do
-      nil -> default
-      "" -> default
-      value -> String.to_existing_atom(value)
-    end
-  end
-
-  defp get_price_cents(changeset) do
-    case Ecto.Changeset.get_field(changeset, :price_yuan) do
-      nil -> 0
-      yuan when is_number(yuan) -> round(yuan * 100)
-      _ -> 0
-    end
-  end
-
-  defp ash_message(error) do
-    Exception.message(error)
-  rescue
-    _ -> "创建失败，请稍后重试"
+  # 基于 Ash 资源 action 构建表单:字段类型、accept 列表、约束都来自
+  # `:create_course` action;`teacher_id` 走 `prepare_source` 由服务端注入,
+  # 避免表单回显时被改写。表单字段直接绑定 `:price_cents`(数据库存的就是分),
+  # 沿用 `allow_nil? false` / 约束由资源提供,无需手写 Ecto changeset。
+  defp course_form(teacher, params) do
+    Course
+    |> AshPhoenix.Form.for_create(:create_course,
+      actor: teacher.actor,
+      tenant: teacher.tenant,
+      as: "course",
+      params: params,
+      prepare_source: fn changeset ->
+        Ash.Changeset.force_change_attribute(changeset, :teacher_id, teacher.id)
+      end
+    )
+    |> to_form()
   end
 end

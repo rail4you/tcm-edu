@@ -80,13 +80,13 @@
             />
           </div>
           <.input
-            field={@form[:price_yuan]}
+            field={@form[:price_cents]}
             type="number"
-            label="价格（元）"
+            label="价格（分，0 = 免费）"
             min="0"
-            step="0.01"
+            step="1"
           />
-          <p class="label">0 表示免费课程，学生可直接选课</p>
+          <p class="label">按分计价：100 = 1 元，留 0 表示免费课程</p>
         </fieldset>
       </div>
 

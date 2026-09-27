@@ -7,7 +7,8 @@ defmodule TcmEdu.Courses do
   """
 
   use Ash.Domain,
-    otp_app: :tcm_edu
+    otp_app: :tcm_edu,
+    extensions: [AshPhoenix]
 
   resources do
     resource TcmEdu.Courses.CourseCategory

@@ -10,7 +10,8 @@ defmodule TcmEdu.System do
   """
 
   use Ash.Domain,
-    otp_app: :tcm_edu
+    otp_app: :tcm_edu,
+    extensions: [AshPhoenix]
 
   resources do
     resource TcmEdu.System.Organization

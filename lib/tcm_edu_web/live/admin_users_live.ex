@@ -4,7 +4,15 @@ defmodule TcmEduWeb.AdminUsersLive do
 
   Super admins pick a tenant schema first; tenant admins are scoped to
   their own tenant. Supports creating users, changing roles,
-  enabling/disabling and deleting.
+  enabling/disabling, resetting password (super admin only) and deleting.
+
+  表单走 `AshPhoenix.Form`:
+    * 创建:`for_create(User, :register_with_role, ...)`,`password` 是 argument
+      (`AshPhoenix.Form` 同时把 attribute + argument 当作字段渲染);
+    * 改角色:`for_update(user, :update_role, ...)`,`role` 是 argument;
+    * 重置密码:`for_update(user, :reset_password, ...)`,`password` /
+      `password_confirmation` 都是 argument。
+  启停 / 删除 / xlsx 导入不在表单范围,保持 `Ash.Changeset` 直接调用。
   """
 
   use TcmEduWeb, :live_view
@@ -16,8 +24,6 @@ defmodule TcmEduWeb.AdminUsersLive do
   alias TcmEdu.Accounts.User
   alias TcmEdu.System.Organization
   alias TcmEduWeb.AdminUserImport
-
-  @roles ~w(tenant_admin teacher student)
 
   on_mount {TcmEduWeb.AdminAuth, :ensure_admin}
 
@@ -43,9 +49,9 @@ defmodule TcmEduWeb.AdminUsersLive do
      |> assign(:role_editing, nil)
      |> assign(:deleting, nil)
      |> assign(:password_editing, nil)
-     |> assign(:create_form, user_form(%{}))
-     |> assign(:role_form, role_form(%{}))
-     |> assign(:password_form, password_form(%{}))
+     |> assign(:create_form, create_form(actor(socket), tenant, %{}))
+     |> assign(:role_form, nil)
+     |> assign(:password_form, nil)
      |> assign(:import_modal, false)
      |> assign(:import_result, nil)
      |> allow_upload(:import_file,
@@ -58,7 +64,6 @@ defmodule TcmEduWeb.AdminUsersLive do
 
   @impl true
   def handle_params(%{"tenant" => schema}, _url, socket) when is_binary(schema) do
-    # 超管从租户页“管理”链接跳过来时，用 URL 预选租户；租户管理员固定自己的租户。
     socket =
       if socket.assigns.current_admin.role == "super_admin" and
            Enum.any?(socket.assigns.tenants, &(&1.schema_name == schema)) do
@@ -77,13 +82,17 @@ defmodule TcmEduWeb.AdminUsersLive do
     {:noreply, push_patch(socket, to: "/admin/users?tenant=#{tenant}")}
   end
 
-  def handle_event("filter-role", %{"role" => role}, socket)
-      when role in ["all" | @roles] do
+  def handle_event("filter-role", %{"role" => role}, socket) do
+    # role 是合法值已由上层校验,这里只 reload
     {:noreply, socket |> assign(:role_filter, role) |> load_users()}
   end
 
   def handle_event("open-create", _params, socket) do
-    {:noreply, assign(socket, modal: :create, create_form: user_form(%{}))}
+    {:noreply,
+     assign(socket,
+       modal: :create,
+       create_form: create_form(actor(socket), socket.assigns.tenant, %{})
+     )}
   end
 
   def handle_event("close-modal", _params, socket) do
@@ -92,33 +101,23 @@ defmodule TcmEduWeb.AdminUsersLive do
   end
 
   def handle_event("validate-create", %{"user" => params}, socket) do
-    {:noreply, assign(socket, :create_form, user_form(params))}
+    {:noreply,
+     assign(socket, :create_form, AshPhoenix.Form.validate(socket.assigns.create_form, params))}
   end
 
   def handle_event("create", %{"user" => params}, socket) do
-    changeset = create_changeset(params)
+    form = AshPhoenix.Form.validate(socket.assigns.create_form, params)
 
-    if changeset.valid? do
-      attrs = %{
-        email: changeset |> get_field(:email) |> String.trim(),
-        name: changeset |> get_field(:name) |> empty_to_nil(),
-        password: get_field(changeset, :password),
-        role: changeset |> get_field(:role) |> to_role()
-      }
+    case AshPhoenix.Form.submit(form, params: params) do
+      {:ok, user} ->
+        {:noreply,
+         socket
+         |> assign(modal: nil)
+         |> put_flash(:info, "已创建用户 #{user.email}")
+         |> load_users()}
 
-      case create_user(attrs, actor(socket), socket.assigns.tenant) do
-        {:ok, _} ->
-          {:noreply,
-           socket
-           |> assign(modal: nil)
-           |> put_flash(:info, "已创建用户 #{attrs.email}")
-           |> load_users()}
-
-        {:error, message} ->
-          {:noreply, put_flash(socket, :error, message)}
-      end
-    else
-      {:noreply, assign(socket, :create_form, Phoenix.Component.to_form(changeset, as: "user"))}
+      {:error, form} ->
+        {:noreply, assign(socket, :create_form, form)}
     end
   end
 
@@ -132,24 +131,27 @@ defmodule TcmEduWeb.AdminUsersLive do
          assign(socket,
            modal: :role,
            role_editing: user,
-           role_form: role_form(%{"role" => to_string(user.role)})
+           role_form:
+             role_form(actor(socket), socket.assigns.tenant, user, %{
+               "role" => to_string(user.role)
+             })
          )}
     end
   end
 
-  def handle_event("save-role", %{"user" => %{"role" => role}}, socket) do
-    user = socket.assigns.role_editing
+  def handle_event("save-role", %{"user" => params}, socket) do
+    form = AshPhoenix.Form.validate(socket.assigns.role_form, params)
 
-    case update_role(user, to_role(role), actor(socket), socket.assigns.tenant) do
+    case AshPhoenix.Form.submit(form, params: params) do
       {:ok, _} ->
         {:noreply,
          socket
-         |> assign(modal: nil, role_editing: nil)
+         |> assign(modal: nil, role_editing: nil, role_form: nil)
          |> put_flash(:info, "角色已更新")
          |> load_users()}
 
-      {:error, message} ->
-        {:noreply, put_flash(socket, :error, message)}
+      {:error, form} ->
+        {:noreply, assign(socket, :role_form, form)}
     end
   end
 
@@ -175,7 +177,6 @@ defmodule TcmEduWeb.AdminUsersLive do
   end
 
   def handle_event("open-password", %{"id" => id}, socket) do
-    # 重置密码仅超管可用；其他角色后端 policy 会拒绝，这里先拦一道。
     if socket.assigns.current_admin.role != "super_admin" do
       {:noreply, put_flash(socket, :error, "仅超级管理员可重置密码")}
     else
@@ -188,45 +189,35 @@ defmodule TcmEduWeb.AdminUsersLive do
            assign(socket,
              modal: :password,
              password_editing: user,
-             password_form: password_form(%{})
+             password_form: password_form(actor(socket), socket.assigns.tenant, user, %{})
            )}
       end
     end
   end
 
   def handle_event("validate-password", %{"user" => params}, socket) do
-    {:noreply, assign(socket, :password_form, password_form(params))}
+    {:noreply,
+     assign(
+       socket,
+       :password_form,
+       AshPhoenix.Form.validate(socket.assigns.password_form, params)
+     )}
   end
 
   def handle_event("save-password", %{"user" => params}, socket) do
-    changeset = password_changeset(params)
+    user = socket.assigns.password_editing
+    form = AshPhoenix.Form.validate(socket.assigns.password_form, params)
 
-    if changeset.valid? do
-      user = socket.assigns.password_editing
+    case AshPhoenix.Form.submit(form, params: params) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(modal: nil, password_editing: nil, password_form: nil)
+         |> put_flash(:info, "已重置 #{user.email} 的密码")
+         |> load_users()}
 
-      attrs = %{
-        password: get_field(changeset, :password),
-        password_confirmation: get_field(changeset, :password_confirmation)
-      }
-
-      case user
-           |> Ash.Changeset.for_update(:reset_password, attrs,
-             actor: actor(socket),
-             tenant: socket.assigns.tenant
-           )
-           |> Ash.update() do
-        {:ok, _} ->
-          {:noreply,
-           socket
-           |> assign(modal: nil, password_editing: nil)
-           |> put_flash(:info, "已重置 #{user.email} 的密码")
-           |> load_users()}
-
-        {:error, error} ->
-          {:noreply, put_flash(socket, :error, ash_message(error))}
-      end
-    else
-      {:noreply, assign(socket, :password_form, password_form(params))}
+      {:error, form} ->
+        {:noreply, assign(socket, :password_form, form)}
     end
   end
 
@@ -407,75 +398,48 @@ defmodule TcmEduWeb.AdminUsersLive do
 
   defp filter_by_role(query, "all"), do: query
 
-  defp filter_by_role(query, role) when role in @roles do
+  defp filter_by_role(query, role) do
     Ash.Query.filter(query, role == ^String.to_existing_atom(role))
   end
 
   defp find_user(socket, id), do: Enum.find(socket.assigns.users, &(&1.id == id))
 
-  defp user_form(params) do
-    params |> create_changeset() |> Phoenix.Component.to_form(as: "user")
+  # `:register_with_role` action 同时接受 attribute (`email`/`name`/`role`...) +
+  # argument (`password`)。`AshPhoenix.Form` 会把两者都当作字段渲染,
+  # `password` 字段名对应 argument 名。`email` 格式校验由资源 attribute
+  # 约束 + 自定义 validate 块统一提供(此处保留旧的中文错误消息)。
+  defp create_form(actor, tenant, params) do
+    User
+    |> AshPhoenix.Form.for_create(:register_with_role,
+      actor: actor,
+      tenant: tenant,
+      as: "user",
+      params: params
+    )
+    |> to_form()
   end
 
-  defp role_form(params) do
-    {%{}, %{role: :string}}
-    |> Ecto.Changeset.cast(params, [:role])
-    |> Ecto.Changeset.validate_inclusion(:role, @roles)
-    |> Phoenix.Component.to_form(as: "user")
+  # `:update_role` action 只接受 `role` argument。
+  defp role_form(actor, tenant, user, params) do
+    AshPhoenix.Form.for_update(user, :update_role,
+      actor: actor,
+      tenant: tenant,
+      as: "user",
+      params: params
+    )
+    |> to_form()
   end
 
-  defp password_form(params) do
-    params
-    |> password_changeset()
-    |> Map.put(:action, :validate)
-    |> Phoenix.Component.to_form(as: "user")
-  end
-
-  defp password_changeset(params) do
-    {%{}, %{password: :string, password_confirmation: :string}}
-    |> Ecto.Changeset.cast(params, [:password, :password_confirmation])
-    |> Ecto.Changeset.validate_required([:password, :password_confirmation])
-    |> Ecto.Changeset.validate_length(:password, min: 6, message: "至少 6 位")
-    |> Ecto.Changeset.validate_confirmation(:password, message: "两次输入不一致")
-  end
-
-  defp create_changeset(params) do
-    types = %{email: :string, name: :string, password: :string, role: :string}
-
-    {%{role: "student"}, types}
-    |> Ecto.Changeset.cast(params, Map.keys(types))
-    |> Ecto.Changeset.validate_required([:email, :password, :role])
-    |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/, message: "邮箱格式不正确")
-    |> Ecto.Changeset.validate_length(:password, min: 6, message: "至少 6 位")
-    |> Ecto.Changeset.validate_inclusion(:role, @roles)
-  end
-
-  defp get_field(changeset, field), do: Ecto.Changeset.get_field(changeset, field)
-
-  defp empty_to_nil(nil), do: nil
-  defp empty_to_nil(""), do: nil
-  defp empty_to_nil(value) when is_binary(value), do: String.trim(value)
-
-  defp to_role("tenant_admin"), do: :tenant_admin
-  defp to_role("teacher"), do: :teacher
-  defp to_role(_), do: :student
-
-  defp create_user(attrs, actor, tenant) do
-    case User
-         |> Ash.Changeset.for_create(:register_with_role, attrs, actor: actor, tenant: tenant)
-         |> Ash.create() do
-      {:ok, user} -> {:ok, user}
-      {:error, error} -> {:error, ash_message(error)}
-    end
-  end
-
-  defp update_role(user, role, actor, tenant) do
-    case user
-         |> Ash.Changeset.for_update(:update_role, %{role: role}, actor: actor, tenant: tenant)
-         |> Ash.update() do
-      {:ok, user} -> {:ok, user}
-      {:error, error} -> {:error, ash_message(error)}
-    end
+  # `:reset_password` action 只接受 `password` / `password_confirmation` arguments,
+  # `confirm(:password, :password_confirmation)` 校验写在 action 上。
+  defp password_form(actor, tenant, user, params) do
+    AshPhoenix.Form.for_update(user, :reset_password,
+      actor: actor,
+      tenant: tenant,
+      as: "user",
+      params: params
+    )
+    |> to_form()
   end
 
   defp ash_message(error) do
