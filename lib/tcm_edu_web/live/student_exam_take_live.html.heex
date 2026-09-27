@@ -1,0 +1,275 @@
+<Layouts.app flash={@flash} shell={:storefront}>
+  <.student_shell
+    current_student={@current_student}
+    current_page={:exams}
+    unread_count={0}
+  >
+    <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+      <div :if={is_nil(@assignment)} class="rounded-box border border-[#e5e5e5] bg-white px-6 py-14 text-center">
+        <p class="text-sm text-[#999]">这场考试不存在或未分配给你</p>
+        <.link navigate="/exams" class="mt-3 inline-block text-sm text-[#00b86b] hover:underline">
+          返回我的考试
+        </.link>
+      </div>
+
+      <div :if={@assignment} class="rounded-box border border-[#e5e5e5] bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 class="text-xl font-semibold text-[#1a2e2a]">{@assignment.exam.name}</h1>
+            <p class="mt-1 text-sm text-[#888]">
+              {@assignment.exam.duration_minutes} 分钟 · {@assignment.exam.total_questions || 0} 题 ·
+              总分 {fmt_score(@assignment.exam.total_score)}
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class={["badge badge-soft", status_badge(@assignment.status)]}>
+              {status_text(@assignment.status)}
+            </span>
+            <span :if={@assignment.status in [:submitted, :graded]} class="badge badge-soft badge-success">
+              {fmt_score(@assignment.total_score)} 分
+            </span>
+          </div>
+        </div>
+        <p
+          :if={@assignment.exam.description not in [nil, ""]}
+          class="mt-2 text-sm text-[#888]"
+        >
+          {@assignment.exam.description}
+        </p>
+
+        <div :if={@assignment.status in [:assigned, :in_progress]} class="mt-4 flex items-center gap-3">
+          <progress
+            class="progress progress-success h-2 w-full"
+            value={answered_count(@assignment, @response_map)}
+            max={total_count(@assignment)}
+          />
+          <p class="shrink-0 text-xs tabular-nums text-[#888]">
+            {answered_count(@assignment, @response_map)} / {total_count(@assignment)} 已答
+          </p>
+        </div>
+      </div>
+
+      <!-- 答题视图 -->
+      <div :if={@assignment && @assignment.status in [:assigned, :in_progress]} class="flex flex-col gap-4">
+        <div
+          :for={{eq, index} <- Enum.with_index(questions(@assignment), 1)}
+          class="rounded-box border border-[#e5e5e5] bg-white p-5 shadow-sm"
+          id={"question-#{eq.question.id}"}
+        >
+          <div class="flex items-start gap-3">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#00b86b] text-xs font-semibold text-white">
+              {index}
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="rounded bg-[#eef9f3] px-2 py-0.5 text-xs font-medium text-[#00b86b]">
+                  {type_label(eq.question.type)}
+                </span>
+                <span class="text-xs text-[#aaa]">{fmt_score(eq.score)} 分</span>
+              </div>
+              <p class="mt-1.5 text-[15px] leading-6 text-[#333]">{eq.question.stem}</p>
+            </div>
+          </div>
+
+          <form
+            phx-change="save-answer"
+            phx-value-id={eq.question.id}
+            id={"answer-form-#{eq.question.id}"}
+            class="mt-3 flex flex-col gap-2"
+          >
+            <!-- 单选 -->
+            <label
+              :for={{label, text} <- options_text(eq.question.options)}
+              :if={eq.question.type == :single}
+              class={[
+                "flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm",
+                saved_answer(@response_map, eq.question.id) == label && "border-[#00b86b] bg-[#eef9f3]",
+                saved_answer(@response_map, eq.question.id) != label && "border-[#e5e5e5] hover:bg-[#fafafa]"
+              ]}
+            >
+              <input
+                type="radio"
+                name={"answer[" <> eq.question.id <> "]"}
+                value={label}
+                checked={saved_answer(@response_map, eq.question.id) == label}
+                class="radio radio-sm radio-success"
+              />
+              <span class="font-medium">{label}.</span>
+              <span>{text}</span>
+            </label>
+
+            <!-- 多选 -->
+            <label
+              :for={{label, text} <- options_text(eq.question.options)}
+              :if={eq.question.type == :multi}
+              class={[
+                "flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm",
+                label in saved_choices(@response_map, eq.question.id) && "border-[#00b86b] bg-[#eef9f3]",
+                not (label in saved_choices(@response_map, eq.question.id)) && "border-[#e5e5e5] hover:bg-[#fafafa]"
+              ]}
+            >
+              <input
+                type="checkbox"
+                name={"answer[" <> eq.question.id <> "][]"}
+                value={label}
+                checked={label in saved_choices(@response_map, eq.question.id)}
+                class="checkbox checkbox-sm checkbox-success"
+              />
+              <span class="font-medium">{label}.</span>
+              <span>{text}</span>
+            </label>
+
+            <!-- 判断 -->
+            <div :if={eq.question.type == :judge} class="flex gap-3">
+              <label
+                :for={{value, text} <- [{"对", "正确"}, {"错", "错误"}]}
+                class={[
+                  "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm",
+                  saved_answer(@response_map, eq.question.id) == value && "border-[#00b86b] bg-[#eef9f3]",
+                  saved_answer(@response_map, eq.question.id) != value && "border-[#e5e5e5] hover:bg-[#fafafa]"
+                ]}
+              >
+                <input
+                  type="radio"
+                  name={"answer[" <> eq.question.id <> "]"}
+                  value={value}
+                  checked={saved_answer(@response_map, eq.question.id) == value}
+                  class="radio radio-sm radio-success"
+                />
+                {text}
+              </label>
+            </div>
+
+            <!-- 简答 -->
+            <textarea
+              :if={eq.question.type == :essay}
+              name={"answer[" <> eq.question.id <> "]"}
+              rows="4"
+              placeholder="在此输入你的答案…"
+              aria-label="作答"
+              phx-change="save-answer"
+              phx-value-id={eq.question.id}
+              class="textarea textarea-bordered w-full resize-y text-sm"
+            >{saved_answer(@response_map, eq.question.id)}</textarea>
+          </form>
+        </div>
+
+        <div class="sticky bottom-4 z-10 flex justify-center">
+          <button
+            class="btn btn-lg border-0 bg-[#00b86b] text-white shadow-lg hover:brightness-95"
+            phx-click="open-submit"
+            id="open-submit-btn"
+          >
+            交卷
+          </button>
+        </div>
+      </div>
+
+      <!-- 结果视图 -->
+      <div :if={@assignment && @assignment.status in [:submitted, :graded]} class="flex flex-col gap-4">
+        <div class="rounded-box border border-[#e5e5e5] bg-white p-5 shadow-sm">
+          <div class="flex flex-wrap items-center gap-6">
+            <div>
+              <p class="text-xs text-[#999]">总分</p>
+              <p class="text-3xl font-semibold text-[#00b86b]">{fmt_score(@assignment.total_score)}</p>
+            </div>
+            <div>
+              <p class="text-xs text-[#999]">客观题</p>
+              <p class="text-xl font-medium text-[#333]">{fmt_score(@assignment.objective_score)}</p>
+            </div>
+            <div>
+              <p class="text-xs text-[#999]">主观题</p>
+              <p class="text-xl font-medium text-[#333]">{fmt_score(@assignment.essay_score)}</p>
+            </div>
+            <div class="ml-auto text-xs text-[#999]">
+              试卷满分 {fmt_score(@assignment.exam.total_score)}
+            </div>
+          </div>
+        </div>
+
+        <div
+          :for={{eq, index} <- Enum.with_index(questions(@assignment), 1)}
+          class="rounded-box border border-[#e5e5e5] bg-white p-5 shadow-sm"
+          id={"review-question-#{eq.question.id}"}
+        >
+          <div class="flex items-start gap-3">
+            <span
+              :if={is_correct?(@response_map, eq.question.id) != nil}
+              class={[
+                "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white",
+                is_correct?(@response_map, eq.question.id) && "bg-[#00b86b]",
+                !is_correct?(@response_map, eq.question.id) && "bg-[#ff4d2f]"
+              ]}
+            >
+              {if is_correct?(@response_map, eq.question.id), do: "✓", else: "✗"}
+            </span>
+            <span :if={is_correct?(@response_map, eq.question.id) == nil} class="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#e5e5e5] text-xs font-semibold text-[#888]">
+              {index}
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="rounded bg-[#eef9f3] px-2 py-0.5 text-xs font-medium text-[#00b86b]">
+                  {type_label(eq.question.type)}
+                </span>
+                <span class="text-xs text-[#aaa]">
+                  {if is_correct?(@response_map, eq.question.id) != nil or eq.question.type == :essay,
+                    do: "得分 #{fmt_score(Map.get(@response_map, eq.question.id) && Map.get(@response_map, eq.question.id).score)}",
+                    else: ""}
+                </span>
+              </div>
+              <p class="mt-1.5 text-[15px] leading-6 text-[#333]">{eq.question.stem}</p>
+            </div>
+          </div>
+
+          <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div class="rounded-lg bg-[#fafafa] p-3">
+              <p class="text-xs text-[#999]">我的答案</p>
+              <p class="mt-1 text-sm text-[#333]">
+                {if eq.question.type == :essay,
+                  do: Map.get(@response_map, eq.question.id) && Map.get(@response_map, eq.question.id).answer || "（未作答）",
+                  else: saved_answer(@response_map, eq.question.id) || "（未作答）"}
+              </p>
+              <p
+                :if={eq.question.type == :essay and Map.get(@response_map, eq.question.id) && Map.get(@response_map, eq.question.id).comment}
+                class="mt-2 border-t border-[#f0f0f0] pt-2 text-xs text-[#00b86b]"
+              >
+                教师批注：{Map.get(@response_map, eq.question.id).comment}
+              </p>
+            </div>
+            <div class="rounded-lg bg-[#fafafa] p-3">
+              <p class="text-xs text-[#999]">参考答案</p>
+              <p class="mt-1 whitespace-pre-line text-sm text-[#333]">{eq.question.answer}</p>
+            </div>
+          </div>
+          <p
+            :if={eq.question.explanation not in [nil, ""]}
+            class="mt-3 rounded-lg border border-[#eef9f3] bg-[#f4fcf8] p-3 text-sm text-[#555]"
+          >
+            <span class="font-medium text-[#00b86b]">解析：</span>
+            {eq.question.explanation}
+          </p>
+        </div>
+
+        <div class="flex justify-center">
+          <.link navigate="/exams" class="rounded border border-[#00b86b] px-5 py-2 text-sm text-[#00b86b] hover:bg-[#eef9f3]">
+            返回我的考试
+          </.link>
+        </div>
+      </div>
+    </div>
+
+    <div :if={@confirm_submit} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <p class="text-lg font-medium">确认交卷？</p>
+        <p class="mt-2 text-sm text-base-content/60">
+          已答 {answered_count(@assignment, @response_map)} / {total_count(@assignment)} 题。交卷后客观题即时判分，主观题由老师批改，不能再修改答案。
+        </p>
+        <div class="modal-action">
+          <button type="button" class="btn btn-soft" phx-click="close-submit">再检查一下</button>
+          <button type="button" class="btn btn-error" phx-click="submit-exam" id="confirm-submit-btn">确认交卷</button>
+        </div>
+      </div>
+      <div class="modal-backdrop" phx-click="close-submit"></div>
+    </div>
+  </.student_shell>
+</Layouts.app>

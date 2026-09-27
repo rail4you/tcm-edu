@@ -1,0 +1,210 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.teacher_shell
+    current_teacher={@current_teacher}
+    current_page={:exams}
+    page_title="考试结果"
+    page_subtitle={@exam && @exam.name}
+  >
+    <:page_actions>
+      <div :if={@exam} class="flex flex-wrap items-center gap-2">
+        <span class="badge badge-soft badge-xs">{@exam.total_questions || 0} 题</span>
+        <span class="badge badge-soft badge-xs badge-primary">总分 {fmt_score(@exam.total_score)}</span>
+      </div>
+    </:page_actions>
+
+    <div :if={is_nil(@exam)} class="card bg-base-100 shadow-sm">
+      <div class="card-body flex flex-col items-center gap-2 py-12">
+        <.icon name="hero-exclamation-triangle" class="size-8 text-base-content/40" />
+        <p class="text-sm text-base-content/60">试卷不存在</p>
+        <.link navigate="/teacher/exams" class="btn btn-soft btn-sm">返回考试管理</.link>
+      </div>
+    </div>
+
+    <div :if={@exam} class="flex flex-col gap-6">
+      <div class="grid grid-cols-2 gap-4 md:grid-cols-5">
+        <div class="card bg-base-100 shadow-sm">
+          <div class="card-body gap-1 p-4">
+            <p class="text-sm text-base-content/60">已分配</p>
+            <p class="text-2xl font-semibold tabular-nums">{length(@assignments)}</p>
+          </div>
+        </div>
+        <div class="card bg-base-100 shadow-sm">
+          <div class="card-body gap-1 p-4">
+            <p class="text-sm text-base-content/60">作答中</p>
+            <p class="text-2xl font-semibold tabular-nums text-info">{count_by(@assignments, :in_progress)}</p>
+          </div>
+        </div>
+        <div class="card bg-base-100 shadow-sm">
+          <div class="card-body gap-1 p-4">
+            <p class="text-sm text-base-content/60">待批改</p>
+            <p class="text-2xl font-semibold tabular-nums text-warning">{count_by(@assignments, :submitted)}</p>
+          </div>
+        </div>
+        <div class="card bg-base-100 shadow-sm">
+          <div class="card-body gap-1 p-4">
+            <p class="text-sm text-base-content/60">已批改</p>
+            <p class="text-2xl font-semibold tabular-nums text-success">{count_by(@assignments, :graded)}</p>
+          </div>
+        </div>
+        <div class="card bg-base-100 shadow-sm">
+          <div class="card-body gap-1 p-4">
+            <p class="text-sm text-base-content/60">平均分</p>
+            <p class="text-2xl font-semibold tabular-nums">{fmt_avg(avg_total(@assignments))}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body gap-3 p-4 sm:p-6">
+          <p class="font-medium">作答列表</p>
+
+          <div :if={@assignments == []} class="rounded-box bg-base-200/30 px-4 py-10 text-center">
+            <p class="text-sm text-base-content/60">还没有分配记录，先去「分配」页面把试卷发给学生</p>
+          </div>
+
+          <div :if={@assignments != []} class="overflow-x-auto rounded-box border border-base-300">
+            <table class="table table-sm table-zebra table-pin-rows">
+              <thead>
+                <tr>
+                  <th>学生</th>
+                  <th>状态</th>
+                  <th class="text-right tabular-nums">客观题</th>
+                  <th class="text-right tabular-nums">主观题</th>
+                  <th class="text-right tabular-nums">总分</th>
+                  <th class="text-right tabular-nums">交卷时间</th>
+                  <th class="text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  :for={assignment <- @assignments}
+                  class="transition-colors hover:bg-base-200"
+                  id={"assignment-#{assignment.id}"}
+                >
+                  <td>
+                    <div class="flex items-center gap-3">
+                      <span class="avatar avatar-placeholder">
+                        <span class="flex size-8 items-center justify-center rounded-full bg-neutral text-xs text-neutral-content">
+                          {student_initial(assignment.student)}
+                        </span>
+                      </span>
+                      <div class="min-w-0">
+                        <p class="truncate font-medium">{student_name(assignment)}</p>
+                        <p class="truncate text-xs text-base-content/60">{student_email(assignment)}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class={["badge badge-soft badge-xs", status_badge(assignment.status)]}>
+                      {status_text(assignment.status)}
+                    </span>
+                  </td>
+                  <td class="text-right tabular-nums">{fmt_score(assignment.objective_score)}</td>
+                  <td class="text-right tabular-nums">{fmt_score(assignment.essay_score)}</td>
+                  <td class="text-right tabular-nums font-medium">{fmt_score(assignment.total_score)}</td>
+                  <td class="text-right tabular-nums text-base-content/60">{format_time(assignment.submitted_at)}</td>
+                  <td>
+                    <div class="flex justify-end">
+                      <button
+                        :if={assignment.status in [:submitted, :graded]}
+                        class="btn btn-ghost btn-xs"
+                        phx-click="open-grade"
+                        phx-value-id={assignment.id}
+                        id={"grade-assignment-#{assignment.id}"}
+                      >
+                        {if assignment.status == :graded, do: "查看/改分", else: "批改"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div :if={@grading} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box max-w-2xl">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-lg font-medium">批改简答题</p>
+            <p class="mt-1 text-xs text-base-content/60">
+              {student_name(@grading)} · {status_text(@grading.status)}
+            </p>
+          </div>
+          <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-grade" aria-label="关闭">
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </div>
+
+        <div :if={essay_questions(@grading) == []} class="rounded-box bg-base-200/30 px-4 py-8 text-center mt-4">
+          <p class="text-sm text-base-content/60">这份试卷没有简答题，或该生未作答</p>
+        </div>
+
+        <div :if={essay_questions(@grading) != []} class="mt-4 flex flex-col gap-4">
+          <div
+            :for={response <- essay_questions(@grading)}
+            class="rounded-box border border-base-300 bg-base-100 p-3"
+            id={"essay-response-#{response.id}"}
+          >
+            <p class="text-sm font-medium">{response.question.stem}</p>
+            <div class="mt-2 rounded-box bg-base-200/50 p-2">
+              <p class="text-xs text-base-content/60">学生作答</p>
+              <p class="mt-1 whitespace-pre-line text-sm">{response.answer || "（未作答）"}</p>
+            </div>
+            <div class="mt-2 rounded-box bg-base-200/50 p-2">
+              <p class="text-xs text-base-content/60">参考答案</p>
+              <p class="mt-1 whitespace-pre-line text-sm text-base-content/80">{response.question.answer}</p>
+            </div>
+
+            <form phx-change="validate-grade" phx-submit="save-essay" class="mt-3 flex flex-wrap items-end gap-2">
+              <input type="hidden" name="grade[response_id]" value={response.id} />
+              <label class="form-control">
+                <span class="label-text text-xs">得分</span>
+                <input
+                  type="number"
+                  name="grade[score]"
+                  min="0"
+                  step="0.5"
+                  value={@grade_form[response.id]["score"]}
+                  class="input input-sm w-24 input-bordered"
+                  aria-label="得分"
+                />
+              </label>
+              <label class="form-control min-w-0 flex-1">
+                <span class="label-text text-xs">批注</span>
+                <input
+                  type="text"
+                  name="grade[comment]"
+                  value={@grade_form[response.id]["comment"]}
+                  placeholder="可选"
+                  class="input input-sm w-full input-bordered"
+                />
+              </label>
+              <button type="submit" class="btn btn-primary btn-sm" id={"save-essay-#{response.id}"}>
+                {if response.graded, do: "更新评分", else: "保存评分"}
+              </button>
+            </form>
+          </div>
+
+          <div class="flex items-center justify-between border-t border-base-300 pt-3">
+            <p :if={@grading.status == :submitted} class="text-xs text-base-content/60">
+              批完简答题后可一键完成整份批改
+            </p>
+            <button
+              :if={@grading.status == :submitted}
+              class="btn btn-soft btn-sm"
+              phx-click="finish-grading"
+              phx-value-id={@grading.id}
+              id="finish-grading-btn"
+            >
+              <.icon name="hero-check-circle" class="size-4" /> 完成批改
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-backdrop" phx-click="close-grade"></div>
+    </div>
+  </.teacher_shell>
+</Layouts.app>

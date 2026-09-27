@@ -1,0 +1,170 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.teacher_shell
+    current_teacher={@current_teacher}
+    current_page={:exams}
+    page_title="分配试卷"
+    page_subtitle={@exam && @exam.name}
+  >
+    <:page_actions>
+      <div :if={@exam} class="flex flex-wrap items-center gap-2">
+        <span class={["badge badge-soft badge-xs", status_badge(@exam.status)]}>{status_text(@exam.status)}</span>
+        <span class="badge badge-soft badge-xs">{@exam.total_questions || 0} 题</span>
+      </div>
+    </:page_actions>
+
+    <div :if={is_nil(@exam) || @exam.status != :published} class="card bg-base-100 shadow-sm">
+      <div class="card-body flex flex-col items-center gap-3 py-12">
+        <.icon name="hero-exclamation-triangle" class="size-8 text-base-content/40" />
+        <p class="text-sm text-base-content/60">试卷需先发布才能分配给学生</p>
+        <.link navigate={"/teacher/exams/#{@exam_id}/build"} class="btn btn-soft btn-sm">去发布</.link>
+      </div>
+    </div>
+
+    <div :if={@exam && @exam.status == :published} class="flex flex-col gap-6">
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body gap-3 p-4 sm:p-6">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p class="font-medium">选择学生</p>
+              <p class="mt-1 text-xs text-base-content/60">
+                已选 <b class="text-primary">{MapSet.size(@selected)}</b> 人 · 共 {length(@students)} 名学生
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <form phx-change="search" phx-submit="search" class="contents" id="assign-search-form">
+                <label class="input input-sm flex items-center gap-2" for="assign-search-input">
+                  <.icon name="hero-magnifying-glass" class="size-4 text-base-content/60" />
+                  <input
+                    id="assign-search-input"
+                    type="search"
+                    name="keyword"
+                    value={@keyword}
+                    placeholder="按邮箱 / 姓名筛选"
+                    class="grow"
+                    aria-label="按邮箱或姓名筛选学生"
+                  />
+                </label>
+              </form>
+              <button
+                class="btn btn-primary btn-sm"
+                phx-click="assign-selected"
+                id="assign-selected-btn"
+              >
+                <span :if={MapSet.size(@selected) > 0} class="badge badge-primary badge-sm">
+                  {MapSet.size(@selected)}
+                </span>
+                <span :if={MapSet.size(@selected) == 0}><.icon name="hero-user-plus" class="size-4" /></span>
+                分配选中学生
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto rounded-box border border-base-300">
+            <table class="table table-sm table-zebra table-pin-rows">
+              <thead>
+                <tr>
+                  <th class="w-10">
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm checkbox-primary"
+                      phx-change="toggle-all"
+                      name="select_all"
+                      checked={all_page_selected?(page_ids(@students, @keyword, @page), @selected)}
+                      aria-label="全选当前页"
+                    />
+                  </th>
+                  <th>学生</th>
+                  <th>状态</th>
+                  <th class="text-right tabular-nums">加入时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  :for={student <- page_students(@students, @keyword, @page)}
+                  class={[
+                    "transition-colors hover:bg-base-200",
+                    MapSet.member?(@assigned_students, student.id) && "opacity-60"
+                  ]}
+                  id={"assign-student-#{student.id}"}
+                >
+                  <td>
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm checkbox-primary"
+                      name={"student_#{student.id}"}
+                      phx-click="toggle-student"
+                      phx-value-id={student.id}
+                      checked={MapSet.member?(@selected, student.id)}
+                      disabled={MapSet.member?(@assigned_students, student.id)}
+                      aria-label={"选择 #{student.name || student.email}"}
+                    />
+                  </td>
+                  <td>
+                    <div class="flex items-center gap-3">
+                      <span class="avatar avatar-placeholder">
+                        <span class="flex size-9 items-center justify-center rounded-full bg-neutral text-sm text-neutral-content">
+                          {student_initial(student)}
+                        </span>
+                      </span>
+                      <div class="min-w-0">
+                        <p class="truncate font-medium">{student.name || student.email}</p>
+                        <p class="truncate text-xs text-base-content/60">{student.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span :if={MapSet.member?(@assigned_students, student.id)} class="badge badge-soft badge-xs badge-success">
+                      已分配
+                    </span>
+                    <span :if={!MapSet.member?(@assigned_students, student.id)} class="badge badge-soft badge-xs">
+                      未分配
+                    </span>
+                  </td>
+                  <td class="text-right tabular-nums text-base-content/60">{format_date(student.inserted_at)}</td>
+                </tr>
+                <tr :if={total_count(@students, @keyword) == 0}>
+                  <td colspan="100%">
+                    <div class="flex flex-col items-center gap-2 py-10">
+                      <.icon name="hero-users" class="size-8 text-base-content/40" />
+                      <p class="text-sm text-base-content/60">
+                        {if @keyword == "", do: "还没有学生，请先在管理端添加", else: "没有匹配的学生"}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div
+            :if={total_count(@students, @keyword) > page_size()}
+            class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 pt-3"
+          >
+            <p class="text-sm text-base-content/60">共 {total_count(@students, @keyword)} 名学生</p>
+            <div class="join">
+              <button
+                class="btn join-item btn-sm"
+                phx-click="page"
+                phx-value-page={@page - 1}
+                disabled={@page <= 1}
+              >
+                «
+              </button>
+              <button class="btn join-item btn-sm btn-active" disabled>
+                {@page} / {total_pages(@students, @keyword)}
+              </button>
+              <button
+                class="btn join-item btn-sm"
+                phx-click="page"
+                phx-value-page={@page + 1}
+                disabled={@page >= total_pages(@students, @keyword)}
+              >
+                »
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </.teacher_shell>
+</Layouts.app>

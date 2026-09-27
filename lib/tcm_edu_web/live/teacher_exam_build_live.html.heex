@@ -1,0 +1,238 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.teacher_shell
+    current_teacher={@current_teacher}
+    current_page={:exams}
+    page_title="试卷组卷"
+    page_subtitle={@exam && @exam.name}
+  >
+    <:page_actions>
+      <div :if={@exam} class="flex flex-wrap items-center gap-2">
+        <span class="badge badge-soft badge-xs">{status_text(@exam.status)}</span>
+        <span class="badge badge-soft badge-xs">{length(@exam.exam_questions || [])} 题</span>
+        <span class="badge badge-soft badge-xs badge-primary">总分 {fmt_score(total_score(@exam))}</span>
+        <button class="btn btn-primary btn-sm" phx-click="publish" id="publish-exam-btn">
+          <span :if={@exam.status == :draft}>发布试卷</span>
+          <span :if={@exam.status != :draft}>已完成组卷</span>
+        </button>
+      </div>
+    </:page_actions>
+
+    <div :if={is_nil(@exam)} class="card bg-base-100 shadow-sm">
+      <div class="card-body flex flex-col items-center gap-2 py-12">
+        <.icon name="hero-exclamation-triangle" class="size-8 text-base-content/40" />
+        <p class="text-sm text-base-content/60">试卷不存在或已删除</p>
+        <.link navigate="/teacher/exams" class="btn btn-soft btn-sm">返回考试管理</.link>
+      </div>
+    </div>
+
+    <div :if={@exam} class="grid grid-cols-1 gap-6 xl:grid-cols-5">
+      <div class="card bg-base-100 shadow-sm xl:col-span-2">
+        <div class="card-body gap-3 p-4 sm:p-6">
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between gap-2">
+              <p class="font-medium">从题库选题</p>
+              <span class="badge badge-soft badge-xs">{length(@bank_questions)} 题</span>
+            </div>
+            <form phx-change="select-bank" class="contents" id="bank-select-form">
+              <select
+                class="select select-sm select-bordered"
+                name="bank_id"
+                id="build-bank-select"
+                aria-label="选择题库"
+              >
+                <option value="">请选择题库</option>
+                <option
+                  :for={bank <- @banks}
+                  value={bank.id}
+                  selected={@selected_bank_id == bank.id}
+                >
+                  {bank.name}（{bank.question_count || 0} 题）
+                </option>
+              </select>
+            </form>
+          </div>
+
+          <div :if={@selected_bank_id} class="flex flex-wrap items-center gap-2">
+            <div class="join join-sm">
+              <button
+                :for={f <- [{"all", "全部"}, {"single", "单选"}, {"multi", "多选"}, {"judge", "判断"}, {"essay", "简答"}]}
+                class={["btn join-item btn-sm", @type_filter == elem(f, 0) && "btn-active"]}
+                phx-click="filter-type"
+                phx-value-type={elem(f, 0)}
+                id={"filter-type-#{elem(f, 0)}"}
+              >
+                {elem(f, 1)}
+              </button>
+            </div>
+            <select
+              class="select select-sm select-bordered"
+              phx-change="filter-difficulty"
+              name="difficulty"
+            >
+              <option value="all" selected={@difficulty_filter == "all"}>全部难度</option>
+              <option value="1" selected={@difficulty_filter == "1"}>★</option>
+              <option value="2" selected={@difficulty_filter == "2"}>★★</option>
+              <option value="3" selected={@difficulty_filter == "3"}>★★★</option>
+              <option value="4" selected={@difficulty_filter == "4"}>★★★★</option>
+              <option value="5" selected={@difficulty_filter == "5"}>★★★★★</option>
+            </select>
+          </div>
+
+          <div :if={is_nil(@selected_bank_id)} class="rounded-box bg-base-200/30 px-4 py-8 text-center">
+            <p class="text-sm text-base-content/60">请先选择题库</p>
+          </div>
+
+          <div
+            :if={@selected_bank_id && filtered_questions(@bank_questions, @type_filter, @difficulty_filter) == []}
+            class="rounded-box bg-base-200/30 px-4 py-8 text-center"
+          >
+            <p class="text-sm text-base-content/60">该题库暂无匹配的题目</p>
+          </div>
+
+          <div :if={filtered_questions(@bank_questions, @type_filter, @difficulty_filter) != []} class="flex flex-col gap-2">
+            <div
+              :for={q <- filtered_questions(@bank_questions, @type_filter, @difficulty_filter)}
+              class={[
+                "flex items-start gap-2 rounded-box border p-3",
+                in_exam?(@exam, q.id) && "border-base-200 bg-base-200/40 opacity-60",
+                !in_exam?(@exam, q.id) && "border-base-300 bg-base-100"
+              ]}
+              id={"bank-question-#{q.id}"}
+            >
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-1">
+                  <span class="badge badge-soft badge-secondary badge-xs">{question_type_label(q.type)}</span>
+                  <span class={["badge badge-soft badge-xs", difficulty_badge(q.difficulty)]}>
+                    {String.duplicate("★", q.difficulty || 3)}
+                  </span>
+                </div>
+                <p class="mt-1 line-clamp-2 text-sm" title={q.stem}>{q.stem}</p>
+              </div>
+              <button
+                class="btn btn-soft btn-xs shrink-0"
+                phx-click="add-question"
+                phx-value-id={q.id}
+                disabled={in_exam?(@exam, q.id)}
+                id={"add-question-#{q.id}"}
+              >
+                <span :if={in_exam?(@exam, q.id)}>已加入</span>
+                <span :if={!in_exam?(@exam, q.id)}><.icon name="hero-plus" class="size-4" /> 加入</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card bg-base-100 shadow-sm xl:col-span-3">
+        <div class="card-body gap-3 p-4 sm:p-6">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p class="font-medium">试卷题目</p>
+              <p class="text-xs text-base-content/60">
+                {length(@exam.exam_questions || [])} 题 · 总分 {fmt_score(total_score(@exam))}
+              </p>
+            </div>
+            <div :if={@exam.exam_questions != []} class="flex items-center gap-1">
+              <button class="btn btn-ghost btn-xs" phx-click="publish">
+                {if @exam.status == :draft, do: "直接发布", else: "已发布"}
+              </button>
+            </div>
+          </div>
+
+          <div :if={(@exam.exam_questions || []) == []} class="rounded-box bg-base-200/30 px-4 py-10 text-center">
+            <p class="text-sm text-base-content/60">试卷还没有题目，请从左侧加入</p>
+          </div>
+
+          <div :if={(@exam.exam_questions || []) != []} class="flex flex-col gap-2">
+            <div
+              :for={{eq, index} <- Enum.with_index(ordered_questions(@exam), 1)}
+              class="rounded-box border border-base-300 bg-base-100 p-3"
+              id={"exam-question-#{eq.id}"}
+            >
+              <div class="flex items-start gap-3">
+                <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-content">
+                  {index}
+                </span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-1">
+                    <span class="badge badge-soft badge-secondary badge-xs">
+                      {question_type_label(eq.question.type)}
+                    </span>
+                    <span class={["badge badge-soft badge-xs", difficulty_badge(eq.question.difficulty)]}>
+                      {String.duplicate("★", eq.question.difficulty || 3)}
+                    </span>
+                  </div>
+                  <p class="mt-1 line-clamp-2 text-sm" title={eq.question.stem}>{eq.question.stem}</p>
+                </div>
+                <div class="flex shrink-0 items-center gap-2">
+                  <label class="label gap-1.5">
+                    <span class="text-xs text-base-content/60">分</span>
+                    <input
+                      type="number"
+                      name="score"
+                      min="0.5"
+                      step="0.5"
+                      value={fmt_score(eq.score)}
+                      phx-change="update-score"
+                      phx-value-id={eq.id}
+                      class="input input-sm w-20"
+                      aria-label={"第 #{index} 题分值"}
+                    />
+                  </label>
+                  <div class="flex flex-col gap-0.5">
+                    <button
+                      class="btn btn-ghost btn-xs"
+                      phx-click="move-up"
+                      phx-value-id={eq.id}
+                      disabled={index == 1}
+                      aria-label="上移"
+                    >
+                      <span class="text-xs">↑</span>
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-xs"
+                      phx-click="move-down"
+                      phx-value-id={eq.id}
+                      disabled={index == length(@exam.exam_questions)}
+                      aria-label="下移"
+                    >
+                      <span class="text-xs">↓</span>
+                    </button>
+                  </div>
+                  <button
+                    class="btn btn-ghost btn-xs text-error"
+                    phx-click="confirm-remove"
+                    phx-value-id={eq.id}
+                    aria-label="移除"
+                  >
+                    <.icon name="hero-trash" class="size-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div :if={@deleting} class="modal modal-open" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <p class="text-lg font-medium">从试卷移除这道题？</p>
+        <p class="mt-2 line-clamp-3 text-sm text-base-content/60">{@deleting.question.stem}</p>
+        <div class="modal-action">
+          <button type="button" class="btn btn-soft" phx-click="close-remove">取消</button>
+          <button
+            type="button"
+            class="btn btn-error"
+            phx-click="remove-question"
+            phx-value-id={@deleting.id}
+            id="confirm-remove-question-btn"
+          >
+            确认移除
+          </button>
+        </div>
+      </div>
+      <div class="modal-backdrop" phx-click="close-remove"></div>
+    </div>
+  </.teacher_shell>
+</Layouts.app>

@@ -1,0 +1,71 @@
+<Layouts.app flash={@flash} shell={:storefront}>
+  <.student_shell
+    current_student={@current_student}
+    current_page={:exams}
+    unread_count={@unread_count}
+  >
+    <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-semibold text-[#1a2e2a]">我的考试</h1>
+          <p class="mt-1 text-sm text-[#888]">教师分配给你的试卷会出现在这里</p>
+        </div>
+        <span class="badge badge-soft badge-lg">{length(@assignments)} 场考试</span>
+      </div>
+
+      <div :if={@assignments == []} class="rounded-box border border-dashed border-[#e5e5e5] bg-white px-6 py-14 text-center">
+        <p class="text-sm text-[#999]">暂时没有分配的考试，等老师发布吧</p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div
+          :for={assignment <- @assignments}
+          class="flex flex-col gap-4 rounded-box border border-[#e5e5e5] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          id={"exam-card-#{assignment.id}"}
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="truncate text-lg font-medium text-[#1a2e2a]">{assignment.exam.name}</p>
+              <div class="mt-1.5 flex flex-wrap items-center gap-2">
+                <span class="inline-block rounded border border-[#00c98a] px-2 py-0.5 text-xs text-[#00b86b]">
+                  {subject_label(assignment.exam.subject)}
+                </span>
+                <span class="text-xs text-[#999]">{assignment.exam.duration_minutes} 分钟</span>
+                <span class="text-xs text-[#999]">{assignment.exam.total_questions || 0} 题</span>
+                <span class="text-xs text-[#999]">总分 {fmt_score(assignment.exam.total_score)}</span>
+              </div>
+            </div>
+            <span class={["badge badge-soft", status_badge(assignment.status)]}>
+              {status_text(assignment.status)}
+            </span>
+          </div>
+
+          <div
+            :if={assignment.exam.description not in [nil, ""]}
+            class="line-clamp-2 text-sm text-[#888]"
+          >
+            {assignment.exam.description}
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-3 border-t border-[#f0f0f0] pt-3">
+            <div class="text-sm text-[#888]">
+              <span :if={assignment.status in [:submitted, :graded]} class="font-medium text-[#00b86b]">
+                得分 {fmt_score(assignment.total_score)}
+              </span>
+              <span :if={assignment.status in [:assigned, :in_progress]} class="text-[#999]">
+                分配于 {fmt_date(assignment.assigned_at)}
+              </span>
+            </div>
+            <.link
+              navigate={"/exams/#{assignment.exam.id}/take"}
+              class="rounded bg-[#00b86b] px-4 py-1.5 text-sm text-white transition hover:brightness-95"
+              id={"take-exam-#{assignment.exam.id}"}
+            >
+              {if assignment.status in [:submitted, :graded], do: "查看结果", else: "去答题"}
+            </.link>
+          </div>
+        </div>
+      </div>
+    </div>
+  </.student_shell>
+</Layouts.app>
