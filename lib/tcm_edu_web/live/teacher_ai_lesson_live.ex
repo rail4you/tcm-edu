@@ -158,6 +158,8 @@ defmodule TcmEduWeb.TeacherAILessonLive do
     end
   end
 
+  defp audience_options, do: [{"大一", "大一"}, {"大二", "大二"}, {"大三", "大三"}, {"大四", "大四"}]
+
   defp plan_form(params) do
     params |> plan_changeset() |> Phoenix.Component.to_form(as: "plan")
   end
@@ -165,7 +167,7 @@ defmodule TcmEduWeb.TeacherAILessonLive do
   defp plan_changeset(params) do
     types = %{topic: :string, subject: :string, level: :string, audience: :string}
 
-    {%{level: "本科"}, types}
+    {%{level: "本科", audience: "大一"}, types}
     |> Ecto.Changeset.cast(params, Map.keys(types))
     |> Ecto.Changeset.validate_required([:topic])
     |> Ecto.Changeset.validate_length(:topic, max: 100)

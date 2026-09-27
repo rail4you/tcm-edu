@@ -120,6 +120,8 @@ defmodule TcmEdu.MixProject do
       {:oban, "~> 2.18"},
       # File storage and attachments (not yet published to Hex)
       {:ash_storage, github: "ash-project/ash_storage"},
+      # Markdown rendering (AI answers, lesson content)
+      {:earmark, "~> 1.4"},
       # Dev tooling: AGENTS.md / skill management from deps
       {:usage_rules, "~> 1.1", only: [:dev]},
       {:igniter, "~> 0.6", only: [:dev]},

@@ -43,8 +43,17 @@ defmodule TcmEduWeb.AiChatLive do
     if is_nil(identity) do
       {:ok, push_navigate(socket, to: "/login")}
     else
-      sessions = list_sessions(identity)
-      current = List.first(sessions)
+      {sessions, current} =
+        case list_sessions(identity) do
+          [] ->
+            case create_session(identity) do
+              {:ok, session} -> {[session], session}
+              _ -> {[], nil}
+            end
+
+          sessions ->
+            {sessions, List.first(sessions)}
+        end
 
       {:ok,
        socket
@@ -128,7 +137,18 @@ defmodule TcmEduWeb.AiChatLive do
       session ->
         _ = destroy_session(session, identity)
         sessions = Enum.reject(socket.assigns.sessions, &(&1.id == id))
-        current = List.first(sessions)
+
+        {sessions, current} =
+          case sessions do
+            [] ->
+              case create_session(identity) do
+                {:ok, fresh} -> {[fresh], fresh}
+                _ -> {[], nil}
+              end
+
+            sessions ->
+              {sessions, List.first(sessions)}
+          end
 
         {:noreply,
          socket
@@ -211,7 +231,13 @@ defmodule TcmEduWeb.AiChatLive do
         current_title={(@chat_session && @chat_session.title) || "新的问答"}
       />
 
-      <div class="flex flex-col gap-4 md:h-[calc(100dvh-240px)] md:min-h-[36rem] md:flex-row">
+      <div class={
+        [
+          "flex flex-col gap-4 md:flex-row",
+          teacher_view?(@identity) && "md:h-[calc(100dvh-24rem)] md:min-h-[24rem]",
+          !teacher_view?(@identity) && "md:h-[calc(100dvh-220px)] md:min-h-[30rem]"
+        ]
+      }>
         <%!-- 会话侧栏 --%>
         <aside class="w-full shrink-0 md:w-64" aria-label="会话列表">
           <div class="flex h-full flex-col gap-2 rounded-box border border-base-300 bg-base-100 p-2">
@@ -269,7 +295,7 @@ defmodule TcmEduWeb.AiChatLive do
         </aside>
 
         <%!-- 主对话区 --%>
-        <div class="flex min-h-80 min-w-0 flex-1 flex-col overflow-hidden rounded-box border border-base-300 bg-base-100">
+        <div class="flex min-h-[24rem] min-w-0 flex-1 flex-col overflow-hidden rounded-box border border-base-300 bg-base-100">
           <div class="flex flex-wrap items-center gap-2 border-b border-base-300 px-4 py-2">
             <span class="badge badge-soft badge-sm">qwen-flash</span>
             <span class="text-sm text-base-content/60">多轮对话 · 按会话保存历史</span>
@@ -331,7 +357,13 @@ defmodule TcmEduWeb.AiChatLive do
                   message.role == "user" && "bg-primary text-primary-content",
                   message.role != "user" && "bg-base-200"
                 ]}>
-                  <p class="whitespace-pre-line text-sm">{message.content}</p>
+                  <p :if={message.role == "user"} class="whitespace-pre-line text-sm">{message.content}</p>
+                  <div
+                    :if={message.role != "user"}
+                    class="ai-markdown text-sm leading-7 [&_ol]:list-decimal [&_ol]:ps-5 [&_ul]:list-disc [&_ul]:ps-5 [&_code]:rounded [&_code]:bg-base-300/60 [&_code]:px-1 [&_h1]:mt-2 [&_h1]:text-base [&_h1]:font-bold [&_h2]:mt-2 [&_h2]:text-base [&_h2]:font-bold [&_h3]:mt-2 [&_h3]:text-sm [&_h3]:font-bold [&_li]:mt-0.5 [&_p]:my-1 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-base-300/50 [&_pre]:p-2 [&_strong]:font-semibold [&_table]:table [&_td]:border [&_td]:border-base-300 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-base-300 [&_th]:bg-base-300/40 [&_th]:px-2 [&_th]:py-1"
+                  >
+                    {Phoenix.HTML.raw(render_markdown(message.content))}
+                  </div>
                 </div>
                 <div :if={message.role != "user" and message.references not in [nil, []]}
                   class="flex flex-wrap items-center gap-1"
@@ -362,7 +394,7 @@ defmodule TcmEduWeb.AiChatLive do
             </div>
           </div>
 
-          <div class="border-t border-base-300 bg-base-100 px-4 py-2">
+          <div class="sticky bottom-0 z-10 border-t border-base-300 bg-base-100 px-4 py-2">
             <.form
               for={@form}
               id="qa-form"
@@ -662,6 +694,23 @@ defmodule TcmEduWeb.AiChatLive do
     |> case do
       %{content: content} -> content
       _ -> ""
+    end
+  end
+
+  defp render_markdown(content) do
+    text = to_string(content || "")
+
+    if Code.ensure_loaded?(Earmark) and function_exported?(Earmark, :as_html, 1) do
+      case Earmark.as_html(text) do
+        {:ok, html, _} -> html
+        {:error, html, _} -> html
+      end
+    else
+      # server 尚未重启加载新依赖时的纯文本兜底，避免页面崩溃
+      text
+      |> Phoenix.HTML.html_escape()
+      |> Phoenix.HTML.safe_to_string()
+      |> String.replace("\n", "<br>")
     end
   end
 

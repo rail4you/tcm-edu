@@ -84,7 +84,7 @@
           <.input field={@form[:topic]} type="text" label="主题" placeholder="如：手太阴肺经腧穴" maxlength="100" required />
           <.input field={@form[:subject]} type="text" label="学科" placeholder="如：中医基础（可选）" maxlength="50" />
           <.input field={@form[:level]} type="select" label="学段" options={level_options()} />
-          <.input field={@form[:audience]} type="text" label="授课对象" placeholder="如：大二本科生（可选）" maxlength="100" />
+          <.input field={@form[:audience]} type="select" label="授课对象" options={audience_options()} />
           <div class="modal-action">
             <button type="button" class="btn btn-ghost" phx-click="close-form">取消</button>
             <.button

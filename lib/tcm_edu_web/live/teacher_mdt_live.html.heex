@@ -5,65 +5,167 @@
           <div>
             <h1 class="text-xl font-semibold">MDT 会诊</h1>
             <p class="mt-1 text-sm text-base-content/60">
-              从模板创建多学科会诊病例，学生进入后由 AI 扮演患者与未认领科室专家。
+              手动创建或从模板创建多学科会诊病例，学生进入后由 AI 扮演患者与未认领科室专家。
             </p>
           </div>
-          <details class="dropdown dropdown-end">
-            <summary class="btn btn-primary btn-sm">从模板创建病例</summary>
-            <ul class="menu dropdown-content z-10 mt-2 w-72 rounded-box border border-base-300 bg-base-100 p-2 shadow-md">
-              <li :for={t <- MdtExamples.list()}>
-                <button type="button" phx-click="create-from-template" phx-value-key={t.key} class="text-left">
-                  {t.label}
-                </button>
-              </li>
-            </ul>
-          </details>
-        </div>
-
-        <div class="mt-4 grid items-start gap-4 lg:grid-cols-2">
-          <div class="card border border-base-300 bg-base-100">
-            <div class="card-body gap-2 p-4">
-              <p class="font-medium">病例</p>
-              <div
-                :for={case <- @cases}
-                class="flex items-center justify-between gap-2 rounded-box border border-base-300 p-3"
-              >
-                <div>
-                  <p class="text-sm font-medium">{case.name}</p>
-                  <p class="text-xs text-base-content/60">{case.complaint}</p>
-                  <div class="mt-1 flex flex-wrap gap-1">
-                    <span :for={d <- case.departments || []} class="badge badge-ghost badge-sm">{d}</span>
-                  </div>
-                </div>
-                <div class="flex flex-col items-end gap-1">
-                  <span class="badge badge-soft badge-sm">
-                    {status_text(case.status)}
-                  </span>
-                  <button
-                    :if={case.status == :published}
-                    type="button"
-                    phx-click="archive"
-                    phx-value-id={case.id}
-                    class="btn btn-ghost btn-xs text-error"
-                  >
-                    归档
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="btn btn-primary btn-sm" phx-click="open-form">
+              <.icon name="hero-plus" class="size-4" /> 新建病例
+            </button>
+            <details class="dropdown dropdown-end">
+              <summary class="btn btn-soft btn-sm">从模板创建</summary>
+              <ul class="menu dropdown-content z-10 mt-2 w-72 rounded-box border border-base-300 bg-base-100 p-2 shadow-md">
+                <li :for={t <- MdtExamples.list()}>
+                  <button type="button" phx-click="create-from-template" phx-value-key={t.key} class="text-left">
+                    {t.label}
                   </button>
-                </div>
-              </div>
-              <p :if={@cases == []} class="py-4 text-center text-sm text-base-content/60">暂无病例</p>
-            </div>
+                </li>
+              </ul>
+            </details>
           </div>
+        </div>
 
-          <div class="card border border-base-300 bg-base-100">
-            <div class="card-body gap-2 p-4">
-              <p class="font-medium">会诊记录</p>
-              <p :for={room <- @rooms} class="rounded-box border border-base-300 p-3 text-sm">
-                {rooms_label(room)}
-              </p>
-              <p :if={@rooms == []} class="py-4 text-center text-sm text-base-content/60">暂无会诊</p>
+        <div class="card mt-4 border border-base-300 bg-base-100">
+          <div class="card-body gap-3 p-4 sm:p-6">
+            <p class="font-medium">病例列表</p>
+            <div :if={@cases != []} class="overflow-x-auto">
+              <table class="table table-sm table-zebra w-full">
+                <thead>
+                  <tr>
+                    <th>病例名称</th>
+                    <th>主诉</th>
+                    <th>科室</th>
+                    <th>状态</th>
+                    <th class="text-right tabular-nums">会诊场次</th>
+                    <th class="text-right">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr :for={case <- @cases} id={"mdt-case-#{case.id}"}>
+                    <td class="font-medium">{case.name}</td>
+                    <td class="max-w-64 truncate">{case.complaint}</td>
+                    <td>
+                      <span :for={d <- case.departments || []} class="badge badge-ghost badge-xs me-1">{d}</span>
+                    </td>
+                    <td>
+                      <span class="badge badge-soft badge-xs">{status_text(case.status)}</span>
+                    </td>
+                    <td class="text-right tabular-nums">{length(rooms_for(@rooms, case.id))}</td>
+                    <td>
+                      <div class="flex justify-end gap-1">
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-xs"
+                          phx-click="toggle-rooms"
+                          phx-value-id={case.id}
+                        >
+                          {if @expanded_case_id == case.id, do: "收起会诊", else: "会诊记录"}
+                        </button>
+                        <button
+                          :if={case.status == :published}
+                          type="button"
+                          phx-click="archive"
+                          phx-value-id={case.id}
+                          class="btn btn-ghost btn-xs text-error"
+                        >
+                          归档
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p :if={@cases == []} class="py-4 text-center text-sm text-base-content/60">暂无病例，点右上新建</p>
+
+            <div :if={@expanded_case_id} class="rounded-box border border-base-300 bg-base-200/30 p-3">
+              <p class="mb-2 text-sm font-medium">会诊记录</p>
+              <div :if={rooms_for(@rooms, @expanded_case_id) == []} class="py-2 text-center text-sm text-base-content/60">
+                该病例暂无会诊
+              </div>
+              <button
+                :for={room <- rooms_for(@rooms, @expanded_case_id)}
+                type="button"
+                phx-click="open-room"
+                phx-value-id={room.id}
+                class="mb-2 flex w-full items-center justify-between gap-2 rounded-box border border-base-300 bg-base-100 p-3 text-left text-sm hover:border-primary"
+              >
+                <span>{rooms_label(room)}</span>
+                <.icon name="hero-chevron-right" class="size-4 shrink-0 text-base-content/40" />
+              </button>
             </div>
           </div>
         </div>
+      </div>
+
+      <div :if={@show_form} class="modal modal-open" role="dialog" aria-modal="true">
+        <div class="modal-box max-w-xl">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold">新建会诊病例</h3>
+            <button class="btn btn-ghost btn-sm btn-circle" phx-click="close-form" aria-label="关闭">
+              <.icon name="hero-x-mark" class="size-5" />
+            </button>
+          </div>
+          <.form
+            for={@case_form}
+            id="mdt-case-form"
+            phx-change="validate-case"
+            phx-submit="save-case"
+            class="mt-4 flex flex-col gap-3"
+          >
+            <.input field={@case_form[:name]} type="text" label="病例名称" placeholder="如：胸痛待查跨科会诊" maxlength="100" required />
+            <.input field={@case_form[:scenario_title]} type="text" label="场景标题" placeholder="如：胸痛原因不明，需多科协同（可选）" maxlength="100" />
+            <.input field={@case_form[:complaint]} type="textarea" label="患者主诉" placeholder="如：间断胸痛 1 月，深呼吸时加重" rows="2" required />
+            <.input field={@case_form[:history]} type="textarea" label="病史背景" placeholder="现病史 / 既往史 / 查体 / 辅助检查（可选）" rows="3" />
+            <.input field={@case_form[:departments]} type="text" label="参与科室" placeholder="多个科室用逗号、空格或顿号分隔，如：内科，外科，影像科" />
+            <.input field={@case_form[:expected_conclusion]} type="textarea" label="期望结论方向" placeholder="供教师对照本次会诊是否收敛（可选）" rows="2" />
+            <div class="modal-action">
+              <button type="button" class="btn btn-ghost" phx-click="close-form">取消</button>
+              <.button type="submit" phx-disable-with="创建中..." class="btn-primary">
+                创建并发布
+              </.button>
+            </div>
+          </.form>
+        </div>
+        <div class="modal-backdrop" phx-click="close-form"></div>
+      </div>
+
+      <div :if={@viewing_room} class="modal modal-open" role="dialog" aria-modal="true">
+        <div class="modal-box max-w-2xl">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-lg font-medium">{rooms_label(@viewing_room)}</p>
+              <p class="mt-1 whitespace-pre-line text-xs text-base-content/60">
+                {(@viewing_room.case_snapshot["complaint"] || "")}
+              </p>
+            </div>
+            <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-room" aria-label="关闭">
+              <.icon name="hero-x-mark" class="size-4" />
+            </button>
+          </div>
+
+          <div :if={@viewing_conclusion} class="mt-3 rounded-box border border-success/30 bg-success/5 p-3">
+            <p class="text-sm font-medium text-success">会诊结论</p>
+            <p class="mt-1 whitespace-pre-line text-sm">{@viewing_conclusion.summary}</p>
+            <p :if={@viewing_conclusion.primary_diagnosis} class="mt-2 text-sm">
+              <span class="font-medium">主要诊断：</span>{@viewing_conclusion.primary_diagnosis}
+            </p>
+            <p :if={@viewing_conclusion.treatment} class="mt-1 whitespace-pre-line text-sm">
+              <span class="font-medium">治疗建议：</span>{@viewing_conclusion.treatment}
+            </p>
+          </div>
+
+          <div class="mt-3 flex max-h-[50vh] flex-col gap-3 overflow-y-auto">
+            <div :for={message <- @viewing_messages} class="flex flex-col gap-1 rounded-box bg-base-200/50 p-3">
+              <p class="text-xs font-medium text-primary">{role_label(message.role)}</p>
+              <p class="whitespace-pre-line text-sm">{message.content}</p>
+            </div>
+            <p :if={@viewing_messages == []} class="py-6 text-center text-sm text-base-content/60">
+              这场会诊还没有发言
+            </p>
+          </div>
+        </div>
+        <div class="modal-backdrop" phx-click="close-room"></div>
       </div>
     </.teacher_shell>
   </Layouts.app>
