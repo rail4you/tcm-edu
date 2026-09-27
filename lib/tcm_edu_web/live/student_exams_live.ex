@@ -17,12 +17,28 @@ defmodule TcmEduWeb.StudentExamsLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket) and socket.assigns.current_student do
+      student = socket.assigns.current_student
+      Phoenix.PubSub.subscribe(TcmEdu.PubSub, "notifications:#{student.tenant}:#{student.id}")
+    end
+
     {:ok,
      socket
      |> assign(:page_title, "我的考试")
      |> assign(:unread_count, 0)
      |> load_assignments()}
   end
+
+  @impl true
+  def handle_info({:exam_graded, %{exam_name: exam_name}}, socket) do
+    {:noreply,
+     socket
+     |> load_assignments()
+     |> put_flash(:info, "试卷《#{exam_name}》已批改，可查看成绩")}
+  end
+
+  @impl true
+  def handle_info(_message, socket), do: {:noreply, socket}
 
   defp load_assignments(socket) do
     student = socket.assigns.current_student

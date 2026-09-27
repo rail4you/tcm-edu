@@ -15,11 +15,27 @@ defmodule TcmEduWeb.StudentNotificationsLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket) and socket.assigns.current_student do
+      student = socket.assigns.current_student
+      Phoenix.PubSub.subscribe(TcmEdu.PubSub, "notifications:#{student.tenant}:#{student.id}")
+    end
+
     {:ok,
      socket
      |> assign(:page_title, "通知中心")
      |> load_notifications()}
   end
+
+  @impl true
+  def handle_info({:exam_graded, %{exam_name: exam_name}}, socket) do
+    {:noreply,
+     socket
+     |> load_notifications()
+     |> put_flash(:info, "收到新通知：试卷《#{exam_name}》已批改")}
+  end
+
+  @impl true
+  def handle_info(_message, socket), do: {:noreply, socket}
 
   @impl true
   def handle_event("mark-read", %{"id" => id}, socket) do
@@ -71,6 +87,8 @@ defmodule TcmEduWeb.StudentNotificationsLive do
   defp type_label(:course_published), do: "课程发布"
   defp type_label(:progress), do: "学习进度"
   defp type_label(:quiz_graded), do: "答题"
+  defp type_label(:exam_graded), do: "考试批改"
+  defp type_label(:exam_assigned), do: "考试分配"
   defp type_label(:ai_lesson), do: "AI 教学"
   defp type_label(_), do: "通知"
 
@@ -78,10 +96,16 @@ defmodule TcmEduWeb.StudentNotificationsLive do
   defp type_badge(:enrollment), do: "badge-success"
   defp type_badge(:course_published), do: "badge-secondary"
   defp type_badge(:quiz_graded), do: "badge-warning"
+  defp type_badge(:exam_graded), do: "badge-success"
+  defp type_badge(:exam_assigned), do: "badge-info"
   defp type_badge(_), do: "badge-ghost"
 
   defp format_time(nil), do: "-"
   defp format_time(%DateTime{} = dt), do: Calendar.strftime(dt, "%Y-%m-%d %H:%M")
+
+  defp notification_route(%{payload: %{"route" => route}}) when is_binary(route), do: route
+  defp notification_route(%{payload: %{route: route}}) when is_binary(route), do: route
+  defp notification_route(_), do: nil
 
   defp load_notifications(socket) do
     student = socket.assigns.current_student

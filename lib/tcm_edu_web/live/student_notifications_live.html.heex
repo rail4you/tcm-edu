@@ -31,8 +31,16 @@
             </div>
             <p class="font-medium">{notification.title}</p>
             <p :if={notification.body} class="whitespace-pre-line text-sm text-base-content/80">{notification.body}</p>
-            <div :if={is_nil(notification.read_at)} class="card-actions justify-end">
+            <div class="card-actions items-center justify-end">
+              <.link
+                :if={notification_route(notification)}
+                navigate={notification_route(notification)}
+                class="btn btn-primary btn-xs"
+              >
+                查看成绩
+              </.link>
               <button
+                :if={is_nil(notification.read_at)}
                 class="btn btn-ghost btn-xs"
                 phx-click="mark-read"
                 phx-value-id={notification.id}

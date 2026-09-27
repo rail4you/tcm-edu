@@ -160,10 +160,12 @@ defmodule TcmEduWeb.TeacherExamResultsLive do
                tenant: teacher.tenant
              )
              |> Ash.update() do
-          {:ok, _} ->
+          {:ok, graded} ->
+            notify_student_graded(socket, graded)
+
             {:noreply,
              socket
-             |> put_flash(:info, "批改完成")
+             |> put_flash(:info, "批改完成，已通知学生查看成绩")
              |> load_assignments()}
 
           {:error, error} ->
@@ -179,6 +181,41 @@ defmodule TcmEduWeb.TeacherExamResultsLive do
   end
 
   # ── loading ───────────────────────────────────────────────
+
+  defp notify_student_graded(socket, assignment) do
+    teacher = socket.assigns.current_teacher
+    exam_name = (socket.assigns.exam && socket.assigns.exam.name) || "考试"
+    exam_id = socket.assigns.exam_id
+
+    attrs = %{
+      recipient_id: assignment.student_id,
+      actor_id: teacher.id,
+      type: :exam_graded,
+      title: "试卷已批改：#{exam_name}",
+      body: "教师已完成批改，得分 #{fmt_score(assignment.total_score)}，点击查看成绩与解析",
+      payload: %{"route" => "/exams/#{exam_id}/take", "exam_id" => exam_id}
+    }
+
+    result =
+      try do
+        TcmEdu.Notification.Notification.create_notification(attrs,
+          actor: teacher.actor,
+          tenant: teacher.tenant
+        )
+      rescue
+        _ -> {:error, :failed}
+      end
+
+    if match?({:ok, _}, result) do
+      Phoenix.PubSub.broadcast(
+        TcmEdu.PubSub,
+        "notifications:#{teacher.tenant}:#{assignment.student_id}",
+        {:exam_graded, %{exam_id: exam_id, exam_name: exam_name}}
+      )
+    end
+
+    :ok
+  end
 
   defp load_exam(socket) do
     teacher = socket.assigns.current_teacher

@@ -93,9 +93,13 @@ defmodule TcmEduWeb.StudentExamsTest do
     |> assert_has("p", "1 / 2 已答")
     |> click_button("#open-submit-btn", "交卷")
     |> click_button("#confirm-submit-btn", "确认交卷")
+    |> assert_path("/exams")
     |> assert_has("p", "交卷成功")
-    |> assert_has("p", "我的答案")
-    |> assert_has("p", "参考答案")
+    |> assert_has("span", "待批改")
+    |> click_link("#take-exam-#{exam.id}", "等待批改")
+    |> assert_has("p", "已交卷，等待教师批改")
+    |> refute_has("p", "我的答案")
+    |> refute_has("p", "教师批注")
   end
 
   # ── helpers ───────────────────────────────────────────────

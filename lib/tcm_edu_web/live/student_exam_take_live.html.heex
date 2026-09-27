@@ -25,8 +25,11 @@
             <span class={["badge badge-soft", status_badge(@assignment.status)]}>
               {status_text(@assignment.status)}
             </span>
-            <span :if={@assignment.status in [:submitted, :graded]} class="badge badge-soft badge-success">
+            <span :if={@assignment.status == :graded} class="badge badge-soft badge-success">
               {fmt_score(@assignment.total_score)} 分
+            </span>
+            <span :if={@assignment.status == :submitted} class="badge badge-soft badge-warning">
+              待批改
             </span>
           </div>
         </div>
@@ -165,8 +168,21 @@
         </div>
       </div>
 
-      <!-- 结果视图 -->
-      <div :if={@assignment && @assignment.status in [:submitted, :graded]} class="flex flex-col gap-4">
+      <!-- 待批改视图：不展示得分与答案 -->
+      <div :if={@assignment && @assignment.status == :submitted} class="flex flex-col gap-4">
+        <div class="rounded-box border border-[#e5e5e5] bg-white p-10 text-center shadow-sm">
+          <p class="text-lg font-medium text-[#333]">已交卷，等待教师批改</p>
+          <p class="mt-2 text-sm text-[#888]">
+            客观题得分与参考答案将在教师批改完成后公布，请稍后回来查看成绩。
+          </p>
+          <.link navigate="/exams" class="mt-5 inline-block rounded bg-[#00b86b] px-5 py-2 text-sm text-white hover:brightness-95">
+            返回我的考试
+          </.link>
+        </div>
+      </div>
+
+      <!-- 结果视图：仅批改完成后可见 -->
+      <div :if={@assignment && @assignment.status == :graded} class="flex flex-col gap-4">
         <div class="rounded-box border border-[#e5e5e5] bg-white p-5 shadow-sm">
           <div class="flex flex-wrap items-center gap-6">
             <div>
@@ -262,7 +278,7 @@
       <div class="modal-box">
         <p class="text-lg font-medium">确认交卷？</p>
         <p class="mt-2 text-sm text-base-content/60">
-          已答 {answered_count(@assignment, @response_map)} / {total_count(@assignment)} 题。交卷后客观题即时判分，主观题由老师批改，不能再修改答案。
+          已答 {answered_count(@assignment, @response_map)} / {total_count(@assignment)} 题。交卷后等待教师批改，批改完成后可查看得分与解析，不能再修改答案。
         </p>
         <div class="modal-action">
           <button type="button" class="btn btn-soft" phx-click="close-submit">再检查一下</button>

@@ -49,8 +49,11 @@
 
           <div class="flex flex-wrap items-center justify-between gap-3 border-t border-[#f0f0f0] pt-3">
             <div class="text-sm text-[#888]">
-              <span :if={assignment.status in [:submitted, :graded]} class="font-medium text-[#00b86b]">
+              <span :if={assignment.status == :graded} class="font-medium text-[#00b86b]">
                 得分 {fmt_score(assignment.total_score)}
+              </span>
+              <span :if={assignment.status == :submitted} class="text-[#999]">
+                待批改
               </span>
               <span :if={assignment.status in [:assigned, :in_progress]} class="text-[#999]">
                 分配于 {fmt_date(assignment.assigned_at)}
@@ -61,7 +64,11 @@
               class="rounded bg-[#00b86b] px-4 py-1.5 text-sm text-white transition hover:brightness-95"
               id={"take-exam-#{assignment.exam.id}"}
             >
-              {if assignment.status in [:submitted, :graded], do: "查看结果", else: "去答题"}
+              {cond do
+                assignment.status == :graded -> "查看成绩"
+                assignment.status == :submitted -> "等待批改"
+                true -> "去答题"
+              end}
             </.link>
           </div>
         </div>

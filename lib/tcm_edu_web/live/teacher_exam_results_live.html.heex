@@ -248,18 +248,23 @@
             <button type="submit" class="btn btn-primary btn-sm" id="save-all-essays-btn">
               保存全部评分
             </button>
-            <button
-              :if={@grading.status == :submitted}
-              type="button"
-              class="btn btn-soft btn-sm"
-              phx-click="finish-grading"
-              phx-value-id={@grading.id}
-              id="finish-grading-btn"
-            >
-              <.icon name="hero-check-circle" class="size-4" /> 完成批改
-            </button>
           </div>
         </form>
+
+        <div :if={@grading.status == :submitted} class="flex flex-wrap items-center justify-end gap-2 border-t border-base-300 pt-3">
+          <p class="mr-auto text-xs text-base-content/60">
+            确认无误后完成整份批改，学生将收到通知
+          </p>
+          <button
+            type="button"
+            class="btn btn-soft btn-sm"
+            phx-click="finish-grading"
+            phx-value-id={@grading.id}
+            id="finish-grading-btn"
+          >
+            <.icon name="hero-check-circle" class="size-4" /> 完成批改
+          </button>
+        </div>
       </div>
       <div class="modal-backdrop" phx-click="close-grade"></div>
     </div>

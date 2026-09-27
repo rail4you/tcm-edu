@@ -58,6 +58,7 @@ defmodule TcmEduWeb.StudentComponents do
                 <.mobile_link navigate="/ai-chat" label="AI 聊天" />
                 <.mobile_link navigate="/simulated-patient" label="AI 诊疗" />
                 <.mobile_link navigate="/mdt" label="多学科会诊" />
+                <.mobile_link navigate="/notifications" label="通知中心" />
               </ul>
             </div>
             <.link navigate="/" class="flex items-center" aria-label="杏宁树首页">
