@@ -54,6 +54,7 @@ defmodule TcmEduWeb.StudentComponents do
                 <.mobile_link navigate="/courses" label="精品课程" />
                 <.mobile_link navigate="/resources" label="资料下载" />
                 <.mobile_link navigate="/my-learning" label="我的学习" />
+                <.mobile_link navigate="/exams" label="我的考试" />
                 <.mobile_link navigate="/ai-chat" label="AI 聊天" />
                 <.mobile_link navigate="/simulated-patient" label="AI 诊疗" />
               </ul>
@@ -73,6 +74,7 @@ defmodule TcmEduWeb.StudentComponents do
             <.nav_link navigate="/courses" label="精品课程" active={@current_page in [:courses, :course]} />
             <.nav_link navigate="/resources" label="资料下载" active={@current_page == :resources} />
             <.nav_link navigate="/my-learning" label="我的学习" active={@current_page in [:my_learning, :mistakes]} />
+            <.nav_link navigate="/exams" label="我的考试" active={@current_page == :exams} />
             <.nav_link navigate="/ai-chat" label="AI 聊天" active={@current_page == :ai_chat} />
             <.nav_link navigate="/simulated-patient" label="AI 诊疗" active={@current_page == :simulated_patient} />
             <.nav_link navigate="/mdt" label="MDT" active={@current_page in [:mdt, :mdt_room]} />

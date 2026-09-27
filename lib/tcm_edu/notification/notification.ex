@@ -48,7 +48,10 @@ defmodule TcmEdu.Notification.Notification do
           :quiz_graded,
           :ai_lesson,
           :quiz_generated,
-          :simulated_patient_evaluated
+          :simulated_patient_evaluated,
+          :exam_generated,
+          :exam_assigned,
+          :exam_graded
         ]
       )
 

@@ -34,7 +34,8 @@ config :tcm_edu,
     TcmEdu.Storage,
     TcmEdu.Knowledge,
     TcmEdu.SimulatedPatient,
-    TcmEdu.Mdt
+    TcmEdu.Mdt,
+    TcmEdu.Exam
   ],
   # Storage: local Disk service for file uploads
   storage_root: "priv/storage",

@@ -62,6 +62,9 @@ defmodule TcmEdu.Workers.NotificationDeliver do
       "progress" -> :progress
       "quiz_graded" -> :quiz_graded
       "ai_lesson" -> :ai_lesson
+      "exam_generated" -> :exam_generated
+      "exam_assigned" -> :exam_assigned
+      "exam_graded" -> :exam_graded
       _ -> :system
     end
   end
