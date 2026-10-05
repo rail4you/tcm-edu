@@ -1,0 +1,5 @@
+# Elixir toolchain for the Mob project (mise/asdf).
+# Zig is required for native builds but is installed manually — see README
+# (the exact pinned nightly is no longer served by ziglang.org).
+erlang 27.3.4
+elixir 1.20.4-otp-27
