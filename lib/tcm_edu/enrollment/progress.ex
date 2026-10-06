@@ -13,10 +13,24 @@ defmodule TcmEdu.Enrollment.Progress do
   use Ash.Resource,
     domain: TcmEdu.Enrollment,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource]
 
   multitenancy do
     strategy :context
+  end
+
+  # 学员端 JSON:API（`/api/student/progress*`）：读进度 + 心跳上报
+  json_api do
+    type("progress")
+    includes([:lesson, enrollment: [:course]])
+
+    routes do
+      base("/student/progress")
+
+      index(:read)
+      post(:upsert_progress)
+    end
   end
 
   postgres do

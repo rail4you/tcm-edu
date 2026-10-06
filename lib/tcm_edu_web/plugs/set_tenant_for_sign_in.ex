@@ -51,7 +51,10 @@ defmodule TcmEduWeb.Plugs.SetTenantForSignIn do
   end
 
   defp tenant_for_slug(slug) do
-    case Ash.get(Organization, slug: slug, authorize?: false) do
+    # Ash.get/3：第 2 个参数是 id/filter，第 3 个才是 opts。写成
+    # Ash.get(Organization, slug: slug, authorize?: false) 会把整个列表当 id，
+    # 导致 authorize?: false 被忽略、policy 拒绝 → 永远回退 tenant_default。
+    case Ash.get(Organization, [slug: slug], authorize?: false) do
       {:ok, %Organization{schema_name: schema_name}} -> schema_name
       _ -> @default_tenant
     end

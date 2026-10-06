@@ -62,6 +62,13 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# JSON:API 规范要求的媒体类型 application/vnd.api+json。
+# 没有这段配置，带该 Content-Type 的请求会走到 Plug.Parsers 时报
+# unsupported media type。
+config :mime,
+  extensions: %{"json" => "application/vnd.api+json"},
+  types: %{"application/vnd.api+json" => ["json"]}
+
 # Jido agent runtime configuration
 config :tcm_edu, TcmEdu.Jido,
   max_tasks: 1000,

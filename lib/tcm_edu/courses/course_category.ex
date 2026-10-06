@@ -10,7 +10,13 @@ defmodule TcmEdu.Courses.CourseCategory do
   use Ash.Resource,
     domain: TcmEdu.Courses,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource]
+
+  # 仅用于 `?include=category` 序列化（JSON:API 要求每个资源都有 type），不注册路由
+  json_api do
+    type("course_category")
+  end
 
   multitenancy do
     strategy :context

@@ -11,11 +11,26 @@ defmodule TcmEdu.Courses.Course do
   use Ash.Resource,
     domain: TcmEdu.Courses,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshStorage],
+    extensions: [AshStorage, AshJsonApi.Resource],
     authorizers: [Ash.Policy.Authorizer],
     otp_app: :tcm_edu
 
   require Ash.Query
+
+  # 学员端 JSON:API：只暴露课程详情（`?include=chapters.lessons`）。
+  # 不给 index —— 课程目录浏览仍走移动端本地 Catalog，后端目录接口另议。
+  json_api do
+    type("course")
+    # 目录页要分类名 + 课时树，一次 include 带出
+    includes([:category, chapters: [:lessons]])
+
+    routes do
+      base("/student/courses")
+      # 课程目录：学员端列表走 list_published（服务端只回已发布课程）
+      index(:list_published)
+      get(:read)
+    end
+  end
 
   multitenancy do
     strategy :context

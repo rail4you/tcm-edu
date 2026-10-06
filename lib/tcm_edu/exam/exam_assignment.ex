@@ -21,9 +21,21 @@ defmodule TcmEdu.Exam.ExamAssignment do
   use Ash.Resource,
     domain: TcmEdu.Exam,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource]
 
   require Ash.Query
+
+  # 学员端 JSON:API（`/api/student/exam-assignments`）：我的测验记录
+  json_api do
+    type("exam_assignment")
+    includes([:exam])
+
+    routes do
+      base("/student/exam-assignments")
+      index(:my_exams)
+    end
+  end
 
   multitenancy do
     strategy :context

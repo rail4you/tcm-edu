@@ -12,12 +12,31 @@ defmodule TcmEdu.Enrollment.Enrollment do
   use Ash.Resource,
     domain: TcmEdu.Enrollment,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource]
 
   require Ash.Query
 
   multitenancy do
     strategy :context
+  end
+
+  # 学员端 JSON:API（`/api/student/enrollments*`）
+  json_api do
+    type("enrollment")
+
+    # 一次请求带出课程树 + 我的课时进度，移动端「我的学习」列表单次取全
+    includes([{:course, [chapters: [:lessons]]}, :progress_records])
+
+    routes do
+      base("/student/enrollments")
+
+      # 首页统计（generic action，无 `:id` 段，与 index 不同层级、互不遮蔽）
+      route(:get, "/overview", :overview)
+
+      index(:my_enrollments)
+      post(:enroll)
+    end
   end
 
   postgres do
@@ -107,6 +126,11 @@ defmodule TcmEdu.Enrollment.Enrollment do
       change(set_attribute(:status, :completed))
       change(set_attribute(:completed_at, &DateTime.utc_now/0))
     end
+
+    action :overview, :map do
+      description("学员首页统计：选课 / 完成课时 / 学习时长 / 连续天数 / 错题 / 未读通知")
+      run(TcmEdu.Enrollment.Overview)
+    end
   end
 
   policies do
@@ -138,6 +162,13 @@ defmodule TcmEdu.Enrollment.Enrollment do
     policy action(:mark_completed) do
       authorize_if(actor_attribute_equals(:role, :tenant_admin))
       authorize_if(relates_to_actor_via(:user))
+    end
+
+    # 首页统计是 generic action（无目标记录，不匹配 action_type(:read)），
+    # 不加这条 policy 会因「无 policy 命中」默认 Forbidden。
+    # 具体数字的属主过滤写在 TcmEdu.Enrollment.Overview 里。
+    policy action(:overview) do
+      authorize_if(actor_present())
     end
 
     policy action(:destroy) do

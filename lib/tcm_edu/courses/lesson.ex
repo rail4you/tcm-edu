@@ -13,7 +13,13 @@ defmodule TcmEdu.Courses.Lesson do
   use Ash.Resource,
     domain: TcmEdu.Courses,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource]
+
+  # 只声明 type 供课程详情 `?include=chapters.lessons` 序列化，不单独开路由。
+  json_api do
+    type("lesson")
+  end
 
   multitenancy do
     strategy :context

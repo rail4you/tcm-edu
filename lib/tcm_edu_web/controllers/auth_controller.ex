@@ -33,7 +33,7 @@ defmodule TcmEduWeb.AuthController do
   def success(conn, _activity, user, _token) do
     # 租户用户：Phase 3 后默认在 tenant_default schema
     role = user_role(user)
-    tenant = user_tenant()
+    tenant = user_tenant(conn)
     issue_token(conn, user.id, tenant, role)
   end
 
@@ -63,11 +63,10 @@ defmodule TcmEduWeb.AuthController do
   defp user_role(%{role: role}) when is_atom(role), do: Atom.to_string(role)
   defp user_role(_), do: "student"
 
-  # Phase 3：现有 User 都在 tenant_default schema。Phase 4 会从连接里读
-  # organization_slug，为每个租户生成对应 tenant_<slug>。
-  defp user_tenant() do
-    # TODO Phase 4: 从 conn.assigns.organization_slug 读 slug
-    "tenant_default"
+  # 登录时由 SetTenantForSignIn 按 organization_slug 解析出的 tenant
+  # （如 "tenant_gzu"）。没带 slug 时回退 tenant_default。
+  defp user_tenant(conn) do
+    Ash.PlugHelpers.get_tenant(conn) || "tenant_default"
   end
 
   @doc """
@@ -188,7 +187,9 @@ defmodule TcmEduWeb.AuthController do
 
     if user do
       body =
-        %{id: user.id, email: user.email, tenant: tenant} |> maybe_put_role(role, user)
+        %{id: user.id, email: user.email, tenant: tenant}
+        |> maybe_put_role(role, user)
+        |> put_profile(user)
 
       conn
       |> put_status(200)
@@ -198,6 +199,14 @@ defmodule TcmEduWeb.AuthController do
       |> put_status(401)
       |> json(%{error: "Not authenticated"})
     end
+  end
+
+  # 移动端 / 跨端客户端用 `name` + `avatar` 展示身份卡。
+  # avatar_url 在 SuperAdmin 上不存在，用 Map.get 兜底。
+  defp put_profile(body, user) do
+    body
+    |> Map.put(:name, Map.get(user, :name))
+    |> Map.put(:avatar, Map.get(user, :avatar_url))
   end
 
   defp maybe_put_role(body, role, _user) when is_binary(role) do

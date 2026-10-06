@@ -92,6 +92,10 @@ defmodule TcmEdu.MixProject do
       # 已经是 ash_ai / ash_authentication_phoenix 的传递依赖,这里显式声明以便
       # 在 domain 上启用 `extensions: [AshPhoenix]` 并自动生成 form_to_<action>。
       {:ash_phoenix, "~> 2.3"},
+      # JSON:API 端点由 Ash DSL 生成（学员端只读/写接口）。
+      # 同样是 ash_ai 的传递依赖，显式声明以便在 domain/resource 上启用
+      # `AshJsonApi.Domain` / `AshJsonApi.Resource` 扩展。
+      {:ash_json_api, "~> 1.7"},
       # SAT solver required by Ash.Policy.Authorizer
       {:picosat_elixir, "~> 0.2"},
       # Authentication

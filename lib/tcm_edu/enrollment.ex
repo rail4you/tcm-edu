@@ -7,7 +7,8 @@ defmodule TcmEdu.Enrollment do
   """
 
   use Ash.Domain,
-    otp_app: :tcm_edu
+    otp_app: :tcm_edu,
+    extensions: [AshJsonApi.Domain]
 
   resources do
     resource TcmEdu.Enrollment.Enrollment

@@ -13,7 +13,13 @@ defmodule TcmEdu.Exam.Exam do
   use Ash.Resource,
     domain: TcmEdu.Exam,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource]
+
+  # 仅用于 `?include=exam` 序列化（JSON:API 要求 type），不注册路由
+  json_api do
+    type("exam")
+  end
 
   require Ash.Query
 

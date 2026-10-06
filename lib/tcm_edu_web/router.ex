@@ -70,6 +70,13 @@ defmodule TcmEduWeb.Router do
     plug TcmEduWeb.Plugs.SetTenantFromToken
   end
 
+  # AshJsonApi 的 controller 不自己判「有没有 actor」，缺了这道闸会以
+  # Ash.Error.Query.ReadActionRequiresActor → HTTP 400 收场，而不是客户端
+  # 期望的 401。只给下面的 JSON:API scope 用，不动其它 :api_auth 路由。
+  pipeline :api_auth_required do
+    plug TcmEduWeb.Plugs.RequireAuth
+  end
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -134,6 +141,15 @@ defmodule TcmEduWeb.Router do
     post "/lesson_plan", AIController, :lesson_plan
     post "/image", AIController, :image
     post "/mistake_explain", AIController, :mistake_explain
+  end
+
+  # ── 学员端 JSON:API（由 Ash DSL 生成）──────────────────────────
+  # 声明必须晚于上所有手工 `/api` 路由：Phoenix 按声明顺序匹配，
+  # `forward "/"` 会匹配 `/api/*` 的一切剩余路径。
+  scope "/api" do
+    pipe_through [:api_auth, :api_auth_required]
+
+    forward "/", TcmEduWeb.JsonApiRouter
   end
 
   # ── Course static page ─────────────────────────────────────────────
