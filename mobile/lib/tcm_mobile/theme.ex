@@ -1,6 +1,6 @@
 defmodule TcmMobile.Theme do
   @moduledoc """
-  中医学院学员端品牌主题 —— Material 3 亮色，宣纸底、朱砂主色、草木绿点缀。
+  杏宁树学员端品牌主题 —— Material 3 亮色，与主站 `storefront` 主题同色板。
 
   Design tokens resolve at render time, so every screen picks these up
   automatically. Raw colours are `0xAARRGGBB` integers (alpha first).
@@ -9,23 +9,25 @@ defmodule TcmMobile.Theme do
   @spec theme() :: Mob.Theme.t()
   def theme do
     %Mob.Theme{
-      # 主色：朱砂红
-      primary: 0xFF9A3324,
+      # 主色：storefront primary #00b86b
+      primary: 0xFF00B86B,
       on_primary: 0xFFFFFFFF,
-      # 次色：草木绿
-      secondary: 0xFF3E5C46,
+      # 次色：storefront secondary #0f766e
+      secondary: 0xFF0F766E,
       on_secondary: 0xFFFFFFFF,
-      # 背景：暖白宣纸
-      background: 0xFFF7F5F1,
-      on_background: 0xFF201C17,
-      # 表面：纯白卡片
+      # 背景：storefront base-200 #f1f5f2
+      background: 0xFFF1F5F2,
+      on_background: 0xFF1F2937,
+      # 表面：base-100 纯白卡片
       surface: 0xFFFFFFFF,
-      surface_raised: 0xFFFCFAF6,
-      on_surface: 0xFF201C17,
-      muted: 0xFF7C766B,
-      error: 0xFFBA1A1A,
+      surface_raised: 0xFFF7FAF8,
+      on_surface: 0xFF1F2937,
+      muted: 0xFF6B7280,
+      # storefront error #dc2626
+      error: 0xFFDC2626,
       on_error: 0xFFFFFFFF,
-      border: 0xFFE8E3D9,
+      # storefront base-300 #e5ebe5
+      border: 0xFFE5EBE5,
       type_scale: 1.0,
       space_scale: 1.0,
       radius_sm: 8,

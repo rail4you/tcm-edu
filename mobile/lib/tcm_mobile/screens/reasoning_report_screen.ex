@@ -40,6 +40,7 @@ defmodule TcmMobile.Screens.ReasoningReportScreen do
         </Column>
         <Box
           background={if grade.correct?, do: :secondary, else: :error}
+          fill_width={false}
           corner_radius={:radius_pill}
           padding_top={4}
           padding_bottom={4}

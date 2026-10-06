@@ -156,6 +156,87 @@ nil 用占位。另：**trailing 内部不要再嵌 `on_tap` 的盒子**（嵌�
 `render_info` / `assert_renderable`），断言按钮文案要用
 `find(view, :button, text: "…")` 而非 `text/1`（`text/1` 只取 `:text` 节点）。
 
+### 4.6 对接本地后端（Android 实测）
+
+**设备端不会自动启动依赖的 OTP application。** 只有应用自身 + 显式
+`ensure_all_started` 的才会起来（这正是 `ecto_sqlite3` 在 `on_start` 里手动
+启动的原因）。Req 不启动 → `Finch` 池不存在 → 每次请求在
+`Finch.Pool.Manager.lookup_pool/3` 抛 `ArgumentError`，且**整屏 LiveView 崩溃
+重启、输入全丢**（日志里看到 `screen … crashed and is being restarted`）。
+修复：`on_start` 里 `_ = Application.ensure_all_started(:req)`。
+
+**后端两处真实的租户 bug**（此前 `/api/auth` 登录永远落到 `tenant_default`）：
+
+1. `Ash.get(Organization, slug: slug, authorize?: false)` —— `Ash.get/3` 的第 2 个
+   参数是 id/filter，第 3 个才是 opts。这样写会把整个列表当 id，`authorize?: false`
+   被当成过滤条件、授权照跑 → policy 拒绝 → 插件静默回退 `tenant_default`。
+   正确写法：`Ash.get(Organization, [slug: slug], authorize?: false)`。
+2. `AuthController.user_tenant/0` 写死 `"tenant_default"`，签发的 JWT 声明与实际
+   登录租户不符，`/me` 再查一遍就查不到人。改为读
+   `Ash.PlugHelpers.get_tenant(conn)`。
+
+**模拟器访问宿主机**：`adb reverse tcp:4011 tcp:4011`，App 侧直接用
+`http://127.0.0.1:4011`。Mob 生成的 `network_security_config` 已放行
+`127.0.0.1` / `localhost` 明文，`targetSdk 35` 不会拦。
+
+### 4.7 业务数据对接 AshJsonApi（Android 实测）
+
+后端 `/api/student/*` 全部由 `ash_json_api` 从 Ash DSL 生成（`mix precommit`
+下 478 tests 全绿，其中 `student_json_api_test.exs` 25 个专测这 9 个端点），
+移动端 `Api` 侧踩过的坑：
+
+- **媒体类型**：`POST` 必须 `content-type: application/vnd.api+json`，用
+  `application/json` 会吃 **415**。`Req` 的 `body:` 传字符串时要自己设
+  header，不要用 `json:` 选项。
+- **`include` 必须在资源 `json_api` 块里声明过**，否则 `400 invalid_includes`。
+  为此给 `CourseCategory` / `Exam` 补了 `AshJsonApi.Resource` 扩展与 `type/1`
+  —— 没有扩展时关系仍会被序列化，但 `type` 是 `null`，属于非法 JSON:API。
+- **`update` action 不能生成路由**：`mark_all_read` 改写成 generic action，
+  结果是裸的顶层 JSON（不包 `data`）。generic action 没有 `:id` 段，可以和
+  `index` 共存于同一 `base`。
+- **upsert 会把带 `default` 的属性全部按本次取值覆盖**：`ON CONFLICT DO UPDATE
+  SET` 的列来自 `changeset.attributes`（显式参数 + action 默认值），change
+  模块里 `change_attribute` 的值不在其中。`AutoComplete` 因此同时写了
+  `change_attribute(:completed_at, …)`（覆盖 INSERT）和
+  `atomic_update(:completed_at, …)`（覆盖冲突分支），两条路径都验证过。
+- **App 每次写进度必须显式带 `status` / `progress_pct` /
+  `last_position_seconds`**，否则会被默认值抹平。
+- **首页统计、考试记录来自 generic action**，`my_exams` 是 `index`，
+  两者都不需要 id 段。
+- **`teacher` 关系不 include**：`User` 没有 `AshJsonApi.Resource` 扩展，
+  `relationships.teacher.data` 会是 `null`，故 App 侧自带占位教师名。
+
+**Android 实测流程**（`android/` 工程已删，但设备上已装 App 时只需推 BEAM）：
+
+```bash
+adb reverse tcp:4011 tcp:4011
+cd mobile && mix mob.deploy --android        # 597 个 BEAM，秒级
+adb shell am start -n com.example.tcm_mobile/.MainActivity   # monkey 起不来，用 am start
+```
+
+实测覆盖：首页统计/分类/热门课程、课程目录（分类筛选 8→4）、我的学习
+（3 门 + 20%/50%/0% 真实进度）、课程详情与课时树、课时页「标记完成」
+（服务端立刻多出一行 `progress`）、通知列表、我的考试记录。
+
+> **Tab 是 keep-alive 的**：`Mob.Socket.switch_tab/2` 保留 tab 状态，切回来不
+> 重新 `mount`，所以首页/学习页的统计要等 tab 真正重挂载才刷新（传
+> `mount_params:` 会强制重挂载，`courses` tab 跳转已经在用）。
+
+**远程路径怎么测（`test/tcm_mobile/api_test.exs`）**：`Api` 在
+`jsonapi_request/3` 与 `request/4` 里把
+`Application.get_env(:tcm_mobile, :api_req_plug)` 拼进 Req 的 `opts`，测试
+`put_env(:tcm_mobile, :api_req_plug, {Req.Test, :tcm_api})` 即可把整个 HTTP
+层换掉，断言 `conn.method` / `request_path` / 请求头 / 解码后的 body。
+覆盖：目录与详情解码、分类派生、15s 缓存（一次 expect 多次调用）、
+500/503 回落本地、无 token 时不发任何请求、进度写入的三个字段与
+`application/vnd.api+json` 头、本地 id（`c1`…）永不触网。
+
+> **`plug` 必须写进 `mix.exs`**：它是 `req` 的可选依赖，不显式声明时
+> `mix deps.compile req` 的 `Code.ensure_loaded?(Plug)` 为 false，req 会编进
+> "missing plug dependency" 桩，`Req.Test` / `Req.Plug` 全部不可用。且要
+> **按环境**编译：`MIX_ENV=test mix deps.compile plug req --force`
+> （`mix deps.compile` 默认写 `_build/dev`，测试用的 `_build/test` 里仍是旧桩）。
+
 ## 5. 环境与构建
 
 ### 5.1 本机环境
@@ -169,6 +250,11 @@ nil 用占位。另：**trailing 内部不要再嵌 `on_tap` 的盒子**（嵌�
    手动下载 arm32/x86_64/iOS 模拟器 tarball，解压到 `~/.mob/cache/`。
 3. **Zig 精确版本下架**：用镜像相邻 nightly，并改 `deps/mob_dev` 的
    `@required_zig_version` 后 `mix deps.compile mob_dev --force`。
+4. **`mob_new` archive 让 1.18.4 的 `mix` 直接崩**：用 Elixir 1.20 安装的
+   `~/.mix/archives/mob_new-0.6.5` 会让默认 1.18.4 在
+   `Mix.Local.check_elixir_version_in_ebin` 里抛 `ets:lookup(Mix.State, …)`
+   badarg（**任何** `mix` 命令都起不来）。移除该 archive 即恢复
+   （`mob.new` 只在生成新工程时用，1.20 下可随时重装）。
 
 ### 5.3 构建流程
 ```
@@ -179,16 +265,19 @@ mix mob.deploy --ios       # 日常：仅推 BEAM（秒级）
 
 ## 6. 测试
 
-26 个测试（`mix test`）：
+52 个测试（`mix test`）：
 - `Data.CatalogTest`：课程/课时/题库/病案数据自洽性。
 - `StoreTest`：登录、选课进度、测验评分、错题收录、问答、SP 会话与评分。
 - `ScreensTest`：用 `Mob.ScreenCase` 挂载各屏幕、驱动事件、校验渲染树只用
   可渲染节点（`assert_renderable`）。
+- `ApiTest`：26 个，用 `:api_req_plug` + `Req.Test` 桩掉 HTTP，覆盖
+  JSON:API 解码、缓存、离线回落与写入契约（见 §4.7）。
 
 ## 7. 后续计划
 
 - [ ] 安装完整 Xcode 后验证 iOS 构建与真机运行（`mix mob.provision`）。
-- [ ] 后端补学员端 JSON API，`Api` 切 `:remote`（Req 客户端已预留）。
+- [x] 后端补学员端 JSON API，`Api` 切 `:remote` —— 已完成：`ash_json_api` 生成
+  `/api/student/*` 六读三写，`Api` 远程优先 + 离线回落，Android 模拟器实测通过。
 - [ ] 学习问答 / 模拟患者 / MDT 接入真实大模型（替换 `Data.Ai` 规则引擎）。
 - [ ] 测验增加倒计时与防作弊；课程视频课时接入播放器。
 - [ ] 头像/课程封面接入 AshStorage（OSS）真实图片。

@@ -11,7 +11,7 @@ defmodule TcmMobile.Screens.ProfileScreen do
     %{key: :notifications, glyph: "通", label: "通知", tint: :primary, badge: true},
     %{key: :downloads, glyph: "资", label: "学习资料", tint: :secondary},
     %{key: :courses, glyph: "课", label: "浏览课程", tint: :gold},
-    %{key: :about, glyph: "关", label: "关于岐黄学堂", tint: :teal},
+    %{key: :about, glyph: "关", label: "关于杏宁树", tint: :teal},
     %{key: :settings, glyph: "设", label: "设置", tint: :plum},
     %{key: :help, glyph: "助", label: "帮助", tint: :secondary}
   ]
@@ -103,7 +103,7 @@ defmodule TcmMobile.Screens.ProfileScreen do
     <Column gap={:space_sm} fill_width={true}>
       <Button text="退出登录" on_tap={logout_tap} background={:surface} text_color={:error} />
       <Text
-        text="岐黄学堂 v0.1.0 · BEAM on device"
+        text="杏宁树 v0.1.0 · BEAM on device"
         text_size={:xs}
         text_color={:muted}
         text_align="center"

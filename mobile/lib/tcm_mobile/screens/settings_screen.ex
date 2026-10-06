@@ -14,7 +14,7 @@ defmodule TcmMobile.Screens.SettingsScreen do
   def render(assigns) do
     about_card =
       UI.card([
-        ~MOB(<Text text="岐黄学堂 v0.1.0" text_size={:base} text_color={:on_surface} />),
+        ~MOB(<Text text="杏宁树 v0.1.0" text_size={:base} text_color={:on_surface} />),
         ~MOB(<Text text="数据源切换为远程模式后需后端提供 JSON API（见 TcmMobile.Api）。" text_size={:sm} text_color={:muted} />)
       ])
 

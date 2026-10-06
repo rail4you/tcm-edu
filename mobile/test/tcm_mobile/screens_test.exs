@@ -11,7 +11,7 @@ defmodule TcmMobile.ScreensTest do
 
   test "welcome screen mounts and renders a login CTA" do
     view = mount_screen(Screens.WelcomeScreen)
-    assert text(view) =~ "岐黄学堂"
+    assert text(view) =~ "杏宁树"
     assert find(view, :button, text: "学员登录")
     assert_renderable(view)
   end

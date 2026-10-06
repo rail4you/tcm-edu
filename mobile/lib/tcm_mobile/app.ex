@@ -25,6 +25,11 @@ defmodule TcmMobile.App do
     # BEAM 在 iOS 上做 DNS 解析需要切换查找链，避免 hostname 直连失败。
     Mob.DNS.configure_pure_beam()
 
+    # 设备端只拉起应用自身，依赖的 OTP application 需要显式启动。
+    # Req（含其 Finch 连接池）不启动的话，所有 HTTP 请求都会在
+    # Finch.Pool.Manager.lookup_pool 抛 ArgumentError。
+    _ = Application.ensure_all_started(:req)
+
     # 屏幕状态持久化（SQLite）
     {:ok, _} = Application.ensure_all_started(:ecto_sqlite3)
     {:ok, _} = TcmMobile.Repo.start_link()
@@ -35,6 +40,9 @@ defmodule TcmMobile.App do
 
     # 学员端状态仓库
     {:ok, _} = TcmMobile.Store.start_link()
+
+    # 远程模式：用持久化的 token 恢复会话（离线 / 失效都静默降级到登录页）
+    TcmMobile.Api.restore_session()
 
     # 启动：欢迎/登录页；登录成功后 reset_to :home
     Mob.Screen.start_root(Screens.WelcomeScreen)

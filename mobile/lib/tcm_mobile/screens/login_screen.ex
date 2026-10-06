@@ -17,9 +17,16 @@ defmodule TcmMobile.Screens.LoginScreen do
     pass_change = {self(), :password}
     error = assigns.error
 
+    {placeholder, hint} =
+      if TcmMobile.Api.local?() do
+        {"student@tcm.edu.cn", "演示账号：student@tcm.edu.cn　密码：123456"}
+      else
+        {"name@example.com", "后端演示账号：gzs@example.com　密码：123456"}
+      end
+
     error_node =
       if error do
-        ~MOB(<Box background={0x1FBA1A1A} corner_radius={:radius_md} padding={:space_md} fill_width={true}>
+        ~MOB(<Box background={0x1FDC2626} corner_radius={:radius_md} padding={:space_md} fill_width={true}>
   <Text text={error} text_size={:sm} text_color={:error} />
 </Box>)
       else
@@ -39,7 +46,7 @@ defmodule TcmMobile.Screens.LoginScreen do
             background={:primary}
             align={:center}
           >
-            <Text text="岐" text_size={:"3xl"} text_color={:on_primary} font_weight="bold" />
+            <Text text="杏" text_size={:"3xl"} text_color={:on_primary} font_weight="bold" />
           </Box>
           <Column gap={4} fill_width={true}>
             <Text text="欢迎回来" text_size={:"2xl"} font_weight="bold" text_color={:on_surface} />
@@ -50,7 +57,7 @@ defmodule TcmMobile.Screens.LoginScreen do
             <Text text="邮箱" text_size={:sm} font_weight="medium" text_color={:on_surface} />
             <TextField
               value={assigns.email}
-              placeholder="student@tcm.edu.cn"
+              placeholder={placeholder}
               on_change={email_change}
               keyboard_type={:email}
             />
@@ -71,7 +78,7 @@ defmodule TcmMobile.Screens.LoginScreen do
             on_tap={submit}
             disabled={assigns.busy}
           />
-          {UI.card([~MOB(<Text text="演示账号：student@tcm.edu.cn　密码：123456" text_size={:xs} text_color={:muted} text_align="center" />)], background: :surface_raised)}
+          {UI.card([~MOB(<Text text={hint} text_size={:xs} text_color={:muted} text_align="center" />)], background: :surface_raised)}
         </Column>
       </Scroll>
     </Column>

@@ -145,21 +145,35 @@ defmodule TcmMobile.Screens.ExamTakeScreen do
             fill_width={true}
             align={:center}
           >
-            <Column gap={:space_sm} align={:center}>
-              <Text text={exam.title} text_size={:base} text_color={:muted} />
+            <Column gap={:space_sm} fill_width={true}>
+              <Text
+                text={exam.title}
+                fill_width={true}
+                text_align="center"
+                text_size={:base}
+                text_color={:muted}
+              />
               <Text
                 text={"#{result.score}"}
+                fill_width={true}
+                text_align="center"
                 text_size={:"5xl"}
                 font_weight="bold"
                 text_color={score_color}
               />
               <Text
                 text={"答对 #{result.correct} / #{result.total} 题"}
+                fill_width={true}
+                text_align="center"
                 text_size={:base}
                 text_color={:on_surface}
               />
               <Text
-                text={if result.pass?, do: "测验通过，继续加油！", else: "未达及格线，请复习错题" }
+                text={
+                  if result.pass?, do: "测验通过，继续加油！", else: "未达及格线，请复习错题"
+                }
+                fill_width={true}
+                text_align="center"
                 text_size={:sm}
                 text_color={:muted}
               />

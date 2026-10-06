@@ -31,12 +31,12 @@ defmodule TcmMobile.UI do
 
   # 功能入口配色（浅色容器 + 前景色），Material You 风格
   @tints %{
-    primary: {0x1F9A2E22, :primary},
-    secondary: {0x1F3E5C46, :secondary},
-    gold: {0x1F9A6B1E, 0xFF9A6B1E},
-    teal: {0x1F1E6B6B, 0xFF1E6B6B},
-    plum: {0x1F6B2E5C, 0xFF6B2E5C},
-    error: {0x1FBA1A1A, :error}
+    primary: {0x1F00B86B, :primary},
+    secondary: {0x1F0F766E, :secondary},
+    gold: {0x1FF59E0B, 0xFFF59E0B},
+    teal: {0x1F0891B2, 0xFF0891B2},
+    plum: {0x1FE11D48, 0xFFE11D48},
+    error: {0x1FDC2626, :error}
   }
 
   # ── 图标（跨平台逻辑名）─────────────────────────────────────────────────────
@@ -88,7 +88,13 @@ defmodule TcmMobile.UI do
         {icon, tag} ->
           tap = {self(), tag}
 
-          ~MOB(<Box on_tap={tap} padding={:space_sm} corner_radius={:radius_pill} background={:surface_raised}>
+          ~MOB(<Box
+  on_tap={tap}
+  fill_width={false}
+  padding={:space_sm}
+  corner_radius={:radius_pill}
+  background={:surface_raised}
+>
   <Icon name={icon} text_size={20} text_color={:on_surface} />
 </Box>)
 
@@ -116,7 +122,7 @@ defmodule TcmMobile.UI do
         {icon, tag} ->
           tap = {self(), tag}
 
-          ~MOB(<Box on_tap={tap} padding={:space_sm} corner_radius={:radius_pill}>
+          ~MOB(<Box on_tap={tap} fill_width={false} padding={:space_sm} corner_radius={:radius_pill}>
   <Icon name={icon} text_size={20} text_color={:on_surface} />
 </Box>)
 
@@ -137,7 +143,7 @@ defmodule TcmMobile.UI do
       border_color={:border}
       border_bottom_width={1}
     >
-      <Box on_tap={back} padding={:space_sm} corner_radius={:radius_pill}>
+      <Box on_tap={back} fill_width={false} padding={:space_sm} corner_radius={:radius_pill}>
         <Icon name="back" text_size={20} text_color={:on_surface} />
       </Box>
       <Text
@@ -162,30 +168,28 @@ defmodule TcmMobile.UI do
         selected = tab.key == active
         tap = {self(), {:switch_tab, tab.key}}
 
-        icon_bg = if selected, do: 0x1F9A2E22, else: 0x00000000
+        icon_bg = if selected, do: 0x1F00B86B, else: 0x00000000
         color = if selected, do: :primary, else: :muted
 
         ~MOB"""
-        <Column
-          weight={1}
-          gap={2}
-          padding_top={:space_sm}
-          padding_bottom={:space_xs}
-          on_tap={tap}
-          align={:center}
-        >
-          <Box
-            corner_radius={:radius_pill}
-            padding_left={:space_md}
-            padding_right={:space_md}
-            padding_top={4}
-            padding_bottom={4}
-            background={icon_bg}
-          >
-            <Icon name={tab.icon} text_size={20} text_color={color} />
+        <Column weight={1} gap={2} padding_top={:space_sm} padding_bottom={:space_xs} on_tap={tap}>
+          <Box fill_width={true} align={:center}>
+            <Box
+              fill_width={false}
+              corner_radius={:radius_pill}
+              padding_left={:space_md}
+              padding_right={:space_md}
+              padding_top={4}
+              padding_bottom={4}
+              background={icon_bg}
+            >
+              <Icon name={tab.icon} text_size={20} text_color={color} />
+            </Box>
           </Box>
           <Text
             text={tab.label}
+            fill_width={true}
+            text_align="center"
             text_size={:xs}
             text_color={color}
             font_weight={if selected, do: "medium", else: "regular"}
@@ -359,9 +363,17 @@ defmodule TcmMobile.UI do
       border_color={:border}
       border_width={1}
     >
-      <Column gap={:space_sm} align={:center}>
-        {glyph_tile(glyph, tint, 44)}
-        <Text text={label} text_size={:xs} text_color={:on_surface} />
+      <Column gap={:space_sm}>
+        <Box fill_width={true} align={:center}>
+          {glyph_tile(glyph, tint, 44)}
+        </Box>
+        <Text
+          text={label}
+          fill_width={true}
+          text_align="center"
+          text_size={:xs}
+          text_color={:on_surface}
+        />
       </Column>
     </Box>
     """
@@ -385,7 +397,8 @@ defmodule TcmMobile.UI do
     enrolled_badge =
       if enrolled? do
         ~MOB(<Box
-  background={0x1F3E5C46}
+  fill_width={false}
+  background={0x1F0F766E}
   corner_radius={:radius_pill}
   padding_top={2}
   padding_bottom={2}
@@ -473,9 +486,11 @@ defmodule TcmMobile.UI do
   @doc "空状态占位。"
   def empty_state(icon, text) do
     ~MOB"""
-    <Column fill_width={true} align={:center} padding={:space_xl} gap={:space_sm}>
-      <Icon name={icon} text_size={40} text_color={:border} />
-      <Text text={text} text_size={:base} text_color={:muted} text_align="center" />
+    <Column fill_width={true} padding={:space_xl} gap={:space_sm}>
+      <Box fill_width={true} align={:center}>
+        <Icon name={icon} text_size={40} text_color={:border} />
+      </Box>
+      <Text text={text} fill_width={true} text_size={:base} text_color={:muted} text_align="center" />
     </Column>
     """
   end

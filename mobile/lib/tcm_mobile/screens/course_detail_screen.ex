@@ -112,7 +112,7 @@ defmodule TcmMobile.Screens.CourseDetailScreen do
   end
 
   defp lesson_row(l, tap, done, kind_label) do
-    number_bg = if done, do: 0x1F3E5C46, else: 0x1F9A2E22
+    number_bg = if done, do: 0x1F0F766E, else: 0x1F00B86B
     number_fg = if done, do: :secondary, else: :primary
 
     trailing =

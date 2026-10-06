@@ -193,7 +193,13 @@ defmodule TcmMobile.Screens.SimulatedPatientSessionScreen do
         align={:center}
       >
         <TextField value={draft} placeholder="向患者询问病情…" on_change={draft_change} weight={1} />
-        <Box on_tap={send_tap} background={:primary} corner_radius={:radius_pill} padding={:space_md}>
+        <Box
+          on_tap={send_tap}
+          fill_width={false}
+          background={:primary}
+          corner_radius={:radius_pill}
+          padding={:space_md}
+        >
           <Icon name="forward" text_size={18} text_color={:on_primary} />
         </Box>
       </Row>
@@ -204,19 +210,21 @@ defmodule TcmMobile.Screens.SimulatedPatientSessionScreen do
   defp sp_bubble(assigns) do
     {bg, fg, align, label} =
       case assigns.m.role do
-        :patient -> {:surface_raised, :on_surface, :start, "患者"}
-        :student -> {:primary, :on_primary, :end, "我"}
-        :doctor -> {:secondary, :on_secondary, :start, assigns.m.speaker || "会诊"}
+        :patient -> {:surface_raised, :on_surface, :leading, "患者"}
+        :student -> {:primary, :on_primary, :trailing, "我"}
+        :doctor -> {:secondary, :on_secondary, :leading, assigns.m.speaker || "会诊"}
       end
 
     ~MOB"""
-    <Column fill_width={true} align={align}>
-      <Text text={label} text_size={:xs} text_color={:muted} padding_bottom={2} />
-      <Box background={bg} corner_radius={:radius_lg} padding={:space_md} fill_width={false}>
-        <Text text={assigns.m.text} text_size={:base} text_color={fg} />
-      </Box>
-      <Text text={assigns.m.time} text_size={:xs} text_color={:muted} padding_top={2} />
-    </Column>
+    <Box fill_width={true} align={align}>
+      <Column gap={2}>
+        <Text text={label} text_size={:xs} text_color={:muted} padding_bottom={2} />
+        <Box background={bg} corner_radius={:radius_lg} padding={:space_md} fill_width={false}>
+          <Text text={assigns.m.text} text_size={:base} text_color={fg} />
+        </Box>
+        <Text text={assigns.m.time} text_size={:xs} text_color={:muted} padding_top={2} />
+      </Column>
+    </Box>
     """
   end
 

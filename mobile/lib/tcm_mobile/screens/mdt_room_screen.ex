@@ -73,7 +73,13 @@ defmodule TcmMobile.Screens.MdtRoomScreen do
         align={:center}
       >
         <TextField value={@draft} placeholder="发表你的诊疗意见…" on_change={draft_change} weight={1} />
-        <Box on_tap={send_tap} background={:primary} corner_radius={:radius_pill} padding={:space_md}>
+        <Box
+          on_tap={send_tap}
+          fill_width={false}
+          background={:primary}
+          corner_radius={:radius_pill}
+          padding={:space_md}
+        >
           <Icon name="forward" text_size={18} text_color={:on_primary} />
         </Box>
       </Row>
@@ -84,21 +90,25 @@ defmodule TcmMobile.Screens.MdtRoomScreen do
   defp mdt_bubble(assigns) do
     {bg, fg, align} =
       case assigns.m.role do
-        :student -> {:primary, :on_primary, :end}
-        :doctor -> {:surface_raised, :on_surface, :start}
+        :student -> {:primary, :on_primary, :trailing}
+        :doctor -> {:surface_raised, :on_surface, :leading}
       end
 
     label =
-      if assigns.m.role == :doctor, do: "#{assigns.m.speaker}（#{assigns.m.department}）", else: "我"
+      if assigns.m.role == :doctor,
+        do: "#{assigns.m.speaker}（#{assigns.m.department}）",
+        else: "我"
 
     ~MOB"""
-    <Column fill_width={true} align={align}>
-      <Text text={label} text_size={:xs} text_color={:muted} padding_bottom={2} />
-      <Box background={bg} corner_radius={:radius_lg} padding={:space_md} fill_width={false}>
-        <Text text={assigns.m.text} text_size={:base} text_color={fg} />
-      </Box>
-      <Text text={assigns.m.time} text_size={:xs} text_color={:muted} padding_top={2} />
-    </Column>
+    <Box fill_width={true} align={align}>
+      <Column gap={2}>
+        <Text text={label} text_size={:xs} text_color={:muted} padding_bottom={2} />
+        <Box background={bg} corner_radius={:radius_lg} padding={:space_md} fill_width={false}>
+          <Text text={assigns.m.text} text_size={:base} text_color={fg} />
+        </Box>
+        <Text text={assigns.m.time} text_size={:xs} text_color={:muted} padding_top={2} />
+      </Column>
+    </Box>
     """
   end
 

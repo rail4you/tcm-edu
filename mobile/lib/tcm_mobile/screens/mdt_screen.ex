@@ -36,7 +36,7 @@ defmodule TcmMobile.Screens.MdtScreen do
   defp room_card(room) do
     tap = {self(), {:room, room.id}}
     active? = room.status == :active
-    status_bg = if active?, do: 0x1F9A2E22, else: :surface_raised
+    status_bg = if active?, do: 0x1F00B86B, else: :surface_raised
     status_fg = if active?, do: :primary, else: :muted
     status_label = if active?, do: "进行中", else: "待开始"
 
@@ -54,6 +54,7 @@ defmodule TcmMobile.Screens.MdtScreen do
           />
           <Box
             background={status_bg}
+            fill_width={false}
             corner_radius={:radius_pill}
             padding_top={4}
             padding_bottom={4}

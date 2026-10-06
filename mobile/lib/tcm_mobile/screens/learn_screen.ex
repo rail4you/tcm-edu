@@ -9,10 +9,10 @@ defmodule TcmMobile.Screens.LearnScreen do
 
   @impl true
   def mount(%{course_id: course_id, lesson_id: lesson_id}, _session, socket) do
-    lesson = Api.lesson(course_id, lesson_id)
-    content = Api.lesson_content(lesson_id)
-    quiz = Api.lesson_quiz(lesson_id)
     course = Api.get_course(course_id)
+    lesson = Api.lesson(course_id, lesson_id)
+    content = Api.lesson_content(lesson_id, course_id)
+    quiz = Api.lesson_quiz(lesson_id)
 
     {:ok,
      socket

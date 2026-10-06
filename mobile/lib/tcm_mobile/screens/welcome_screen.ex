@@ -39,7 +39,7 @@ defmodule TcmMobile.Screens.WelcomeScreen do
                 width: 40,
                 height: 40,
                 corner_radius: :radius_md,
-                background: 0x1F9A2E22,
+                background: 0x1F00B86B,
                 align: :center
               },
               children: [
@@ -85,19 +85,34 @@ defmodule TcmMobile.Screens.WelcomeScreen do
       <Scroll weight={1} padding={:space_lg} fill_width={true}>
         <Column gap={:space_md} fill_width={true}>
           <Spacer size={:space_xl} />
-          <Column fill_width={true} align={:center} gap={:space_sm}>
-            <Box
-              width={88}
-              height={88}
-              corner_radius={:radius_lg}
-              background={:primary}
-              align={:center}
-            >
-              <Text text="岐" text_size={:"4xl"} text_color={:on_primary} font_weight="bold" />
+          <Column fill_width={true} gap={:space_sm}>
+            <Box fill_width={true} align={:center}>
+              <Box
+                width={88}
+                height={88}
+                corner_radius={:radius_lg}
+                background={:primary}
+                align={:center}
+              >
+                <Text text="杏" text_size={:"4xl"} text_color={:on_primary} font_weight="bold" />
+              </Box>
             </Box>
             <Spacer size={:space_xs} />
-            <Text text="岐黄学堂" text_size={:"3xl"} font_weight="bold" text_color={:on_surface} />
-            <Text text="中医学院 · 学员端" text_size={:base} text_color={:muted} />
+            <Text
+              text="杏宁树"
+              fill_width={true}
+              text_align="center"
+              text_size={:"3xl"}
+              font_weight="bold"
+              text_color={:on_surface}
+            />
+            <Text
+              text="中医学院 · 学员端"
+              fill_width={true}
+              text_align="center"
+              text_size={:base}
+              text_color={:muted}
+            />
           </Column>
           <Spacer size={:space_md} />
           <Column gap={:space_sm} fill_width={true}>
@@ -116,7 +131,12 @@ defmodule TcmMobile.Screens.WelcomeScreen do
 
   @impl true
   def handle_info({:tap, :login}, socket) do
-    {:noreply, Mob.Socket.push_screen(socket, TcmMobile.Screens.LoginScreen)}
+    # 会话已恢复（远程 token 有效）就直接进首页，免得再输一遍密码
+    if TcmMobile.Api.logged_in?() do
+      {:noreply, Mob.Socket.reset_to(socket, :home, %{}, scope: :all)}
+    else
+      {:noreply, Mob.Socket.push_screen(socket, TcmMobile.Screens.LoginScreen)}
+    end
   end
 
   def handle_info({:tap, :guest}, socket) do

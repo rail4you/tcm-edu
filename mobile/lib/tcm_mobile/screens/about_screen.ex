@@ -1,5 +1,5 @@
 defmodule TcmMobile.Screens.AboutScreen do
-  @moduledoc "关于岐黄学堂。"
+  @moduledoc "关于杏宁树。"
 
   use Mob.Screen
 
@@ -13,7 +13,7 @@ defmodule TcmMobile.Screens.AboutScreen do
     intro =
       UI.card([
         ~MOB(<Text
-  text="岐黄学堂学员端基于 Mob（BEAM-on-device）构建：全部界面与业务逻辑以 Elixir 编写，原生运行于 iOS 与 Android。"
+  text="杏宁树学员端基于 Mob（BEAM-on-device）构建：全部界面与业务逻辑以 Elixir 编写，原生运行于 iOS 与 Android。"
   text_size={:sm}
   text_color={:on_surface}
 />),
@@ -24,22 +24,43 @@ defmodule TcmMobile.Screens.AboutScreen do
     <Column fill_height={true} background={:background}>
       {UI.detail_header("关于")}
       <Scroll weight={1} padding={:space_lg} fill_width={true}>
-        <Column gap={:space_md} fill_width={true} align={:center}>
+        <Column gap={:space_md} fill_width={true}>
           <Spacer size={:space_lg} />
-          <Box
-            width={72}
-            height={72}
-            corner_radius={:radius_lg}
-            background={:primary}
-            align={:center}
-          >
-            <Text text="岐" text_size={:"3xl"} text_color={:on_primary} font_weight="bold" />
+          <Box fill_width={true} align={:center}>
+            <Box
+              width={72}
+              height={72}
+              corner_radius={:radius_lg}
+              background={:primary}
+              align={:center}
+            >
+              <Text text="杏" text_size={:"3xl"} text_color={:on_primary} font_weight="bold" />
+            </Box>
           </Box>
-          <Text text="岐黄学堂" text_size={:"2xl"} font_weight="bold" text_color={:on_surface} />
-          <Text text="中医学院 · 学员端 v0.1.0" text_size={:sm} text_color={:muted} />
+          <Text
+            text="杏宁树"
+            fill_width={true}
+            text_align="center"
+            text_size={:"2xl"}
+            font_weight="bold"
+            text_color={:on_surface}
+          />
+          <Text
+            text="中医学院 · 学员端 v0.1.0"
+            fill_width={true}
+            text_align="center"
+            text_size={:sm}
+            text_color={:muted}
+          />
           <Spacer size={:space_md} />
           {intro}
-          <Text text="Powered by Elixir · BEAM on device" text_size={:xs} text_color={:muted} />
+          <Text
+            text="Powered by Elixir · BEAM on device"
+            fill_width={true}
+            text_align="center"
+            text_size={:xs}
+            text_color={:muted}
+          />
           <Spacer size={:space_lg} />
         </Column>
       </Scroll>

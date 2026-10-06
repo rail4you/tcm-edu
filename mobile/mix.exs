@@ -27,6 +27,9 @@ defmodule TcmMobile.MixProject do
       # Mob's on-device BEAM uses the same Req stack as the Phoenix backend,
       # so a client written here transfers 1:1 once the server exposes a JSON API.
       {:req, "~> 0.5"},
+      # req 把 plug 当可选依赖：不显式声明的话 req 编译时 `Code.ensure_loaded?(Plug)`
+      # 为 false，会编进"missing plug dependency"的桩，Req.Test / Req.Plug 全不可用。
+      {:plug, "~> 1.0"},
       # Code quality — Credo + ex_slop (catches AI-generated patterns
       # like blanket rescue, narrator docs, redundant Enum chains, etc).
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

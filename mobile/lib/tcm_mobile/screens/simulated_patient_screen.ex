@@ -41,6 +41,7 @@ defmodule TcmMobile.Screens.SimulatedPatientScreen do
       ~MOB"""
       <Box
         background={status.bg}
+        fill_width={false}
         corner_radius={:radius_pill}
         padding_top={4}
         padding_bottom={4}
@@ -57,8 +58,8 @@ defmodule TcmMobile.Screens.SimulatedPatientScreen do
     UI.list_tile(leading, p.name, subtitle, on_tap: tap, trailing: trailing)
   end
 
-  defp sp_status(%{status: :in_progress}), do: %{label: "接诊中", bg: 0x1F9A2E22, fg: :primary}
-  defp sp_status(%{status: :completed}), do: %{label: "已完成", bg: 0x1F3E5C46, fg: :secondary}
+  defp sp_status(%{status: :in_progress}), do: %{label: "接诊中", bg: 0x1F00B86B, fg: :primary}
+  defp sp_status(%{status: :completed}), do: %{label: "已完成", bg: 0x1F0F766E, fg: :secondary}
   defp sp_status(_), do: %{label: "待接诊", bg: :surface_raised, fg: :muted}
 
   @impl true

@@ -24,7 +24,7 @@ defmodule TcmMobile.Screens.ChatScreen do
       <Scroll weight={1} padding={:space_md} fill_width={true} id="chat">
         <Column gap={:space_sm} fill_width={true}>
           {if @messages == [] do
-            {UI.card([~MOB(<Text text="你好，我是中医学习助教。可以问我辨证、方药、经络、病案等中医问题。" text_size={:base} text_color={:on_surface} />)])}
+            UI.card([~MOB(<Text text="你好，我是中医学习助教。可以问我辨证、方药、经络、病案等中医问题。" text_size={:base} text_color={:on_surface} />)])
           else
             Enum.map(@messages, fn m -> bubble(%{m: m}) end)
           end}
@@ -39,7 +39,13 @@ defmodule TcmMobile.Screens.ChatScreen do
         align={:center}
       >
         <TextField value={@draft} placeholder="输入你的问题…" on_change={draft_change} weight={1} />
-        <Box on_tap={send_tap} background={:primary} corner_radius={:radius_pill} padding={:space_md}>
+        <Box
+          on_tap={send_tap}
+          fill_width={false}
+          background={:primary}
+          corner_radius={:radius_pill}
+          padding={:space_md}
+        >
           <Icon name="forward" text_size={18} text_color={:on_primary} />
         </Box>
       </Row>
@@ -51,15 +57,17 @@ defmodule TcmMobile.Screens.ChatScreen do
     is_user = assigns.m.role == :user
     bg = if is_user, do: :primary, else: :surface_raised
     fg = if is_user, do: :on_primary, else: :on_surface
-    align = if is_user, do: :end, else: :start
+    align = if is_user, do: :trailing, else: :leading
 
     ~MOB"""
-    <Column fill_width={true} align={align}>
-      <Box background={bg} corner_radius={:radius_lg} padding={:space_md} fill_width={false}>
-        <Text text={assigns.m.text} text_size={:base} text_color={fg} />
-      </Box>
-      <Text text={assigns.m.time} text_size={:xs} text_color={:muted} padding_top={2} />
-    </Column>
+    <Box fill_width={true} align={align}>
+      <Column gap={2}>
+        <Box background={bg} corner_radius={:radius_lg} padding={:space_md} fill_width={false}>
+          <Text text={assigns.m.text} text_size={:base} text_color={fg} />
+        </Box>
+        <Text text={assigns.m.time} text_size={:xs} text_color={:muted} padding_top={2} />
+      </Column>
+    </Box>
     """
   end
 

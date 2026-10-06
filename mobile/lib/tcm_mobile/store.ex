@@ -24,6 +24,8 @@ defmodule TcmMobile.Store do
   def logged_in?, do: call(:logged_in?)
   def login(email, password), do: call({:login, email, password})
   def logout, do: call(:logout)
+  @doc "远程登录 / 会话恢复时，把后端返回的学员身份写入会话。"
+  def set_session(student), do: call({:set_session, student})
 
   def enroll(course_id), do: call({:enroll, course_id})
   def enrolled?(course_id), do: call({:enrolled?, course_id})
@@ -112,6 +114,11 @@ defmodule TcmMobile.Store do
 
   def handle_call(:logout, _from, state) do
     {:reply, :ok, %{state | student: nil}}
+  end
+
+  @impl true
+  def handle_call({:set_session, student}, _from, state) do
+    {:reply, :ok, %{state | student: student}}
   end
 
   def handle_call({:enroll, course_id}, _from, state) do

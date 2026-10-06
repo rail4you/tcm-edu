@@ -77,7 +77,7 @@ defmodule TcmMobile.Screens.MistakesScreen do
             %{
               type: :box,
               props: %{
-                background: 0x1FBA1A1A,
+                background: 0x1FDC2626,
                 corner_radius: :radius_md,
                 padding: :space_sm,
                 weight: 1
@@ -93,7 +93,7 @@ defmodule TcmMobile.Screens.MistakesScreen do
             %{
               type: :box,
               props: %{
-                background: 0x1F3E5C46,
+                background: 0x1F0F766E,
                 corner_radius: :radius_md,
                 padding: :space_sm,
                 weight: 1

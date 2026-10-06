@@ -12,17 +12,28 @@ defmodule TcmMobile.Screens.ExamsScreen do
         Map.merge(exam, %{attempt: Api.exam_attempt(exam.id)})
       end)
 
-    {:ok, Mob.Socket.assign(socket, :exams, exams)}
+    {:ok,
+     socket
+     |> Mob.Socket.assign(:exams, exams)
+     |> Mob.Socket.assign(:records, Api.my_exam_records())}
   end
 
   @impl true
   def render(assigns) do
     rows = Enum.map(assigns.exams, &exam_row/1)
+    record_rows = Enum.map(assigns.records, &record_row/1)
 
     hint_card =
       UI.card([
         ~MOB(<Text text="完成阶段测验，检验阶段性学习成果；测验错题将自动收录到错题本。" text_size={:sm} text_color={:muted} />)
       ])
+
+    records_header =
+      if assigns.records == [] do
+        %{type: :spacer, props: %{}, children: []}
+      else
+        UI.section_header("我的考试记录")
+      end
 
     ~MOB"""
     <Column fill_height={true} background={:background}>
@@ -31,12 +42,41 @@ defmodule TcmMobile.Screens.ExamsScreen do
         <Column gap={:space_md} fill_width={true}>
           {hint_card}
           {rows}
+          {records_header}
+          {record_rows}
           <Spacer size={:space_lg} />
         </Column>
       </Scroll>
     </Column>
     """
   end
+
+  defp record_row(record) do
+    tint = if record.status == "graded", do: :secondary, else: :primary
+
+    subtitle =
+      [status_label(record.status), score_label(record.score), date_label(record.assigned_at)]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.join(" · ")
+
+    UI.list_tile(UI.glyph_tile("考", tint, 44), record.exam_name, subtitle, trailing: nil)
+  end
+
+  defp status_label("graded"), do: "已批阅"
+  defp status_label("submitted"), do: "已提交"
+  defp status_label("in_progress"), do: "作答中"
+  defp status_label(_), do: "待作答"
+
+  defp score_label(nil), do: nil
+
+  defp score_label(score) when is_float(score) do
+    if score == trunc(score), do: "#{trunc(score)} 分", else: "#{score} 分"
+  end
+
+  defp score_label(score), do: "#{score} 分"
+
+  defp date_label(nil), do: nil
+  defp date_label(iso) when is_binary(iso), do: String.slice(iso, 0, 10)
 
   defp exam_row(exam) do
     status = exam_status(exam)
@@ -49,6 +89,7 @@ defmodule TcmMobile.Screens.ExamsScreen do
       ~MOB"""
       <Box
         background={status.color}
+        fill_width={false}
         corner_radius={:radius_pill}
         padding_top={4}
         padding_bottom={4}
