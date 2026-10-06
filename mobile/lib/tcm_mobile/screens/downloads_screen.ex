@@ -1,5 +1,5 @@
 defmodule TcmMobile.Screens.DownloadsScreen do
-  @moduledoc "学习资料 —— 列表 + 预览（WebView/pdf.js）+ 原生下载。"
+  @moduledoc "学习资料 —— 列表 + 应用内预览（自托管 pdf.js）+ 应用内下载。"
 
   use Mob.Screen
 
@@ -16,7 +16,7 @@ defmodule TcmMobile.Screens.DownloadsScreen do
 
     hint =
       UI.card([
-        ~MOB(<Text text="点按资料即可在应用内预览 PDF；右侧按钮下载到本地（调用系统下载管理器）。" text_size={:sm} text_color={:muted} />)
+        ~MOB(<Text text="点按资料即可在应用内预览 PDF；点「下载到本地」把文件存进本机，不会跳转外部浏览器。" text_size={:sm} text_color={:muted} />)
       ])
 
     ~MOB"""

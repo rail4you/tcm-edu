@@ -340,6 +340,36 @@ defmodule TcmMobile.Api do
   def list_downloads, do: Store.downloads()
   def toggle_download(id), do: Store.toggle_download(id)
 
+  @doc """
+  把 PDF 地址包成后端的同源转发地址（`/pdfjs/doc?u=…`）。
+
+  设备侧的 BEAM 没有可用的 `:crypto`，任何 `https://` 直连都会死在 TLS
+  握手上；后端转发端点跑在宿主机上、由它去取上游，手机侧只需要走
+  `http://` 回环。同时上游主机由后端白名单限制，这里也就顺带复用了。
+  """
+  @spec proxy_pdf_url(String.t()) :: String.t()
+  def proxy_pdf_url(url) do
+    web_base_url() <> "/pdfjs/doc?u=" <> URI.encode(url, &URI.char_unreserved?/1)
+  end
+
+  @doc """
+  后端站点的 origin（去掉 `/api` 路径），用于加载同源静态资源——
+  自托管的 pdf.js viewer（`/pdfjs/web/viewer.html`）和它的 PDF 同源
+  转发端点（`/pdfjs/doc?u=…`）都挂在这个 origin 下。
+  """
+  @spec web_base_url() :: String.t()
+  def web_base_url do
+    case URI.new(base_url()) do
+      {:ok, %URI{scheme: scheme, host: host} = uri} when is_binary(scheme) and is_binary(host) ->
+        uri
+        |> Map.merge(%{path: "", query: nil, fragment: nil})
+        |> URI.to_string()
+
+      _ ->
+        "http://127.0.0.1:4011"
+    end
+  end
+
   # ── 远程认证 ────────────────────────────────────────────────────────────────
 
   defp remote_login(email, password) do

@@ -20,6 +20,11 @@ config :tcm_edu,
     service: {TcmEdu.Storage.OSS.Service, []}
   ]
 
+# `/pdfjs/doc?u=…` 同源转发的主机白名单（见 TcmEduWeb.PdfProxyController）。
+# 演示占位 PDF 目前指向下面两个公共站点；正式内容上 OSS 后收窄成
+# 只留 OSS 即可——OSS 的 endpoint/bucket 域名由控制器自动放行。
+config :tcm_edu, pdf_proxy_hosts: ["www.w3.org", "mozilla.github.io"]
+
 # Ash framework — list all domains so codegen and CLI tools can find them.
 config :tcm_edu,
   ash_domains: [

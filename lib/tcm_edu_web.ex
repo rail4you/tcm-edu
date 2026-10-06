@@ -19,7 +19,7 @@ defmodule TcmEduWeb do
 
   def static_paths,
     do:
-      ~w(assets fonts images favicon.ico robots.txt phoenix.min.js phoenix_live_view.min.js app.js course)
+      ~w(assets fonts images favicon.ico robots.txt phoenix.min.js phoenix_live_view.min.js app.js course pdfjs)
 
   def router do
     quote do

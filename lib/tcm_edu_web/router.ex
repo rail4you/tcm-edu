@@ -152,6 +152,17 @@ defmodule TcmEduWeb.Router do
     forward "/", TcmEduWeb.JsonApiRouter
   end
 
+  # ── pdf.js viewer 同源转发（无会话、无 CSRF，GET only）───────────
+  pipeline :pdf_proxy do
+    plug :accepts, ["html", "json", "pdf"]
+  end
+
+  scope "/", TcmEduWeb do
+    pipe_through :pdf_proxy
+
+    get "/pdfjs/doc", PdfProxyController, :show
+  end
+
   # ── Course static page ─────────────────────────────────────────────
   scope "/", TcmEduWeb do
     pipe_through :browser
