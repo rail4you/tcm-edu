@@ -36,3 +36,15 @@ tcm_edu-*.tar
 # Local secrets (LLM keys, admin passwords). Never commit.
 .env
 .env.*
+
+# Android native build: signing keystore + passphrases + machine paths,
+# Gradle/CMake caches and the packaged OTP runtime. The android/ source
+# tree itself is tracked.
+/mobile/android/upload_jks.keystore
+/mobile/android/keystore.properties
+/mobile/android/local.properties
+/mobile/android/build/
+/mobile/android/app/build/
+/mobile/android/app/.cxx/
+/mobile/android/.gradle/
+/mobile/android/app/src/release/assets/otp.zip

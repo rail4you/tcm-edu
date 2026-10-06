@@ -18,9 +18,9 @@ config :tcm_edu, TcmEdu.Repo,
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
 config :tcm_edu, TcmEduWeb.Endpoint,
-  # Binding to loopback ipv4 address prevents access from other machines.
-  # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: 4011],
+  # Binding to {0, 0, 0, 0} so LAN devices (physical phone running the APK)
+  # can reach the API. `ip: {127, 0, 0, 1}` restricts it to this machine only.
+  http: [ip: {0, 0, 0, 0}, port: 4011],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
