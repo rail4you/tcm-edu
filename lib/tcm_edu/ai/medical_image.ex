@@ -108,8 +108,8 @@ defmodule TcmEdu.AI.MedicalImage do
         negative_prompt: opts[:negative_prompt] || "低质量、模糊、变形、多余手指、文字水印、错乱解剖结构"
       },
       parameters: %{
-        style: opts[:style] || "<flat illustration>",
-        size: opts[:size] || "1024*1024",
+        style: normalize_style(opts[:style]),
+        size: normalize_size(opts[:size]),
         n: opts[:n] || 1
       }
     }
@@ -188,8 +188,8 @@ defmodule TcmEdu.AI.MedicalImage do
       {:ok, %{status: "SUCCEEDED"}} ->
         {:ok, []}
 
-      {:ok, %{status: "FAILED", urls: _urls}} ->
-        {:error, :task_failed}
+      {:ok, %{status: "FAILED"} = output} ->
+        {:error, failure_reason(output)}
 
       {:ok, %{status: status}} when status in ["PENDING", "RUNNING"] ->
         Process.sleep(interval)
@@ -203,21 +203,52 @@ defmodule TcmEdu.AI.MedicalImage do
     end
   end
 
-  defp parse_output(%{"task_status" => status, "results" => results}) do
+  # DashScope 文生图只接受 "1024*1024" 这类宽*高 格式，以及 16:9 / 9:16 预设；
+  # 页面传入的是 "1024x1024"（字母 x），必须归一化，否则任务直接 FAILED。
+  defp normalize_size(nil), do: "1024*1024"
+  defp normalize_size("16:9"), do: "1280*720"
+  defp normalize_size("9:16"), do: "720*1280"
+  defp normalize_size("1:1"), do: "1024*1024"
+
+  defp normalize_size(size) when is_binary(size) do
+    size |> String.replace("x", "*") |> String.replace("X", "*")
+  end
+
+  defp normalize_size(size), do: size
+
+  # UI 风格 token → DashScope style token（未知 token 退回默认扁平插画）。
+  defp normalize_style("realistic"), do: "<photography>"
+  defp normalize_style("ink"), do: "<chinese painting>"
+  defp normalize_style("flat"), do: "<flat illustration>"
+  defp normalize_style("anatomy"), do: "<flat illustration>"
+  defp normalize_style(style) when is_binary(style) and style != "", do: style
+  defp normalize_style(_), do: "<flat illustration>"
+
+  defp failure_reason(%{message: message}) when is_binary(message) and message != "",
+    do: "图片生成任务失败：#{message}"
+
+  defp failure_reason(%{code: code}) when is_binary(code) and code != "",
+    do: "图片生成任务失败：#{code}"
+
+  defp failure_reason(_), do: :task_failed
+
+  defp parse_output(output) when is_map(output) do
     urls =
-      Enum.flat_map(results || [], fn
+      (output["results"] || [])
+      |> Enum.flat_map(fn
         %{"url" => url} -> [url]
         _ -> []
       end)
 
-    %{status: status, urls: urls}
+    %{
+      status: output["task_status"] || "UNKNOWN",
+      urls: urls,
+      code: output["code"],
+      message: output["message"]
+    }
   end
 
-  defp parse_output(%{"task_status" => status}) do
-    %{status: status, urls: []}
-  end
-
-  defp parse_output(_), do: %{status: "UNKNOWN", urls: []}
+  defp parse_output(_), do: %{status: "UNKNOWN", urls: [], code: nil, message: nil}
 
   defp api_error(status, body) do
     message = get_in(body, ["message"]) || get_in(body, ["code"]) || "HTTP #{status}"

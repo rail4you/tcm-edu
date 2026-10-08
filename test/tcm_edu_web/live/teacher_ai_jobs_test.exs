@@ -15,9 +15,10 @@ defmodule TcmEduWeb.TeacherAIJobsTest do
 
   require Ash.Query
 
+  alias TcmEdu.AI.GenerationJob
   alias TcmEdu.Accounts.User
   alias TcmEdu.Quiz.{QuestionBank, QuizJob}
-  alias TcmEdu.Workers.QuizGenerationWorker
+  alias TcmEdu.Workers.{AiGenerationWorker, QuizGenerationWorker}
 
   @tenant "tenant_default"
 
@@ -114,6 +115,30 @@ defmodule TcmEduWeb.TeacherAIJobsTest do
     |> refute_has("td", "A完成主题")
   end
 
+  test "lists generation jobs and retries a failed one", %{conn: conn, teacher: teacher} do
+    {:ok, job} = create_gen_job(teacher, "备课任务")
+
+    job
+    |> Ash.Changeset.for_update(:mark_failed, %{error_message: "模型超时"})
+    |> Ash.update!(tenant: @tenant, authorize?: false)
+
+    conn
+    |> visit("/teacher/ai/jobs")
+    |> assert_has("#generation-job-#{job.id}")
+    |> assert_has("td", "备课任务")
+    |> assert_has("td", "备课")
+    |> click_button("#retry-job-#{job.id}", "重试")
+    |> assert_has("p", "已重新提交", exact: false)
+
+    assert reload_gen_job(job.id).status == :pending
+
+    assert_enqueued(
+      worker: AiGenerationWorker,
+      args: %{"tenant" => @tenant, "generation_job_id" => job.id},
+      repo: TcmEdu.Repo
+    )
+  end
+
   # ─── helpers ───────────────────────────────────────────
 
   defp create_teacher!(infix) do
@@ -150,5 +175,25 @@ defmodule TcmEduWeb.TeacherAIJobsTest do
 
   defp reload_job(id) do
     QuizJob |> Ash.Query.filter(id == ^id) |> Ash.read_one!(tenant: @tenant, authorize?: false)
+  end
+
+  defp create_gen_job(teacher, title) do
+    GenerationJob.request_generation_job(
+      %{
+        kind: :lesson_plan,
+        title: title,
+        params: %{},
+        requested_by_id: teacher.id,
+        requested_by_email: to_string(teacher.email)
+      },
+      actor: teacher,
+      tenant: @tenant
+    )
+  end
+
+  defp reload_gen_job(id) do
+    GenerationJob
+    |> Ash.Query.filter(id == ^id)
+    |> Ash.read_one!(tenant: @tenant, authorize?: false)
   end
 end

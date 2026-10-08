@@ -127,4 +127,58 @@ defmodule TcmEduWeb.TeacherQuizTest do
     |> assert_has("p", "题目已删除")
     |> assert_has("p", "共 0 题")
   end
+
+  test "AI-generated questions carry an AI badge", %{conn: conn, teacher: teacher, bank: bank} do
+    create_questions(teacher, bank, 1)
+
+    Question.create_question!(
+      %{
+        bank_id: bank.id,
+        type: :judge,
+        difficulty: 2,
+        stem: "AI 判断题",
+        answer: "对",
+        tags: ["AI生成"]
+      },
+      actor: teacher,
+      tenant: @tenant
+    )
+
+    conn
+    |> visit("/teacher/quiz")
+    |> click_button(bank.name)
+    |> assert_has("tr[id^='question-']", count: 2)
+    |> assert_has("span", "AI 生成")
+  end
+
+  test "filters questions by type and stem", %{conn: conn, teacher: teacher, bank: bank} do
+    create_questions(teacher, bank, 3)
+
+    Question.create_question!(
+      %{
+        bank_id: bank.id,
+        type: :judge,
+        difficulty: 2,
+        stem: "判断题：肝主疏泄",
+        answer: "对"
+      },
+      actor: teacher,
+      tenant: @tenant
+    )
+
+    conn
+    |> visit("/teacher/quiz")
+    |> click_button(bank.name)
+    |> assert_has("p", "共 4 题")
+    |> click_button("#question-type-judge", "判断")
+    |> assert_has("p", "共 1 题")
+    |> assert_has("tr[id^='question-']", count: 1)
+    |> assert_has("td", "判断题：肝主疏泄")
+    |> click_button("#question-type-all", "全部")
+    |> assert_has("p", "共 4 题")
+    |> fill_in("搜索题干", with: "肝主疏泄")
+    |> assert_has("tr[id^='question-']", count: 1)
+    |> assert_has("td", "判断题：肝主疏泄")
+    |> assert_has("p", "共 1 题")
+  end
 end

@@ -37,6 +37,9 @@ defmodule TcmEdu.Workers.QuizGenerationWorker do
   alias TcmEdu.Notification.Notification
   alias TcmEdu.Quiz.{Question, QuizJob}
 
+  # 给 AI 生成的题目打标，教师端据此显示「AI 生成」标签并可用于筛选。
+  @ai_tag "AI生成"
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"quiz_job_id" => quiz_job_id} = args}) do
     tenant = args["tenant"] || "tenant_default"
@@ -114,7 +117,12 @@ defmodule TcmEdu.Workers.QuizGenerationWorker do
   end
 
   defp create_question(%QuizJob{} = job, attrs, actor, tenant) do
-    params = Map.put(attrs, :bank_id, job.bank_id)
+    params =
+      attrs
+      |> Map.put(:bank_id, job.bank_id)
+      |> Map.update(:tags, [@ai_tag], fn tags ->
+        [@ai_tag | List.wrap(tags)] |> Enum.uniq()
+      end)
 
     if actor do
       Question.create_question(params, actor: actor, tenant: tenant)

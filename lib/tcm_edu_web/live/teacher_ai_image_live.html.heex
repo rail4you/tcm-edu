@@ -5,9 +5,9 @@
     page_title="AI 配图"
     page_subtitle="生成经络腧穴、中药、示意图等教学配图，自动归档"
   >
-    <div class="grid items-start gap-6 xl:grid-cols-5">
-      <div class="card border border-base-300 bg-base-100 xl:col-span-2">
-        <div class="card-body gap-3 p-4 sm:p-6">
+    <div class="grid gap-6 xl:h-[calc(100dvh-244px)] xl:min-h-[32rem] xl:grid-cols-5">
+      <div class="card border border-base-300 bg-base-100 xl:col-span-2 xl:min-h-0">
+        <div class="card-body flex min-h-0 flex-col gap-3 p-4 sm:p-6 [&>p]:!grow-0">
           <p class="font-medium">作画需求</p>
           <.form
           for={@form}
@@ -42,19 +42,49 @@
         </div>
       </div>
 
-      <div class="card border border-base-300 bg-base-100 xl:col-span-3">
-        <div class="card-body gap-3 p-4 sm:p-6">
-          <p class="font-medium">生成结果</p>
-          <div :if={@generating} class="flex flex-col items-center gap-3 py-10">
-            <span class="loading loading-spinner loading-lg text-primary" />
-            <p class="text-sm text-base-content/60">正在作画并归档，请稍候…</p>
+      <div class="card border border-base-300 bg-base-100 xl:col-span-3 xl:min-h-0">
+        <div class="card-body flex min-h-0 flex-col gap-3 p-4 sm:p-6 [&>p]:!grow-0">
+          <div class="flex items-center justify-between gap-2">
+            <p class="font-medium">生成结果</p>
+            <span :if={@job} class={["badge badge-soft badge-sm", status_badge(@job.status)]}>
+              {status_text(@job.status)}
+            </span>
           </div>
-          <p :if={!@generating and @urls == []} class="py-8 text-center text-sm text-base-content/60">
+
+          <div
+            :if={@generating}
+            id="image-progress"
+            class="flex flex-col gap-3 py-6"
+          >
+            <span class="loading loading-spinner loading-lg text-primary" />
+            <div class="w-full max-w-sm">
+              <progress class="progress progress-primary w-full" value={progress_of(@job)} max="100"></progress>
+            </div>
+            <p class="text-sm text-base-content/60">正在作画并归档，请稍候…（{progress_of(@job)}%）</p>
+            <p class="text-xs text-base-content/50">可离开页面，完成后在「AI 任务管理」查看</p>
+          </div>
+
+          <div
+            :if={!@generating and @job && @job.status == :failed}
+            class="alert alert-soft alert-error py-3"
+          >
+            <.icon name="hero-exclamation-triangle" class="size-4" />
+            <p class="text-sm">生成失败：{@job.error_message || "请稍后重试"}</p>
+          </div>
+
+          <p
+            :if={!@generating and @urls == [] and (!@job || @job.status != :failed)}
+            class="py-8 text-center text-sm text-base-content/60"
+          >
             在左侧描述画面后点击生成
           </p>
-          <div :if={@urls != []} class="grid gap-4 sm:grid-cols-2">
+          <div
+            :if={@urls != []}
+            class="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto sm:grid-cols-2"
+          >
             <form
-              :for={url <- @urls}
+              :for={{url, idx} <- Enum.with_index(@urls)}
+              id={"set-cover-form-#{idx}"}
               phx-change="select-cover-course"
               class="flex flex-col gap-2"
             >

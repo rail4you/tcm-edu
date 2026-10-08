@@ -442,6 +442,108 @@ defmodule TcmEdu.Enrollment.EnrollmentTest do
     end
   end
 
+  # ─── 教师/管理员代学生选课 ───
+
+  describe "enroll_student (teacher manages roster)" do
+    setup do
+      teacher = create_user!("es-teacher", :teacher)
+      student = create_user!("es-student", :student)
+      admin = create_user!("es-admin", :tenant_admin)
+      {:ok, course} = create_published_course!(teacher, "ES #{uniq()}")
+      {:ok, teacher: teacher, student: student, admin: admin, course: course}
+    end
+
+    test "course owner can enroll a student", %{
+      teacher: teacher,
+      student: student,
+      course: course
+    } do
+      assert {:ok, %Enrollment{status: :active} = enrollment} =
+               enroll_student(teacher, course, student)
+
+      assert enrollment.user_id == student.id
+      assert enrollment.course_id == course.id
+    end
+
+    test "admin can enroll a student", %{admin: admin, student: student, course: course} do
+      assert {:ok, %Enrollment{status: :active}} = enroll_student(admin, course, student)
+    end
+
+    test "another teacher cannot enroll into a course they do not own", %{
+      student: student,
+      course: course
+    } do
+      other = create_user!("es-other", :teacher)
+
+      assert {:error, %Ash.Error.Invalid{}} = enroll_student(other, course, student)
+    end
+
+    test "cannot enroll a non-student user", %{teacher: teacher, admin: admin, course: course} do
+      assert {:error, %Ash.Error.Invalid{}} = enroll_student(teacher, course, admin)
+    end
+
+    test "re-adding a cancelled student reactivates the same enrollment", %{
+      teacher: teacher,
+      student: student,
+      course: course
+    } do
+      {:ok, enrollment} = enroll_student(teacher, course, student)
+
+      {:ok, cancelled} =
+        enrollment
+        |> Ash.Changeset.for_update(:cancel, %{})
+        |> Ash.update(actor: student, tenant: @tenant)
+
+      assert cancelled.status == :cancelled
+
+      assert {:ok, reactivated} = enroll_student(teacher, course, student)
+      assert reactivated.id == enrollment.id
+      assert reactivated.status == :active
+    end
+
+    test "course teacher can remove a student via cancel", %{
+      teacher: teacher,
+      student: student,
+      course: course
+    } do
+      {:ok, enrollment} = enroll_student(teacher, course, student)
+
+      assert {:ok, %Enrollment{status: :cancelled}} =
+               enrollment
+               |> Ash.Changeset.for_update(:cancel, %{})
+               |> Ash.update(actor: teacher, tenant: @tenant)
+    end
+
+    test "removing reactivates availability and drops student_count", %{
+      teacher: teacher,
+      student: student,
+      course: course
+    } do
+      {:ok, enrollment} = enroll_student(teacher, course, student)
+
+      assert {:ok, loaded} =
+               Course
+               |> Ash.Query.filter(id == ^course.id)
+               |> Ash.Query.load(:student_count)
+               |> Ash.read_one(actor: nil, tenant: @tenant)
+
+      assert loaded.student_count == 1
+
+      {:ok, _} =
+        enrollment
+        |> Ash.Changeset.for_update(:cancel, %{})
+        |> Ash.update(actor: teacher, tenant: @tenant)
+
+      assert {:ok, loaded} =
+               Course
+               |> Ash.Query.filter(id == ^course.id)
+               |> Ash.Query.load(:student_count)
+               |> Ash.read_one(actor: nil, tenant: @tenant)
+
+      assert loaded.student_count == 0
+    end
+  end
+
   # ─── helpers ───
 
   defp uniq, do: System.unique_integer([:positive])
@@ -506,6 +608,17 @@ defmodule TcmEdu.Enrollment.EnrollmentTest do
     # 且 set_attribute(actor(:id)) 会取到 nil。
     Enrollment
     |> Ash.Changeset.for_action(:enroll, %{course_id: course.id}, actor: student, tenant: @tenant)
+    |> Ash.create()
+  end
+
+  defp enroll_student(actor, course, student) do
+    Enrollment
+    |> Ash.Changeset.for_action(
+      :enroll_student,
+      %{course_id: course.id, user_id: student.id},
+      actor: actor,
+      tenant: @tenant
+    )
     |> Ash.create()
   end
 end

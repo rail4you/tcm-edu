@@ -1,33 +1,44 @@
 defmodule TcmEduWeb.TeacherAILessonLive do
   @moduledoc """
-  AI lesson planning at `/teacher/ai/lesson-plan`.
+  AI 备课 at `/teacher/ai/lesson-plan`.
 
-  The teacher describes a topic; generation runs in a background Task
-  and streams back into the page. The finished plan can be saved as a
-  draft course in one click.
+  教师填写主题后，LiveView 只做两件事：
+
+    1. 创建 `TcmEdu.AI.GenerationJob`（`kind: :lesson_plan`，状态 `:pending`）；
+    2. 向 Oban 插入 `TcmEdu.Workers.AiGenerationWorker` 后立即返回。
+
+  真正的生成发生在 Oban worker 里，与 LiveView 进程无关——提交后可以
+  离开页面；结果落库后再次进入页面即可看到进度/教案。Worker 每次状态
+  变迁向 `ai_jobs:<tenant>` 广播，本页订阅后刷新进度并展示结果。
   """
 
   use TcmEduWeb, :live_view
 
   import TcmEduWeb.TeacherComponents, only: [teacher_shell: 1]
 
-  alias TcmEdu.AI.LessonPlan
+  require Ash.Query
+
+  alias TcmEdu.AI.GenerationJob
   alias TcmEdu.Courses.Course
+  alias TcmEdu.Workers.AiGenerationWorker
 
   on_mount {TcmEduWeb.TeacherAuth, :ensure_teacher}
 
   @impl true
   def mount(_params, _session, socket) do
+    teacher = socket.assigns.current_teacher
+
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(TcmEdu.PubSub, AiGenerationWorker.topic(teacher.tenant))
+    end
+
     {:ok,
      socket
      |> assign(:page_title, "AI 备课")
      |> assign(:page_subtitle, "输入主题，AI 生成结构化教案，可一键存为课程草稿")
      |> assign(:form, plan_form(%{}))
-     |> assign(:generating, false)
-     |> assign(:plan, nil)
      |> assign(:show_form, true)
-     |> assign(:plan_topic, nil)
-     |> assign(:run_ref, nil)}
+     |> load_latest()}
   end
 
   @impl true
@@ -43,41 +54,32 @@ defmodule TcmEduWeb.TeacherAILessonLive do
     {:noreply, assign(socket, :show_form, false)}
   end
 
+  def handle_event("open-detail", _params, socket) do
+    {:noreply, assign(socket, :detail, socket.assigns.plan_doc)}
+  end
+
+  def handle_event("close-detail", _params, socket) do
+    {:noreply, assign(socket, :detail, nil)}
+  end
+
   def handle_event("generate", %{"plan" => params}, socket) do
     changeset = plan_changeset(params)
 
-    if changeset.valid? and not socket.assigns.generating do
-      lv = self()
-      ref = make_ref()
-      topic = get_field(changeset, :topic) |> String.trim()
+    cond do
+      not changeset.valid? ->
+        {:noreply, assign(socket, :form, Phoenix.Component.to_form(changeset, as: "plan"))}
 
-      opts = [
-        topic: topic,
-        subject: get_field(changeset, :subject) |> empty_to_nil() || "中医",
-        level: get_field(changeset, :level) |> to_string(),
-        audience: get_field(changeset, :audience) |> empty_to_nil()
-      ]
+      socket.assigns.generating ->
+        {:noreply, socket}
 
-      Task.start(fn ->
-        result = LessonPlan.generate(opts)
-        if Process.alive?(lv), do: send(lv, {:plan_done, ref, result})
-      end)
-
-      {:noreply,
-       socket
-       |> assign(:generating, true)
-       |> assign(:show_form, false)
-       |> assign(:plan, nil)
-       |> assign(:plan_topic, topic)
-       |> assign(:run_ref, ref)}
-    else
-      {:noreply, assign(socket, :form, Phoenix.Component.to_form(changeset, as: "plan"))}
+      true ->
+        {:noreply, submit_job(socket, changeset)}
     end
   end
 
   def handle_event("save-draft", _params, socket) do
     teacher = socket.assigns.current_teacher
-    topic = socket.assigns.plan_topic || "AI 教案"
+    topic = (socket.assigns.job && socket.assigns.job.title) || "AI 教案"
 
     attrs = %{
       title: String.slice(topic, 0, 100),
@@ -101,61 +103,198 @@ defmodule TcmEduWeb.TeacherAILessonLive do
   end
 
   @impl true
-  def handle_info({:plan_done, ref, result}, socket) do
-    if ref == socket.assigns.run_ref do
-      case result do
-        {:ok, plan} ->
-          {:noreply,
-           socket
-           |> assign(:generating, false)
-           |> assign(:plan, plan)
-           |> assign(:run_ref, nil)
-           |> put_flash(:info, "教案已生成")}
+  def handle_info({:ai_job_event, _type, %{kind: :lesson_plan} = payload}, socket) do
+    teacher = socket.assigns.current_teacher
 
-        {:error, reason} ->
-          {:noreply,
-           socket
-           |> assign(:generating, false)
-           |> assign(:run_ref, nil)
-           |> put_flash(:error, "生成失败：#{format_reason(reason)}")}
+    if payload.requested_by_id == teacher.id do
+      socket = load_latest(socket)
+
+      case payload.status do
+        :completed -> {:noreply, put_flash(socket, :info, "教案已生成")}
+        :failed -> {:noreply, put_flash(socket, :error, "生成失败：#{payload.error_message}")}
+        _ -> {:noreply, socket}
       end
     else
       {:noreply, socket}
     end
   end
 
+  def handle_info({:ai_job_event, _type, _payload}, socket), do: {:noreply, socket}
+
+  # ── submit ─────────────────────────────────────────────────
+
+  defp submit_job(socket, changeset) do
+    teacher = socket.assigns.current_teacher
+    get = &Ecto.Changeset.get_field(changeset, &1)
+    topic = get.(:topic) |> String.trim()
+
+    params = %{
+      "subject" => empty_to_nil(get.(:subject)) || "中医",
+      "level" => get.(:level) |> to_string(),
+      "audience" => empty_to_nil(get.(:audience))
+    }
+
+    with {:ok, job} <-
+           GenerationJob.request_generation_job(
+             %{
+               kind: :lesson_plan,
+               title: topic,
+               params: params,
+               requested_by_id: teacher.id,
+               requested_by_email: teacher.email
+             },
+             actor: teacher.actor,
+             tenant: teacher.tenant
+           ),
+         {:ok, _oban_job} <- enqueue(job, teacher) do
+      socket
+      |> assign(:show_form, false)
+      |> assign(:form, plan_form(%{}))
+      |> assign(:job, %{job | status: :pending, progress: 0})
+      |> assign(:generating, true)
+      |> assign(:plan, nil)
+      |> assign(:plan_doc, empty_doc())
+      |> assign(:detail, nil)
+      |> put_flash(:info, "已提交后台生成《#{topic}》，可离开页面，完成后有提示")
+    else
+      {:error, error} ->
+        put_flash(socket, :error, "提交失败：#{ash_message(error)}")
+    end
+  end
+
+  defp enqueue(%GenerationJob{} = job, teacher) do
+    args = %{"tenant" => teacher.tenant, "generation_job_id" => job.id}
+
+    with {:ok, oban_job} <- AiGenerationWorker.new(args) |> Oban.insert(),
+         {:ok, _} <- maybe_record_oban_id(job, oban_job, teacher) do
+      {:ok, oban_job}
+    end
+  end
+
+  defp maybe_record_oban_id(_job, %{id: nil}, _teacher), do: {:ok, :skipped}
+
+  defp maybe_record_oban_id(job, %{id: oban_id}, teacher) do
+    job
+    |> Ash.Changeset.for_update(:set_oban_job, %{oban_job_id: oban_id},
+      actor: teacher.actor,
+      tenant: teacher.tenant
+    )
+    |> Ash.update()
+  end
+
+  # ── loading ────────────────────────────────────────────────
+
+  defp load_latest(socket) do
+    teacher = socket.assigns.current_teacher
+
+    job =
+      try do
+        GenerationJob
+        |> Ash.Query.for_read(:latest_mine, %{requested_by_id: teacher.id, kind: :lesson_plan},
+          actor: teacher.actor,
+          tenant: teacher.tenant
+        )
+        |> Ash.read_one!()
+      rescue
+        _ -> nil
+      end
+
+    apply_job(socket, job)
+  end
+
+  defp apply_job(socket, nil) do
+    socket
+    |> assign(:job, nil)
+    |> assign(:generating, false)
+    |> assign(:plan, nil)
+    |> assign(:plan_topic, nil)
+    |> assign(:plan_doc, empty_doc())
+    |> assign(:detail, nil)
+    |> assign(:show_form, true)
+  end
+
+  defp apply_job(socket, %GenerationJob{} = job) do
+    plan = if job.status == :completed, do: (job.result || %{})["plan"], else: nil
+
+    socket
+    |> assign(:job, job)
+    |> assign(:generating, job.status in [:pending, :running])
+    |> assign(:plan, plan)
+    |> assign(:plan_topic, job.title)
+    |> assign(:plan_doc, plan_doc(plan))
+    |> assign(:detail, nil)
+    |> assign(:show_form, false)
+  end
+
+  # ── display helpers ────────────────────────────────────────
+
+  defp status_text(nil), do: "排队中"
+  defp status_text(:pending), do: "排队中"
+  defp status_text(:running), do: "生成中"
+  defp status_text(:completed), do: "已完成"
+  defp status_text(:failed), do: "失败"
+  defp status_text(_), do: "未知"
+
+  defp status_badge(:pending), do: "badge-info"
+  defp status_badge(:running), do: "badge-warning"
+  defp status_badge(:completed), do: "badge-success"
+  defp status_badge(:failed), do: "badge-error"
+  defp status_badge(_), do: "badge-ghost"
+
+  defp progress_of(nil), do: 0
+  defp progress_of(job), do: job.progress || 0
+
   defp level_options, do: [{"本科", "本科"}, {"规培", "规培"}, {"继续教育", "继续教育"}]
 
-  @plan_section_titles ["教学目标", "重点难点", "教学过程", "板书设计", "课后作业", "建议课时"]
+  # ── markdown 教案渲染 + 标题导航 ─────────────────────────────
 
-  defp plan_rows(nil), do: []
+  @heading_tags ~w(h1 h2 h3 h4 h5 h6)
 
-  defp plan_rows(plan) when is_binary(plan) do
-    pattern = Enum.map_join(@plan_section_titles, "|", &Regex.escape/1)
+  defp empty_doc, do: %{html: "", toc: []}
 
-    case Regex.split(~r/(?=#{pattern})/u, plan, trim: true) do
-      [_single] ->
-        [%{module: "教案全文", content: String.trim(plan)}]
+  # 把 markdown 教案转成带 id 锚点的 HTML，并按标题层级生成目录（TOC）。
+  defp plan_doc(plan) when is_binary(plan) and plan != "" do
+    nodes = plan |> markdown_to_html() |> Floki.parse_fragment!()
+    {nodes, {toc, _seen}} = Floki.traverse_and_update(nodes, {[], %{}}, &heading_entry/2)
 
-      parts ->
-        parts
-        |> Enum.map(&String.trim/1)
-        |> Enum.reject(&(&1 == ""))
-        |> Enum.map(fn part ->
-          title =
-            Enum.find(@plan_section_titles, "教案内容", &String.contains?(part, &1))
+    %{html: Floki.raw_html(nodes), toc: toc}
+  end
 
-          content =
-            part
-            |> String.replace(~r/^#+\s*/u, "")
-            |> String.replace(~r/^\d+[\.、．\s]*/u, "")
-            |> String.replace(title, "", global: false)
-            |> String.replace(~r/^[\s:：\-*]+/u, "")
-            |> String.trim()
+  defp plan_doc(_), do: empty_doc()
 
-          %{module: title, content: if(content == "", do: part, else: content)}
-        end)
+  defp markdown_to_html(text) do
+    case Earmark.as_html(text) do
+      {:ok, html, _} -> html
+      {:error, html, _} -> html
     end
+  end
+
+  defp heading_entry({tag, attrs, children}, {toc, seen})
+       when tag in @heading_tags do
+    text = children |> Floki.text() |> String.trim()
+    {id, seen} = unique_heading_id(slugify(text), seen)
+    level = tag |> String.trim_leading("h") |> String.to_integer()
+    entry = %{level: level, text: text, id: id}
+
+    {{tag, [{"id", id} | attrs], children}, {toc ++ [entry], seen}}
+  end
+
+  defp heading_entry(node, acc), do: {node, acc}
+
+  defp unique_heading_id("", seen), do: unique_heading_id("section", seen)
+
+  defp unique_heading_id(base, seen) do
+    case Map.get(seen, base) do
+      nil -> {base, Map.put(seen, base, 1)}
+      count -> {"#{base}-#{count + 1}", Map.put(seen, base, count + 1)}
+    end
+  end
+
+  defp slugify(text) do
+    text
+    |> String.downcase()
+    |> String.replace(~r/[^\p{L}\p{N}]+/u, "-")
+    |> String.trim("-")
   end
 
   defp audience_options, do: [{"大一", "大一"}, {"大二", "大二"}, {"大三", "大三"}, {"大四", "大四"}]
@@ -173,19 +312,13 @@ defmodule TcmEduWeb.TeacherAILessonLive do
     |> Ecto.Changeset.validate_length(:topic, max: 100)
   end
 
-  defp get_field(changeset, field), do: Ecto.Changeset.get_field(changeset, field)
-
   defp empty_to_nil(nil), do: nil
   defp empty_to_nil(""), do: nil
   defp empty_to_nil(value) when is_binary(value), do: String.trim(value)
 
-  defp format_reason(:missing_key), do: "未配置大模型 Key"
-  defp format_reason(reason) when is_binary(reason), do: reason
-  defp format_reason(reason), do: inspect(reason)
-
   defp ash_message(error) do
     Exception.message(error)
   rescue
-    _ -> "保存失败，请稍后重试"
+    _ -> "操作失败，请稍后重试"
   end
 end

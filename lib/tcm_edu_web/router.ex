@@ -232,6 +232,7 @@ defmodule TcmEduWeb.Router do
       live "/", TeacherDashboardLive, :index
       live "/courses", TeacherCoursesLive, :index
       live "/courses/new", TeacherCourseNewLive, :index
+      live "/courses/:id/students", TeacherCourseStudentsLive, :index
       live "/students", TeacherStudentsLive, :index
       live "/quiz", TeacherQuizLive, :index
       live "/exams", TeacherExamsLive, :index

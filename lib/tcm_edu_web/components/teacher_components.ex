@@ -180,10 +180,10 @@ defmodule TcmEduWeb.TeacherComponents do
                 </details>
               </li>
               <li>
-                <details open>
+                <details open={@current_page in [:ai_lesson, :ai_image, :ai_quiz, :ai_jobs]}>
                   <summary>
-                    <.icon name="hero-sparkles" class="size-4" />
-                    <span>智能医疗</span>
+                    <.icon name="hero-academic-cap" class="size-4" />
+                    <span>智慧课程</span>
                   </summary>
                   <ul>
                     <li>
@@ -215,6 +215,25 @@ defmodule TcmEduWeb.TeacherComponents do
                     </li>
                     <li>
                       <.link
+                        navigate="/teacher/ai/jobs"
+                        class={["w-full", @current_page == :ai_jobs && "menu-active"]}
+                      >
+                        <.icon name="hero-queue-list" class="size-4" />
+                        AI 任务管理
+                      </.link>
+                    </li>
+                  </ul>
+                </details>
+              </li>
+              <li>
+                <details open={@current_page in [:ai_chat, :ai_simulated_patient, :mdt]}>
+                  <summary>
+                    <.icon name="hero-heart" class="size-4" />
+                    <span>智慧医疗</span>
+                  </summary>
+                  <ul>
+                    <li>
+                      <.link
                         navigate="/teacher/ai/chat"
                         class={["w-full", @current_page == :ai_chat && "menu-active"]}
                       >
@@ -238,15 +257,6 @@ defmodule TcmEduWeb.TeacherComponents do
                       >
                         <.icon name="hero-chat-bubble-oval-left-ellipsis" class="size-4" />
                         MDT 会诊
-                      </.link>
-                    </li>
-                    <li>
-                      <.link
-                        navigate="/teacher/ai/jobs"
-                        class={["w-full", @current_page == :ai_jobs && "menu-active"]}
-                      >
-                        <.icon name="hero-queue-list" class="size-4" />
-                        AI 任务管理
                       </.link>
                     </li>
                   </ul>
@@ -390,6 +400,15 @@ defmodule TcmEduWeb.TeacherComponents do
                   data-tip="AI 模拟诊疗"
                 >
                   <.icon name="hero-user-group" class="size-4" />
+                </.link>
+              </li>
+              <li>
+                <.link
+                  navigate="/teacher/mdt"
+                  class={["tooltip tooltip-right w-full", @current_page == :mdt && "menu-active"]}
+                  data-tip="MDT 会诊"
+                >
+                  <.icon name="hero-chat-bubble-oval-left-ellipsis" class="size-4" />
                 </.link>
               </li>
               <li>

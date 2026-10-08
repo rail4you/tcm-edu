@@ -94,6 +94,7 @@ defmodule TcmEdu.Enrollment.Enrollment do
   code_interface do
     define(:my_enrollments, action: :my_enrollments)
     define(:enroll_in_course, action: :enroll)
+    define(:enroll_student_in_course, action: :enroll_student)
     define(:cancel_enrollment, action: :cancel)
     define(:complete_enrollment, action: :mark_completed)
   end
@@ -112,6 +113,20 @@ defmodule TcmEdu.Enrollment.Enrollment do
 
       change(set_attribute(:user_id, actor(:id)))
       change({TcmEdu.Enrollment.Changes.EnsureCoursePublished, []})
+    end
+
+    create :enroll_student do
+      description("教师/管理员为学生添加选课（已取消的选课会重新激活）")
+      accept([:course_id, :user_id])
+
+      # 重新添加已取消的学生时走 upsert，把 status 改回 active
+      upsert?(true)
+      upsert_identity(:unique_user_course)
+      upsert_fields([:status, :enrolled_at])
+
+      change(set_attribute(:status, :active))
+      change(set_attribute(:enrolled_at, &DateTime.utc_now/0))
+      change({TcmEdu.Enrollment.Changes.EnsureTeacherCanEnroll, []})
     end
 
     update :cancel do
@@ -154,8 +169,16 @@ defmodule TcmEdu.Enrollment.Enrollment do
       authorize_if(actor_attribute_equals(:role, :student))
     end
 
+    # 教师/管理员代学生选课：属主校验交给
+    # `TcmEdu.Enrollment.Changes.EnsureTeacherCanEnroll`（run 阶段可查库）
+    policy action(:enroll_student) do
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
+      authorize_if(actor_attribute_equals(:role, :teacher))
+    end
+
     policy action(:cancel) do
       authorize_if(actor_attribute_equals(:role, :tenant_admin))
+      authorize_if(expr(course.teacher_id == ^actor(:id)))
       authorize_if(relates_to_actor_via(:user))
     end
 

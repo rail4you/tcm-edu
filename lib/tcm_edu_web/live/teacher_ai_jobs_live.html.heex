@@ -42,20 +42,20 @@
             />
             <span class="text-sm">只看我的</span>
           </label>
-          <span class="badge badge-soft">{length(@jobs)} 个任务</span>
+          <span class="badge badge-soft">{length(@rows)} 个任务</span>
         </form>
 
-        <div :if={@jobs == []} class="rounded-box bg-base-200/30 px-4 py-10 text-center">
+        <div :if={@rows == []} class="rounded-box bg-base-200/30 px-4 py-10 text-center">
           <.icon name="hero-queue-list" class="size-8 text-base-content/40" />
           <p class="mt-2 text-sm text-base-content/60">暂无符合条件的任务</p>
         </div>
 
-        <div :if={@jobs != []} class="overflow-x-auto rounded-box border border-base-300">
+        <div :if={@rows != []} class="overflow-x-auto rounded-box border border-base-300">
           <table class="table table-zebra table-pin-rows table-sm">
             <thead>
               <tr>
+                <th>类型</th>
                 <th>主题</th>
-                <th>题库</th>
                 <th>参数</th>
                 <th>业务状态</th>
                 <th>Oban 状态</th>
@@ -66,58 +66,58 @@
               </tr>
             </thead>
             <tbody>
-              <tr :for={job <- @jobs} id={"quiz-job-#{job.id}"} class="hover:bg-base-200">
+              <tr :for={row <- @rows} id={"#{row.source}-job-#{row.id}"} class="hover:bg-base-200">
                 <td>
-                  <p class="max-w-48 truncate text-sm font-medium" title={job.topic}>{job.topic}</p>
-                  <p :if={job.status == :failed} class="max-w-48 truncate text-xs text-error" title={job.error_message}>
-                    {job.error_message}
+                  <span class="badge badge-soft badge-sm">{row.kind_label}</span>
+                </td>
+                <td>
+                  <p class="max-w-48 truncate text-sm font-medium" title={row.title}>{row.title}</p>
+                  <p :if={row.subtitle != ""} class="max-w-48 truncate text-xs text-base-content/60">
+                    {row.subtitle}
+                  </p>
+                  <p
+                    :if={row.status == :failed}
+                    class="max-w-48 truncate text-xs text-error"
+                    title={row.error_message}
+                  >
+                    {row.error_message}
                   </p>
                 </td>
-                <td class="text-sm">{Map.get(@bank_names, job.bank_id, "—")}</td>
-                <td class="text-xs text-base-content/60">
-                  {job.question_count} 题 · {Enum.map_join(
-                    job.question_types || [],
-                    "/",
-                    &type_label/1
-                  )} · 难度 {job.difficulty}
-                </td>
+                <td class="text-xs text-base-content/60">{row.params}</td>
                 <td>
-                  <span class={["badge badge-soft badge-sm", status_badge(job.status)]}>
-                    {status_text(job.status)}
+                  <span class={["badge badge-soft badge-sm", status_badge(row.status)]}>
+                    {status_text(row.status)}
                   </span>
                 </td>
                 <td class="text-xs text-base-content/60">
-                  <span :if={job.oban_job_id}>#{job.oban_job_id} · </span>{oban_state_text(
-                    job,
+                  <span :if={row.oban_job_id}>#{row.oban_job_id} · </span>{oban_state(
+                    row.oban_job_id,
                     @oban_states
                   )}
                 </td>
-                <td class="text-xs tabular-nums">
-                  <span :if={job.status == :completed}>{job.generated_count} 题已入库</span>
-                  <span :if={job.status != :completed}>—</span>
-                </td>
-                <td class="max-w-40 truncate text-xs" title={job.requested_by_email}>
-                  {job.requested_by_email || "—"}
+                <td class="text-xs tabular-nums">{row.result}</td>
+                <td class="max-w-40 truncate text-xs" title={row.requested_by_email}>
+                  {row.requested_by_email || "—"}
                 </td>
                 <td class="text-xs whitespace-nowrap text-base-content/60">
-                  {format_time(job.inserted_at)}
+                  {format_time(row.inserted_at)}
                 </td>
                 <td>
                   <div class="flex justify-end gap-1">
                     <button
-                      :if={job.status == :failed}
+                      :if={row.status == :failed}
                       class="btn btn-ghost btn-xs"
                       phx-click="retry"
-                      phx-value-id={job.id}
-                      id={"retry-job-#{job.id}"}
+                      phx-value-id={row.id}
+                      id={"retry-job-#{row.id}"}
                     >
                       重试
                     </button>
                     <button
                       class="btn btn-ghost btn-xs text-error"
                       phx-click="ask-delete"
-                      phx-value-id={job.id}
-                      id={"delete-job-#{job.id}"}
+                      phx-value-id={row.id}
+                      id={"delete-job-#{row.id}"}
                     >
                       删除
                     </button>
@@ -136,10 +136,10 @@
     <div :if={@confirming} class="modal modal-open" role="dialog" aria-modal="true">
       <div class="modal-box">
         <p class="text-lg font-medium">删除这条任务记录？</p>
-        <p class="mt-2 line-clamp-3 text-sm text-base-content/60">{@confirming.topic}</p>
+        <p class="mt-2 line-clamp-3 text-sm text-base-content/60">{@confirming.title}</p>
         <div class="alert alert-soft alert-error mt-3">
           <.icon name="hero-exclamation-triangle" class="size-5" />
-          <p class="text-sm">仅删除任务记录，已生成的题目不受影响。</p>
+          <p class="text-sm">仅删除任务记录，已生成的内容不受影响。</p>
         </div>
         <div class="modal-action">
           <button type="button" class="btn btn-soft" phx-click="cancel-delete">取消</button>

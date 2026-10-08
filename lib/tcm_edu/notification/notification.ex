@@ -60,6 +60,7 @@ defmodule TcmEdu.Notification.Notification do
           :progress,
           :quiz_graded,
           :ai_lesson,
+          :ai_image,
           :quiz_generated,
           :simulated_patient_evaluated,
           :exam_generated,

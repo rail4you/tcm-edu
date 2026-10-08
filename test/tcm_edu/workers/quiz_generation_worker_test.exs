@@ -59,6 +59,7 @@ defmodule TcmEdu.Workers.QuizGenerationWorkerTest do
     assert length(questions) == 2
     assert Enum.map(questions, & &1.stem) |> Enum.sort() == ["JUDGE题干", "SINGLE题干"]
     assert Enum.all?(questions, &(&1.created_by_id == teacher.id))
+    assert Enum.all?(questions, &("AI生成" in &1.tags))
 
     assert [%Notification{type: :quiz_generated, recipient_id: recipient}] =
              Notification

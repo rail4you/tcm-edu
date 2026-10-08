@@ -40,6 +40,8 @@ defmodule TcmEduWeb.TeacherQuizLive do
      |> assign(:question_options, default_options())
      |> assign(:option_error, nil)
      |> assign(:question_page, 1)
+     |> assign(:question_type_filter, "all")
+     |> assign(:question_keyword, "")
      |> assign(:editing, nil)
      |> assign(:deleting, nil)
      |> assign(:import_modal, false)
@@ -58,6 +60,15 @@ defmodule TcmEduWeb.TeacherQuizLive do
      socket
      |> assign(selected_bank_id: id, question_page: 1, editing: nil)
      |> load_questions()}
+  end
+
+  def handle_event("filter-question-type", %{"type" => type}, socket)
+      when type in ["all", "single", "multi", "judge", "essay"] do
+    {:noreply, socket |> assign(question_type_filter: type, question_page: 1)}
+  end
+
+  def handle_event("search-questions", %{"keyword" => keyword}, socket) do
+    {:noreply, socket |> assign(question_keyword: String.trim(keyword), question_page: 1)}
   end
 
   def handle_event("open-bank", _params, socket) do
@@ -147,7 +158,7 @@ defmodule TcmEduWeb.TeacherQuizLive do
   end
 
   def handle_event("goto-page", %{"page" => page}, socket) do
-    total = total_pages(length(socket.assigns.questions))
+    total = total_pages(length(visible_questions(socket.assigns)))
 
     next =
       case Integer.parse(to_string(page)) do
@@ -484,6 +495,41 @@ defmodule TcmEduWeb.TeacherQuizLive do
 
   defp total_pages(0), do: 1
   defp total_pages(count), do: div(count + @per_page - 1, @per_page)
+
+  # 当前题库下经「题型 + 题干」筛选后的题目列表。
+  defp visible_questions(assigns) do
+    filtered_questions(
+      assigns.questions,
+      assigns.question_type_filter,
+      assigns.question_keyword
+    )
+  end
+
+  defp filtered_questions(questions, type_filter, keyword) do
+    questions |> filter_type(type_filter) |> filter_stem(keyword)
+  end
+
+  defp filter_type(questions, "all"), do: questions
+  defp filter_type(questions, type), do: Enum.filter(questions, &(to_string(&1.type) == type))
+
+  defp filter_stem(questions, ""), do: questions
+
+  defp filter_stem(questions, keyword) do
+    kw = String.downcase(keyword)
+    Enum.filter(questions, &String.contains?(String.downcase(&1.stem || ""), kw))
+  end
+
+  defp type_count(questions, "all"), do: length(questions)
+  defp type_count(questions, type), do: Enum.count(questions, &(to_string(&1.type) == type))
+
+  defp ai_generated?(%{tags: tags}), do: is_list(tags) and "AI生成" in tags
+  defp ai_generated?(_), do: false
+
+  defp type_filter_label("single"), do: "单选"
+  defp type_filter_label("multi"), do: "多选"
+  defp type_filter_label("judge"), do: "判断"
+  defp type_filter_label("essay"), do: "简答"
+  defp type_filter_label(_), do: "全部"
 
   defp paged_questions(questions, page) do
     Enum.slice(questions, (page - 1) * @per_page, @per_page)

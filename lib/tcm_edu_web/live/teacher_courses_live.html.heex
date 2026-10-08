@@ -113,6 +113,16 @@
                 <td class="text-right font-medium tabular-nums">{price_label(course.price_cents)}</td>
                 <td>
                   <div class="flex items-center justify-end gap-0.5 whitespace-nowrap">
+                    <.link
+                      navigate={"/teacher/courses/#{course.id}/students"}
+                      class="btn btn-ghost btn-sm btn-square tooltip tooltip-left"
+                      data-tip="选课管理"
+                      aria-label="选课管理"
+                      id={"manage-students-#{course.id}"}
+                    >
+                      <.icon name="hero-user-group" class="size-4" />
+                      <span class="sr-only">选课管理</span>
+                    </.link>
                     <button
                       class="btn btn-ghost btn-sm btn-square tooltip tooltip-left"
                       data-tip="编辑"
@@ -202,6 +212,16 @@
                 <span class="badge badge-soft badge-success badge-xs">{price_label(course.price_cents)}</span>
               </div>
               <div class="card-actions justify-end">
+                <.link
+                  navigate={"/teacher/courses/#{course.id}/students"}
+                  class="btn btn-ghost btn-sm btn-square tooltip"
+                  data-tip="选课管理"
+                  aria-label="选课管理"
+                  id={"manage-students-card-#{course.id}"}
+                >
+                  <.icon name="hero-user-group" class="size-4" />
+                  <span class="sr-only">选课管理</span>
+                </.link>
                 <button
                   class="btn btn-ghost btn-sm btn-square tooltip"
                   data-tip="编辑"

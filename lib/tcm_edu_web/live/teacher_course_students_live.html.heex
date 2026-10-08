@@ -1,0 +1,160 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.teacher_shell
+    current_teacher={@current_teacher}
+    current_page={:courses}
+    page_title="选课管理"
+    page_subtitle="为课程添加学生，学生在「我的学习」即可看到"
+  >
+    <:page_actions>
+      <.link navigate="/teacher/courses" class="btn btn-ghost btn-sm" id="back-to-courses">
+        <.icon name="hero-arrow-left" class="size-4" /> 返回课程
+      </.link>
+    </:page_actions>
+
+    <div class="flex flex-wrap items-center gap-3 rounded-box border border-base-300 bg-base-100 p-4">
+      <span class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-box bg-base-200">
+        <img
+          :if={@course.cover_image_url}
+          src={@course.cover_image_url}
+          alt=""
+          class="h-full w-full object-cover"
+        />
+        <span :if={!@course.cover_image_url} class="text-lg font-semibold text-primary">
+          {String.first(@course.title)}
+        </span>
+      </span>
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-lg font-semibold">{@course.title}</p>
+        <p class="truncate text-sm text-base-content/60">{@course.subtitle || "暂无简介"}</p>
+      </div>
+      <span class="badge badge-soft badge-primary gap-1">
+        <.icon name="hero-user-group" class="size-3.5" />
+        已选 {length(@roster)} 人
+      </span>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+      <%!-- 已选学生 --%>
+      <div class="flex flex-col gap-3 rounded-box border border-base-300 bg-base-100 p-4">
+        <div class="flex items-center justify-between">
+          <p class="font-medium">已选学生</p>
+          <span class="badge badge-soft badge-primary badge-sm">{length(@roster)}</span>
+        </div>
+
+        <div :if={@roster != []} class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th class="whitespace-nowrap">学生</th>
+                <th class="whitespace-nowrap">选课时间</th>
+                <th class="text-right whitespace-nowrap">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={enrollment <- @roster} id={"enrollment-#{enrollment.id}"}>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-neutral text-sm text-neutral-content">
+                      {student_initial(enrollment.user)}
+                    </span>
+                    <div class="min-w-0">
+                      <p class="max-w-56 truncate font-medium">{student_name(enrollment.user)}</p>
+                      <p class="max-w-56 truncate text-xs text-base-content/60">
+                        {enrollment.user && enrollment.user.email}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+                <td class="whitespace-nowrap text-sm text-base-content/60">
+                  {format_date(enrollment.enrolled_at)}
+                </td>
+                <td class="text-right">
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-xs text-error"
+                    phx-click="remove-student"
+                    phx-value-id={enrollment.id}
+                    id={"remove-student-#{enrollment.id}"}
+                    data-confirm="确定将该学生从此课程移除吗？"
+                  >
+                    <.icon name="hero-user-minus" class="size-4" /> 移除
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div
+          :if={@roster == []}
+          class="flex flex-col items-center gap-2 rounded-box bg-base-200/30 px-4 py-10 text-center"
+        >
+          <span class="flex size-10 items-center justify-center rounded-full bg-base-200 text-base-content/50">
+            <.icon name="hero-user-group" class="size-5" />
+          </span>
+          <p class="text-sm text-base-content/60">还没有学生选这门课</p>
+          <p class="text-xs text-base-content/50">从右侧「添加学生」把学生加入课程</p>
+        </div>
+      </div>
+
+      <%!-- 添加学生 --%>
+      <div class="flex flex-col gap-3 rounded-box border border-base-300 bg-base-100 p-4">
+        <p class="font-medium">添加学生</p>
+
+        <form id="student-search-form" phx-change="search" phx-submit="search">
+          <label class="input input-sm flex items-center gap-2" for="student-search-input">
+            <.icon name="hero-magnifying-glass" class="size-4 text-base-content/60" />
+            <input
+              id="student-search-input"
+              type="search"
+              name="keyword"
+              value={@keyword}
+              placeholder="搜索姓名或邮箱"
+              class="grow"
+              aria-label="搜索学生"
+            />
+          </label>
+        </form>
+
+        <% candidates = filtered(available_students(@students, @roster), @keyword) %>
+
+        <ul :if={candidates != []} class="flex max-h-96 flex-col gap-1 overflow-y-auto">
+          <li
+            :for={student <- candidates}
+            id={"candidate-#{student.id}"}
+            class="flex items-center gap-3 rounded-box bg-base-200/40 p-2"
+          >
+            <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-base-200 text-sm text-base-content/70">
+              {student_initial(student)}
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium">{student_name(student)}</p>
+              <p class="truncate text-xs text-base-content/60">{student.email}</p>
+            </div>
+            <button
+              type="button"
+              class="btn btn-soft btn-primary btn-xs"
+              phx-click="add-student"
+              phx-value-id={student.id}
+              id={"add-student-#{student.id}"}
+            >
+              <.icon name="hero-plus" class="size-3.5" /> 添加
+            </button>
+          </li>
+        </ul>
+
+        <div
+          :if={candidates == []}
+          class="flex flex-col items-center gap-2 rounded-box bg-base-200/30 px-4 py-8 text-center"
+        >
+          <.icon name="hero-check-circle" class="size-6 text-success/70" />
+          <p class="text-sm text-base-content/60">
+            {if @students == [] or available_students(@students, @roster) == [],
+              do: "所有学生都已加入该课程",
+              else: "没有匹配的学生"}
+          </p>
+        </div>
+      </div>
+    </div>
+  </.teacher_shell>
+</Layouts.app>
