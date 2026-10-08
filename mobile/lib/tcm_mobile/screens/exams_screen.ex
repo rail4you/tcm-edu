@@ -7,25 +7,24 @@ defmodule TcmMobile.Screens.ExamsScreen do
 
   @impl true
   def mount(_params, _session, socket) do
-    exams =
-      Enum.map(Api.list_exams(), fn exam ->
-        Map.merge(exam, %{attempt: Api.exam_attempt(exam.id)})
-      end)
-
-    {:ok,
-     socket
-     |> Mob.Socket.assign(:exams, exams)
-     |> Mob.Socket.assign(:records, Api.my_exam_records())}
+    {:ok, Mob.Socket.assign(socket, :records, Api.my_exam_records())}
   end
 
   @impl true
   def render(assigns) do
-    rows = Enum.map(assigns.exams, &exam_row/1)
+    # 作答页交卷后 pop 回本页不会重新 mount，所以考卷与作答状态每次渲染重取。
+    exams = load_exams()
+
+    rows = Enum.map(exams, &exam_row/1)
     record_rows = Enum.map(assigns.records, &record_row/1)
 
     hint_card =
       UI.card([
-        ~MOB(<Text text="完成阶段测验，检验阶段性学习成果；测验错题将自动收录到错题本。" text_size={:sm} text_color={:muted} />)
+        ~MOB(<Text
+  text="测验：选择题自动判分，填空、问答题只看参考答案，错题自动收录错题本；考试：全卷提交后由老师人工评阅。"
+  text_size={:sm}
+  text_color={:muted}
+/>)
       ])
 
     records_header =
@@ -78,12 +77,21 @@ defmodule TcmMobile.Screens.ExamsScreen do
   defp date_label(nil), do: nil
   defp date_label(iso) when is_binary(iso), do: String.slice(iso, 0, 10)
 
+  defp load_exams do
+    Enum.map(Api.list_exams(), fn exam ->
+      Map.merge(exam, %{attempt: Api.exam_attempt(exam.id)})
+    end)
+  end
+
   defp exam_row(exam) do
     status = exam_status(exam)
     tap = {self(), {:exam, exam.id}}
     tint = status_tint(status.color)
 
-    subtitle = "#{exam.duration_min} 分钟 · #{length(exam.questions)} 题 · 满分 #{exam.total_points}"
+    mode = if exam.mode == :exam, do: "考试", else: "测验"
+
+    subtitle =
+      "#{mode} · #{exam.duration_min} 分钟 · #{length(exam.questions)} 题 · 满分 #{exam.total_points}"
 
     trailing =
       ~MOB"""
@@ -123,13 +131,18 @@ defmodule TcmMobile.Screens.ExamsScreen do
 
   defp exam_status(exam) do
     attempt = exam.attempt
+    graded? = Map.get(attempt, :graded?)
+    score = Map.get(attempt, :score)
 
     cond do
-      attempt.submitted and attempt.score >= exam.pass_score ->
-        %{label: "已通过 · #{attempt.score} 分", color: :secondary}
+      attempt.submitted and graded? == false ->
+        %{label: "待评阅", color: :primary}
+
+      attempt.submitted and is_integer(score) and score >= exam.pass_score ->
+        %{label: "已通过 · #{score} 分", color: :secondary}
 
       attempt.submitted ->
-        %{label: "未通过 · #{attempt.score} 分", color: :error}
+        %{label: "未通过 · #{score} 分", color: :error}
 
       map_size(attempt.answers) > 0 ->
         %{label: "继续作答", color: :primary}

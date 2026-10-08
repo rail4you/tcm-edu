@@ -102,6 +102,8 @@ defmodule TcmMobile.Api do
   end
 
   def my_stats do
+    local = Store.my_stats()
+
     case jsonapi_get("/student/enrollments/overview", :overview) do
       {:ok, %{"enrolled_courses" => _} = ov} ->
         %{
@@ -109,11 +111,11 @@ defmodule TcmMobile.Api do
           lessons_done: ov["completed_lessons"] || 0,
           study_minutes: div(ov["study_seconds"] || 0, 60),
           streak: ov["streak_days"] || 0,
-          mistakes: ov["mistakes"] || 0
+          mistakes: local.mistakes
         }
 
       _ ->
-        Store.my_stats()
+        local
     end
   end
 
@@ -276,6 +278,7 @@ defmodule TcmMobile.Api do
   def list_exams, do: Catalog.exams()
   def get_exam(id), do: Catalog.exam(id)
   def exam_attempt(exam_id), do: Store.exam_attempt(exam_id)
+  def exam_result(exam_id), do: Store.exam_result(exam_id)
   def save_answer(exam_id, qid, index), do: Store.save_answer(exam_id, qid, index)
   def submit_exam(exam_id), do: Store.submit_exam(exam_id)
 

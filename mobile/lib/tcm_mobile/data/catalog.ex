@@ -484,31 +484,36 @@ defmodule TcmMobile.Data.Catalog do
 
   # ── 测验题库 ────────────────────────────────────────────────────────────────
 
+  # mode: :quiz 测验 —— 客观题当场自动判分，填空/问答只展示参考答案；
+  #       :exam 考试 —— 整卷提交后待人工评阅，成绩以阅卷结果为准。
   def exams do
     [
       %{
         id: "e1",
+        mode: :quiz,
         title: "中医基础·阶段性测验（一）",
         duration_min: 20,
         total_points: 100,
         pass_score: 60,
-        questions: Questions.pick(["q1", "q2", "q3", "q4", "q5"])
+        questions: Questions.pick(["q1", "q2", "q3", "q4", "q19", "q23"])
       },
       %{
         id: "e2",
+        mode: :quiz,
         title: "中药方剂综合测验",
         duration_min: 25,
         total_points: 100,
         pass_score: 60,
-        questions: Questions.pick(["q6", "q7", "q8", "q9", "q10"])
+        questions: Questions.pick(["q6", "q7", "q8", "q9", "q10", "q20", "q24"])
       },
       %{
         id: "e3",
-        title: "临床辨证·期末模拟卷",
+        mode: :exam,
+        title: "临床辨证·期末考试",
         duration_min: 30,
         total_points: 100,
         pass_score: 60,
-        questions: Questions.pick(["q11", "q12", "q13", "q14", "q15", "q16", "q17", "q18"])
+        questions: Questions.pick(["q11", "q12", "q13", "q14", "q21", "q22", "q25", "q26"])
       }
     ]
   end

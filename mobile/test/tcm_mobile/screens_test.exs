@@ -45,7 +45,13 @@ defmodule TcmMobile.ScreensTest do
 
   test "exams screen lists three exams" do
     view = mount_screen(Screens.ExamsScreen)
-    assert length(assigns(view).exams) == 3
+
+    assert text(view) =~ "中医基础·阶段性测验（一）"
+    assert text(view) =~ "中药方剂综合测验"
+    assert text(view) =~ "临床辨证·期末考试"
+    assert text(view) =~ "测验 ·"
+    assert text(view) =~ "考试 ·"
+    assert text(view) =~ "未开始"
     assert_renderable(view)
   end
 
@@ -62,6 +68,32 @@ defmodule TcmMobile.ScreensTest do
     view = render_info(view, {:tap, :submit_confirm})
     assert assigns(view).result.score == 100
     assert text(view) =~ "测验结果"
+    assert text(view) =~ "参考答案"
+  end
+
+  test "exam take screen refuses to submit while questions are unanswered" do
+    view = mount_screen(Screens.ExamTakeScreen, %{exam_id: "e1"})
+
+    [first | _] = assigns(view).exam.questions
+    view = render_info(view, {:tap, {:answer, first.id, first.answer}})
+
+    view = render_info(view, {:tap, :submit_confirm})
+
+    refute assigns(view).result
+    assert assigns(view).notice =~ "未作答"
+    assert text(view) =~ "未作答"
+  end
+
+  test "fill question renders a text input with its no-score hint" do
+    view = mount_screen(Screens.ExamTakeScreen, %{exam_id: "e1"})
+
+    exam = assigns(view).exam
+    fill_at = Enum.find_index(exam.questions, &(&1.type == :fill))
+
+    view =
+      Enum.reduce(0..(fill_at - 1)//1, view, fn _, acc -> render_info(acc, {:tap, :next}) end)
+
+    assert text(view) =~ "填空、问答题不计分"
   end
 
   test "chat screen sends a message and gets an AI reply" do

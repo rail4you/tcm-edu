@@ -40,16 +40,33 @@ defmodule TcmMobile.Data.CatalogTest do
     assert Enum.all?(quizzes, &(&1.answer < length(&1.options)))
   end
 
-  test "exams reference valid questions with 4 options" do
+  test "exams reference valid questions with typed answers" do
     for exam <- Catalog.exams() do
-      assert length(exam.questions) >= 5
+      assert Enum.count(exam.questions) >= 5
       assert exam.pass_score == 60
+      assert exam.mode in [:quiz, :exam]
 
       for q <- exam.questions do
-        assert length(q.options) == 4
-        assert q.answer in 0..3
+        case Questions.type(q) do
+          :single ->
+            assert match?([_, _, _, _], q.options)
+            assert q.answer in 0..3
+
+          type ->
+            assert type in [:fill, :essay]
+            assert q.options == []
+            assert is_binary(q.answer) and String.trim(q.answer) != ""
+        end
       end
     end
+  end
+
+  test "the question bank covers choice, fill and essay questions" do
+    types = Questions.all() |> Enum.map(&Questions.type/1) |> Enum.uniq()
+
+    assert :single in types
+    assert :fill in types
+    assert :essay in types
   end
 
   test "simulated patients define dialectic options and a correct answer" do

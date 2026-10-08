@@ -9,7 +9,7 @@ defmodule TcmMobile.Store do
 
   use GenServer
 
-  alias TcmMobile.Data.{Ai, Catalog}
+  alias TcmMobile.Data.{Ai, Catalog, Questions}
 
   @name __MODULE__
 
@@ -58,9 +58,10 @@ defmodule TcmMobile.Store do
   def send_mdt(room_id, text), do: call({:send_mdt, room_id, text})
 
   def exam_attempt(exam_id), do: call({:exam_attempt, exam_id})
+  def exam_result(exam_id), do: call({:exam_result, exam_id})
 
-  def save_answer(exam_id, question_id, index),
-    do: call({:save_answer, exam_id, question_id, index})
+  def save_answer(exam_id, question_id, value),
+    do: call({:save_answer, exam_id, question_id, value})
 
   def submit_exam(exam_id), do: call({:submit_exam, exam_id})
 
@@ -348,89 +349,52 @@ defmodule TcmMobile.Store do
     {:reply, :ok, %{state | mdt_messages: Map.put(state.mdt_messages, room_id, extra)}}
   end
 
-  # ── 测验 ────────────────────────────────────────────────────────────────────
+  # ── 测验 / 考试 ─────────────────────────────────────────────────────────────
+  #
+  # mode :quiz —— 单选当场判分，填空/问答只展示参考答案（不计入分数）；
+  # mode :exam —— 整卷交卷后待人工评阅，不产生自动成绩。
+  # 两种模式都要求所有题目已作答才允许交卷。
 
   def handle_call({:exam_attempt, exam_id}, _from, state) do
-    attempt =
-      Map.get(state.exam_attempts, exam_id, %{
-        answers: %{},
-        submitted: false,
-        score: nil,
-        pass?: nil,
-        submitted_at: nil
-      })
-
-    {:reply, attempt, state}
+    {:reply, attempt_of(state, exam_id), state}
   end
 
-  def handle_call({:save_answer, exam_id, question_id, index}, _from, state) do
-    attempt =
-      Map.get(state.exam_attempts, exam_id, %{
-        answers: %{},
-        submitted: false,
-        score: nil,
-        pass?: nil,
-        submitted_at: nil
-      })
+  def handle_call({:exam_result, exam_id}, _from, state) do
+    attempt = Map.get(state.exam_attempts, exam_id)
 
-    answers = Map.put(attempt.answers, question_id, index)
-    updated = %{attempt | answers: answers}
+    result =
+      if attempt && attempt.submitted do
+        result_for(Catalog.exam(exam_id), attempt)
+      end
+
+    {:reply, result, state}
+  end
+
+  def handle_call({:save_answer, exam_id, question_id, value}, _from, state) do
+    attempt = attempt_of(state, exam_id)
+    updated = %{attempt | answers: Map.put(attempt.answers, question_id, value)}
     {:reply, :ok, %{state | exam_attempts: Map.put(state.exam_attempts, exam_id, updated)}}
   end
 
   def handle_call({:submit_exam, exam_id}, _from, state) do
     exam = Catalog.exam(exam_id)
+    attempt = attempt_of(state, exam_id)
 
-    attempt =
-      Map.get(state.exam_attempts, exam_id, %{
-        answers: %{},
-        submitted: false,
-        score: nil,
-        pass?: nil,
-        submitted_at: nil
-      })
+    case unanswered(exam, attempt) do
+      [first | _] = missing ->
+        {:reply, {:error, {:unanswered, length(missing), first}}, state}
 
-    correct =
-      Enum.count(exam.questions, fn q -> Map.get(attempt.answers, q.id) == q.answer end)
+      [] ->
+        updated = grade(exam, attempt)
+        state = %{state | exam_attempts: Map.put(state.exam_attempts, exam_id, updated)}
 
-    score = round(correct / length(exam.questions) * 100)
-    pass? = score >= exam.pass_score
+        state =
+          if updated.graded?,
+            do: %{state | mistakes: collect_mistakes(exam, attempt, state.mistakes)},
+            else: state
 
-    updated = %{attempt | submitted: true, score: score, pass?: pass?, submitted_at: stamp()}
-    state = %{state | exam_attempts: Map.put(state.exam_attempts, exam_id, updated)}
-
-    # 错题自动入错题本
-    mistakes =
-      Enum.reduce(exam.questions, state.mistakes, fn q, acc ->
-        given = Map.get(attempt.answers, q.id)
-
-        if given != q.answer do
-          m = %{
-            id: System.unique_integer([:positive]),
-            question: q.text,
-            options: q.options,
-            my_answer: given,
-            correct_answer: q.answer,
-            explanation: q.explanation,
-            source: exam.title
-          }
-
-          if Enum.any?(acc, &(&1.question == q.text)), do: acc, else: acc ++ [m]
-        else
-          acc
-        end
-      end)
-
-    state = %{state | mistakes: mistakes}
-
-    {:reply,
-     %{
-       score: score,
-       pass?: pass?,
-       correct: correct,
-       total: length(exam.questions),
-       attempt: updated
-     }, state}
+        {:reply, result_for(exam, updated), state}
+    end
   end
 
   # ── 资料下载 ────────────────────────────────────────────────────────────────
@@ -451,6 +415,98 @@ defmodule TcmMobile.Store do
   end
 
   # ── Helpers ─────────────────────────────────────────────────────────────────
+
+  defp attempt_of(state, exam_id),
+    do:
+      Map.get(state.exam_attempts, exam_id, %{
+        answers: %{},
+        submitted: false,
+        score: nil,
+        pass?: nil,
+        graded?: nil,
+        correct: nil,
+        choice_total: nil,
+        submitted_at: nil
+      })
+
+  # 未作答题目的**绝对**下标（题号 - 1），过滤前先带上下标。
+  defp unanswered(exam, attempt) do
+    exam.questions
+    |> Enum.with_index()
+    |> Enum.reject(fn {question, _idx} -> answered?(question, attempt) end)
+    |> Enum.map(fn {_question, idx} -> idx end)
+  end
+
+  defp answered?(question, attempt),
+    do: Questions.answered?(question, Map.get(attempt.answers, question.id))
+
+  defp grade(exam, attempt) do
+    choices = Enum.filter(exam.questions, &(Questions.type(&1) == :single))
+    correct = Enum.count(choices, fn q -> Map.get(attempt.answers, q.id) == q.answer end)
+    choice_total = length(choices)
+
+    case exam.mode do
+      :exam ->
+        %{attempt | submitted: true, graded?: false, submitted_at: stamp()}
+
+      _ ->
+        score = if choice_total == 0, do: 0, else: round(correct / choice_total * 100)
+
+        %{
+          attempt
+          | submitted: true,
+            graded?: true,
+            score: score,
+            pass?: score >= exam.pass_score,
+            correct: correct,
+            choice_total: choice_total,
+            submitted_at: stamp()
+        }
+    end
+  end
+
+  defp result_for(exam, attempt) do
+    %{
+      mode: exam.mode,
+      graded?: attempt.graded? == true,
+      score: attempt.score,
+      pass?: attempt.pass?,
+      correct: attempt.correct,
+      choice_total: attempt.choice_total,
+      total: length(exam.questions),
+      attempt: attempt
+    }
+  end
+
+  # 错题自动入错题本 —— 只收测验里判错的单选题。
+  defp collect_mistakes(exam, attempt, mistakes) do
+    Enum.reduce(exam.questions, mistakes, fn question, acc ->
+      if wrong_choice?(question, attempt),
+        do: push_mistake(acc, mistake_of(question, exam, attempt)),
+        else: acc
+    end)
+  end
+
+  defp wrong_choice?(question, attempt) do
+    Questions.type(question) == :single and
+      Map.get(attempt.answers, question.id) != question.answer
+  end
+
+  defp push_mistake(acc, mistake) do
+    if Enum.any?(acc, &(&1.question == mistake.question)), do: acc, else: acc ++ [mistake]
+  end
+
+  defp mistake_of(question, exam, attempt) do
+    %{
+      id: System.unique_integer([:positive]),
+      question: question.text,
+      options: question.options,
+      my_answer: Map.get(attempt.answers, question.id),
+      correct_answer: question.answer,
+      explanation: question.explanation,
+      source: exam.title
+    }
+  end
 
   defp authenticate(email, password) do
     demo = Catalog.demo_student()

@@ -282,7 +282,7 @@ defmodule TcmMobile.ApiTest do
   # ─── 首页统计 ────────────────────────────────────────────────────
 
   describe "my_stats/0" do
-    test "maps the six overview counters" do
+    test "maps the five backend counters and counts mistakes locally" do
       Req.Test.stub(:tcm_api, fn conn ->
         assert conn.request_path == "/api/student/enrollments/overview"
 
@@ -301,8 +301,42 @@ defmodule TcmMobile.ApiTest do
                lessons_done: 4,
                study_minutes: 40,
                streak: 1,
-               mistakes: 2
+               mistakes: 0
              }
+    end
+
+    test "mistakes follows the local mistake book even when the backend disagrees" do
+      Req.Test.stub(:tcm_api, fn conn ->
+        Req.Test.json(conn, %{
+          "enrolled_courses" => 3,
+          "completed_lessons" => 4,
+          "study_seconds" => 2400,
+          "streak_days" => 1,
+          "mistakes" => 99,
+          "unread_notifications" => 0
+        })
+      end)
+
+      assert Api.my_stats().mistakes == 0
+
+      :sys.replace_state(TcmMobile.Store, fn s ->
+        %{
+          s
+          | mistakes: [
+              %{
+                id: 1,
+                question: "五行相生的顺序是？",
+                options: ["木→火→土→金→水"],
+                my_answer: 0,
+                correct_answer: 1,
+                explanation: "",
+                source: "中药方剂综合测验"
+              }
+            ]
+        }
+      end)
+
+      assert Api.my_stats().mistakes == 1
     end
   end
 

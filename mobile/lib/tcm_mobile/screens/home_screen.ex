@@ -31,7 +31,7 @@ defmodule TcmMobile.Screens.HomeScreen do
   def render(assigns) do
     student = assigns.student
     name = if student, do: student.name, else: "同学"
-    stats = assigns.stats
+    stats = Api.my_stats()
     entries = @entries
 
     course_taps = Map.new(assigns.popular, fn c -> {c.id, {self(), {:course, c.id}}} end)

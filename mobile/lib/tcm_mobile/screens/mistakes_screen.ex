@@ -6,20 +6,19 @@ defmodule TcmMobile.Screens.MistakesScreen do
   alias TcmMobile.{Api, UI}
 
   @impl true
-  def mount(_params, _session, socket) do
-    {:ok, Mob.Socket.assign(socket, :mistakes, Api.mistakes())}
-  end
+  def mount(_params, _session, socket), do: {:ok, socket}
 
   @impl true
-  def render(assigns) do
-    cards = Enum.map(assigns.mistakes, &mistake_card/1)
+  def render(_assigns) do
+    mistakes = Api.mistakes()
+    cards = Enum.map(mistakes, &mistake_card/1)
 
     ~MOB"""
     <Column fill_height={true} background={:background}>
       {UI.detail_header("错题本")}
       <Scroll weight={1} padding={:space_lg} fill_width={true}>
         <Column gap={:space_md} fill_width={true}>
-          {if @mistakes == [] do
+          {if mistakes == [] do
             UI.empty_state("star_filled", "太棒了，没有错题！")
           else
             cards
@@ -33,8 +32,8 @@ defmodule TcmMobile.Screens.MistakesScreen do
 
   defp mistake_card(m) do
     remove_tap = {self(), {:remove, m.id}}
-    my = if m.my_answer, do: Enum.at(m.options, m.my_answer), else: "未作答"
-    correct = Enum.at(m.options, m.correct_answer)
+    my = answer_text(m.my_answer, m.options)
+    correct = answer_text(m.correct_answer, m.options)
 
     UI.card(
       [
@@ -43,17 +42,34 @@ defmodule TcmMobile.Screens.MistakesScreen do
           props: %{gap: :space_sm, align: :center},
           children: [
             %{
-              type: :text,
-              props: %{text: m.source, text_size: :xs, text_color: :muted, weight: 1},
-              children: []
+              type: :box,
+              props: %{weight: 6, fill_width: false},
+              children: [
+                %{
+                  type: :text,
+                  props: %{
+                    text: m.source,
+                    text_size: :xs,
+                    text_color: :muted,
+                    max_lines: 1
+                  },
+                  children: []
+                }
+              ]
             },
             %{
               type: :box,
-              props: %{on_tap: remove_tap, padding: :space_xs, corner_radius: :radius_pill},
+              props: %{
+                weight: 1,
+                align: "trailing",
+                on_tap: remove_tap,
+                padding: :space_sm,
+                corner_radius: :radius_pill
+              },
               children: [
                 %{
                   type: :icon,
-                  props: %{name: "close", text_size: 16, text_color: :muted},
+                  props: %{name: "close", text_size: 18, text_color: :muted},
                   children: []
                 }
               ]
@@ -123,8 +139,12 @@ defmodule TcmMobile.Screens.MistakesScreen do
 
   def handle_info({:tap, {:remove, id}}, socket) do
     Api.clear_mistake(id)
-    {:noreply, Mob.Socket.assign(socket, :mistakes, Api.mistakes())}
+    {:noreply, socket}
   end
 
   def handle_info(_msg, socket), do: {:noreply, socket}
+
+  defp answer_text(nil, _options), do: "未作答"
+  defp answer_text(index, options) when is_integer(index), do: Enum.at(options, index) || "未作答"
+  defp answer_text(value, _options), do: to_string(value)
 end
