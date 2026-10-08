@@ -6,6 +6,9 @@
     page_subtitle="上传教学大纲、病例库、图片/视频资源，AI 问答依据本校资料作答"
   >
     <:page_actions>
+      <.link navigate="/teacher/ai/knowledge/qa" class="btn btn-ghost btn-sm" id="knowledge-qa-link">
+        <.icon name="hero-chat-bubble-left-right" class="size-4" /> 知识库问答
+      </.link>
       <button class="btn btn-primary btn-sm" phx-click="open-upload" type="button" id="open-upload-btn">
         <.icon name="hero-arrow-up-tray" class="size-4" /> 上传资源
       </button>
@@ -280,7 +283,7 @@
   </div>
 
   <div :if={@previewing} class="modal modal-open" role="dialog" aria-modal="true">
-    <div class="modal-box max-w-2xl">
+    <div class="modal-box max-w-3xl">
       <div class="flex items-center justify-between">
         <p class="font-medium truncate">{@previewing.source_name}</p>
         <button class="btn btn-circle btn-ghost btn-sm" phx-click="close-preview" aria-label="关闭">
@@ -301,7 +304,7 @@
       />
       <pre
         :if={@previewing.kind == :text and @previewing.text}
-        class="mt-4 max-h-96 overflow-y-auto whitespace-pre-wrap rounded-box bg-base-200/50 p-4 text-sm"
+        class="mt-4 max-h-[70vh] overflow-y-auto whitespace-pre-wrap rounded-box bg-base-200/50 p-4 text-sm"
       >{@previewing.text}</pre>
       <p :if={@previewing.kind == :text and is_nil(@previewing.text)} class="mt-4 text-sm text-base-content/60">
         该资源没有可预览的文本内容

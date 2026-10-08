@@ -206,6 +206,26 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLiveTest do
     assert Enum.all?(docs, &(&1.title == "桂枝汤病例库新标题"))
   end
 
+  test "preview shows the full document reconstructed from all chunks in order", %{
+    conn: conn,
+    teacher: teacher
+  } do
+    for content <- ["第一段内容：阴阳学说", "第二段内容：五行学说"] do
+      {:ok, _} =
+        TenantDoc.create_tenant_doc(
+          %{title: "中医基础指南", source_name: "guide.docx", content: content, doc_type: :handbook},
+          actor: teacher,
+          tenant: @tenant
+        )
+    end
+
+    conn
+    |> visit("/teacher/ai/knowledge")
+    |> click_button("#preview-guide\\.docx", "预览")
+    |> assert_has("pre", "第一段内容：阴阳学说", exact: false)
+    |> assert_has("pre", "第二段内容：五行学说", exact: false)
+  end
+
   defp fixture_xlsx do
     sheet = %Sheet{
       name: "病例库",

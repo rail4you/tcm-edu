@@ -17,6 +17,9 @@ defmodule TcmEduWeb.AdminKnowledgeLive do
 
   on_mount {TcmEduWeb.AdminAuth, :ensure_admin}
 
+  # 预览最多展示的字符数（文档分片按顺序拼回后）
+  @preview_chars 20_000
+
   @impl true
   def mount(_params, _session, socket) do
     admin = socket.assigns.current_admin
@@ -79,6 +82,8 @@ defmodule TcmEduWeb.AdminKnowledgeLive do
     docs
     |> Enum.group_by(& &1.source_name)
     |> Enum.map(fn {name, group} ->
+      # load_docs 按 inserted_at desc 排序，这里恢复为文档原始顺序
+      group = Enum.sort_by(group, & &1.inserted_at)
       first = hd(group)
 
       counts =
@@ -98,10 +103,18 @@ defmodule TcmEduWeb.AdminKnowledgeLive do
          doc_type: first.doc_type,
          asset_url: first.asset_url,
          thumbnail_url: first.thumbnail_url,
-         content: first.content
+         content: join_chunks(group)
        }}
     end)
     |> Enum.sort_by(fn {name, _} -> name end)
+  end
+
+  # 把分片按顺序拼回完整文本（供预览）
+  defp join_chunks(group) do
+    group
+    |> Enum.map(& &1.content)
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.join("\n")
   end
 
   defp summary(grouped) do
@@ -128,13 +141,23 @@ defmodule TcmEduWeb.AdminKnowledgeLive do
         %{source_name: current.title, kind: :video, url: current.asset_url, text: nil}
 
       _ ->
-        text =
-          current.content
-          |> then(fn c ->
-            if String.length(c) > 600, do: String.slice(c, 0, 600) <> "…", else: c
-          end)
+        %{
+          source_name: current.title,
+          kind: :text,
+          url: nil,
+          text: truncate_preview(current.content)
+        }
+    end
+  end
 
-        %{source_name: current.title, kind: :text, url: nil, text: text}
+  defp truncate_preview(nil), do: nil
+  defp truncate_preview(""), do: nil
+
+  defp truncate_preview(text) when is_binary(text) do
+    if String.length(text) > @preview_chars do
+      String.slice(text, 0, @preview_chars) <> "\n\n…（内容较长，仅显示前 #{@preview_chars} 字）"
+    else
+      text
     end
   end
 

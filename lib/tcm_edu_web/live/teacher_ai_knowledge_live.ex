@@ -21,6 +21,9 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLive do
   @accepted ~w(.docx .xlsx .pptx .pdf .doc .xls .ppt .odt .ods .odp .txt .md .csv
                .png .jpg .jpeg .gif .webp .bmp .svg .mp4 .mov .webm .avi)
 
+  # 预览最多展示的字符数（文档分片按顺序拼回后）
+  @preview_chars 20_000
+
   @impl true
   def mount(_params, _session, socket) do
     teacher = socket.assigns.current_teacher
@@ -274,11 +277,13 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLive do
     }
   end
 
-  # 按 source_name 分组，携带该源第一个片段的元信息
+  # 按 source_name 分组，把同一源文件的所有分片按插入顺序拼回完整文本
   defp group_by_source(docs) do
     docs
     |> Enum.group_by(& &1.source_name)
     |> Enum.map(fn {name, group} ->
+      # list_docs 按 inserted_at desc 排序，这里恢复为文档原始顺序
+      group = Enum.sort_by(group, & &1.inserted_at)
       first = hd(group)
 
       status_counts =
@@ -298,13 +303,21 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLive do
          doc_type: first.doc_type,
          asset_url: first.asset_url,
          thumbnail_url: first.thumbnail_url,
-         content: first.content
+         content: join_chunks(group)
        }}
     end)
     |> Enum.sort_by(fn {name, _} -> name end)
   end
 
-  # 预览负载：文本 → 提取前段；图片 → 原图；视频 → 播放器
+  # 把分片按顺序拼回完整文本（供预览）
+  defp join_chunks(group) do
+    group
+    |> Enum.map(& &1.content)
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.join("\n")
+  end
+
+  # 预览负载：文本 → 完整内容；图片 → 原图；视频 → 播放器
   defp preview_payload(current) do
     case current.media_kind do
       :image ->
@@ -314,13 +327,23 @@ defmodule TcmEduWeb.TeacherAIKnowledgeLive do
         %{source_name: current.title, kind: :video, url: current.asset_url, text: nil}
 
       _ ->
-        text =
-          current.content
-          |> then(fn c ->
-            if String.length(c) > 600, do: String.slice(c, 0, 600) <> "…", else: c
-          end)
+        %{
+          source_name: current.title,
+          kind: :text,
+          url: nil,
+          text: truncate_preview(current.content)
+        }
+    end
+  end
 
-        %{source_name: current.title, kind: :text, url: nil, text: text}
+  defp truncate_preview(nil), do: nil
+  defp truncate_preview(""), do: nil
+
+  defp truncate_preview(text) when is_binary(text) do
+    if String.length(text) > @preview_chars do
+      String.slice(text, 0, @preview_chars) <> "\n\n…（内容较长，仅显示前 #{@preview_chars} 字）"
+    else
+      text
     end
   end
 

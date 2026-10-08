@@ -1,0 +1,238 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.teacher_shell
+    current_teacher={@current_teacher}
+    current_page={:ai_knowledge_qa}
+    page_title="知识库问答"
+    page_subtitle="基于本校知识库的 RAG 问答，回答会附带引用的资料"
+  >
+    <:page_actions>
+      <.link navigate="/teacher/ai/knowledge" class="btn btn-ghost btn-sm" id="manage-docs-link">
+        <.icon name="hero-bookmark" class="size-4" /> 管理资料
+      </.link>
+      <button
+        class="btn btn-ghost btn-sm"
+        phx-click="refresh"
+        type="button"
+        id="refresh-qa-docs-btn"
+      >
+        <.icon name="hero-arrow-path" class="size-4" /> 刷新
+      </button>
+    </:page_actions>
+
+    <div class="flex flex-col gap-4 md:flex-row md:items-stretch">
+      <%!-- 左侧：知识库可用文档 --%>
+      <aside class="w-full shrink-0 md:w-80" aria-label="知识库可用文档">
+        <div class="flex h-full flex-col gap-3 rounded-box border border-base-300 bg-base-100 p-3">
+          <div class="flex items-center justify-between">
+            <p class="text-sm font-medium">可用文档</p>
+            <span class="badge badge-soft badge-primary badge-sm">
+              {length(available_docs(@docs))}
+            </span>
+          </div>
+          <p class="text-xs text-base-content/60">
+            已开启「索引 + 问答」并完成向量化的资料，AI 将依据它们作答
+          </p>
+
+          <ul :if={available_docs(@docs) != []} class="flex flex-col gap-1" id="kb-qa-docs">
+            <li :for={{source_name, group} <- available_docs(@docs)} id={"kb-doc-#{source_name}"}>
+              <div class="flex items-start gap-2 rounded-box bg-base-200/40 p-2">
+                <span class="flex size-8 shrink-0 items-center justify-center rounded-box bg-base-200 text-base-content/60">
+                  <span :if={group.media_kind == :video}>
+                    <.icon name="hero-video-camera" class="size-4" />
+                  </span>
+                  <span :if={group.media_kind != :video}>
+                    <.icon name="hero-document-text" class="size-4" />
+                  </span>
+                </span>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-medium">{group.title}</p>
+                  <div class="mt-0.5 flex items-center gap-1">
+                    <span class="badge badge-soft badge-primary badge-xs">
+                      {doc_type_label(group.doc_type)}
+                    </span>
+                    <span class="text-xs text-base-content/60">{group.total} 段</span>
+                  </div>
+                </div>
+                <.icon name="hero-check-circle" class="size-4 shrink-0 text-success" />
+              </div>
+            </li>
+          </ul>
+
+          <div
+            :if={available_docs(@docs) == []}
+            class="flex flex-col items-center gap-2 rounded-box bg-base-200/40 px-4 py-8 text-center"
+          >
+            <span class="flex size-10 items-center justify-center rounded-full bg-base-200 text-base-content/50">
+              <.icon name="hero-bookmark" class="size-5" />
+            </span>
+            <p class="text-sm text-base-content/60">还没有可用资料</p>
+            <p class="text-xs text-base-content/50">
+              请先到「我的知识库」上传资料，并开启索引与问答
+            </p>
+          </div>
+
+          <p
+            :if={unavailable_count(@docs) > 0}
+            class="mt-auto text-xs text-base-content/50"
+          >
+            另有 {unavailable_count(@docs)} 份资料未参与问答（未开启索引/问答或尚未向量化）
+          </p>
+        </div>
+      </aside>
+
+      <%!-- 右侧：基于知识库的问答 --%>
+      <div class="flex min-h-[32rem] min-w-0 flex-1 flex-col overflow-hidden rounded-box border border-base-300 bg-base-100">
+        <div class="flex flex-wrap items-center gap-2 border-b border-base-300 px-4 py-2">
+          <span class="badge badge-soft badge-sm">qwen-flash</span>
+          <span class="text-sm text-base-content/60">基于知识库检索作答 · 附引用来源</span>
+          <span :if={@answering} class="badge badge-soft badge-info badge-sm gap-1">
+            <span class="loading loading-dots loading-xs" /> 思考中
+          </span>
+          <button
+            :if={@messages != [] and !@answering}
+            type="button"
+            class="btn btn-ghost btn-xs ms-auto"
+            phx-click="clear"
+            id="kb-qa-clear"
+          >
+            <.icon name="hero-trash" class="size-3.5" /> 清空对话
+          </button>
+        </div>
+
+        <div
+          id="kb-qa-messages"
+          class="flex flex-1 flex-col gap-4 overflow-y-auto p-4"
+          aria-live="polite"
+        >
+          <div
+            :if={@messages == [] and !@answering}
+            class="flex flex-col items-center gap-4 rounded-box bg-base-200/10 px-6 py-10 text-center"
+          >
+            <span class="flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <.icon name="hero-chat-bubble-left-right" class="size-8" />
+            </span>
+            <div class="flex flex-col gap-1">
+              <p class="text-base font-semibold">基于知识库提问</p>
+              <p class="text-sm text-base-content/60">
+                AI 会先检索左侧资料再作答，比如试试：
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-2">
+              <button
+                :for={question <- @suggestions}
+                type="button"
+                phx-click="use-suggestion"
+                phx-value-content={question}
+                class="btn btn-soft btn-sm"
+              >
+                {question}
+              </button>
+            </div>
+          </div>
+
+          <div
+            :for={message <- @messages}
+            class={["flex items-start gap-2", message.role == "user" && "flex-row-reverse"]}
+          >
+            <div
+              :if={message.role == "user"}
+              class="flex size-8 shrink-0 items-center justify-center rounded-full bg-neutral text-sm text-neutral-content"
+            >
+              你
+            </div>
+            <div
+              :if={message.role != "user"}
+              class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+            >
+              <.icon name="hero-sparkles" class="size-4" />
+            </div>
+            <div class={[
+              "flex min-w-0 flex-col gap-1 md:max-w-xl",
+              message.role == "user" && "items-end"
+            ]}>
+              <div class={[
+                "w-fit max-w-full rounded-2xl px-4 py-2",
+                message.role == "user" && "bg-primary text-primary-content",
+                message.role != "user" && "bg-base-200"
+              ]}>
+                <p :if={message.role == "user"} class="whitespace-pre-line text-sm">
+                  {message.content}
+                </p>
+                <div
+                  :if={message.role != "user"}
+                  class="ai-markdown text-sm leading-7 [&_ol]:list-decimal [&_ol]:ps-5 [&_ul]:list-disc [&_ul]:ps-5 [&_code]:rounded [&_code]:bg-base-300/60 [&_code]:px-1 [&_h1]:mt-2 [&_h1]:text-base [&_h1]:font-bold [&_h2]:mt-2 [&_h2]:text-base [&_h2]:font-bold [&_h3]:mt-2 [&_h3]:text-sm [&_h3]:font-bold [&_li]:mt-0.5 [&_p]:my-1 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-base-300/50 [&_pre]:p-2 [&_strong]:font-semibold [&_table]:table [&_td]:border [&_td]:border-base-300 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-base-300 [&_th]:bg-base-300/40 [&_th]:px-2 [&_th]:py-1"
+                >
+                  {Phoenix.HTML.raw(render_markdown(message.content))}
+                </div>
+              </div>
+              <div
+                :if={message.role != "user" and message.references not in [nil, []]}
+                class="flex flex-wrap items-center gap-1"
+              >
+                <span class="text-xs text-base-content/60">依据</span>
+                <span
+                  :for={ref <- message.references}
+                  class="badge badge-soft badge-info badge-sm"
+                >
+                  <span class="max-w-40 truncate">{ref.section || ref.title}</span>
+                </span>
+              </div>
+              <p class="text-xs text-base-content/60">
+                {if message.role == "user", do: "你", else: "AI 助手"}
+                <span :if={message.time != ""}> · {message.time}</span>
+              </p>
+            </div>
+          </div>
+
+          <div :if={@answering} class="flex gap-2">
+            <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <.icon name="hero-sparkles" class="size-4" />
+            </div>
+            <div class="flex flex-col gap-2 pt-1">
+              <div class="skeleton h-4 w-48"></div>
+              <div class="skeleton h-4 w-32"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="border-t border-base-300 px-4 py-2">
+          <.form
+            for={@form}
+            id="kb-qa-form"
+            phx-change="validate"
+            phx-submit="ask"
+            class="flex items-end gap-2"
+          >
+            <div class="min-w-0 flex-1">
+              <.input
+                field={@form[:content]}
+                type="text"
+                label="基于知识库提问"
+                placeholder="比如：桂枝汤适用于哪些证候？"
+                autocomplete="off"
+                maxlength="2000"
+              />
+            </div>
+            <.button
+              type="submit"
+              id="kb-qa-send"
+              aria-label="发送"
+              class="btn-circle btn-primary shrink-0"
+              disabled={@answering}
+            >
+              <span :if={!@answering} class="flex items-center justify-center">
+                <.icon name="hero-paper-airplane" class="size-5" />
+                <span class="sr-only">发送</span>
+              </span>
+              <span
+                :if={@answering}
+                class="loading loading-spinner loading-sm"
+                aria-hidden="true"
+              />
+            </.button>
+          </.form>
+        </div>
+      </div>
+    </div>
+  </.teacher_shell>
+</Layouts.app>

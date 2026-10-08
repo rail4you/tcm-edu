@@ -243,6 +243,7 @@ defmodule TcmEduWeb.Router do
       live "/ai/quiz", TeacherAIQuizLive, :index
       live "/ai/jobs", TeacherAIJobsLive, :index
       live "/ai/knowledge", TeacherAIKnowledgeLive, :index
+      live "/ai/knowledge/qa", TeacherAIKnowledgeQaLive, :index
       live "/ai/chat", AiChatLive, :index
       live "/ai/simulated-patient", TeacherAISimulatedPatientLive, :index
       live "/mdt", TeacherMdtLive, :index
