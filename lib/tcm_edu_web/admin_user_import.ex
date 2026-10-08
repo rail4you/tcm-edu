@@ -5,11 +5,12 @@ defmodule TcmEduWeb.AdminUserImport do
 
   Template columns (`用户` sheet):
 
-    | 邮箱 | 姓名 | 角色 | 初始密码 |
+    | 邮箱 | 姓名 | 角色 | 班级 | 初始密码 |
 
   * `邮箱`     — required, must look like an email address.
   * `姓名`     — optional.
   * `角色`     — required, dropdown (租户管理员 / 教师 / 学生).
+  * `班级`     — optional；填写后按名称自动创建/关联班级（学生常用）.
   * `初始密码` — required, at least 6 characters.
 
   A second sheet (`填写说明`) documents the format.
@@ -21,7 +22,7 @@ defmodule TcmEduWeb.AdminUserImport do
 
   alias Elixlsx.{Sheet, Workbook}
 
-  @headers ["邮箱", "姓名", "角色", "初始密码"]
+  @headers ["邮箱", "姓名", "角色", "班级", "初始密码"]
   @role_labels %{"租户管理员" => :tenant_admin, "教师" => :teacher, "学生" => :student}
   @role_order ["租户管理员", "教师", "学生"]
   @max_rows 200
@@ -46,6 +47,7 @@ defmodule TcmEduWeb.AdminUserImport do
       |> Sheet.set_col_width("B", 20)
       |> Sheet.set_col_width("C", 14)
       |> Sheet.set_col_width("D", 20)
+      |> Sheet.set_col_width("E", 20)
 
     guide = %Sheet{
       name: "填写说明",
@@ -54,6 +56,7 @@ defmodule TcmEduWeb.AdminUserImport do
         ["邮箱", "必填，必须是合法的邮箱格式；在租户内唯一"],
         ["姓名", "选填；留空则用邮箱前缀作为显示名"],
         ["角色", "必填，只能从下拉列表选择：租户管理员 / 教师 / 学生"],
+        ["班级", "选填；填写后按名称自动创建并关联班级（学生常用）"],
         ["初始密码", "必填，至少 6 位；用户登录后可自行修改"],
         ["", ""],
         ["注意", "一次最多导入 #{@max_rows} 行；整行为空的行会被跳过；表头必须匹配模板"]
@@ -139,7 +142,7 @@ defmodule TcmEduWeb.AdminUserImport do
       |> Enum.map(&cell_text/1)
       |> pad_cells(length(@headers))
 
-    [email_raw, name_raw, role_raw, password_raw] = cells
+    [email_raw, name_raw, role_raw, class_raw, password_raw] = cells
 
     with {:ok, email} <- parse_email(email_raw),
          {:ok, role} <- parse_role(role_raw),
@@ -149,7 +152,8 @@ defmodule TcmEduWeb.AdminUserImport do
          email: String.downcase(email),
          name: empty_to_nil(name_raw),
          role: role,
-         password: password
+         password: password,
+         class_name: empty_to_nil(class_raw)
        }}
     end
   end

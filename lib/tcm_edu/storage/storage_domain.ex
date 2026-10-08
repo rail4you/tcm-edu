@@ -9,5 +9,6 @@ defmodule TcmEdu.Storage do
   resources do
     resource TcmEdu.Storage.Blob
     resource TcmEdu.Storage.CourseAttachment
+    resource TcmEdu.Storage.UserAttachment
   end
 end

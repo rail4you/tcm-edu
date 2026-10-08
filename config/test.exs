@@ -37,3 +37,4 @@ config :phoenix,
 
 # Use in-memory test service for file storage in tests
 config :tcm_edu, TcmEdu.Courses.Course, storage: [service: {AshStorage.Service.Test, []}]
+config :tcm_edu, TcmEdu.Accounts.User, storage: [service: {AshStorage.Service.Test, []}]

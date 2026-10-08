@@ -14,6 +14,7 @@ defmodule TcmEduWeb.AdminUsersImportTest do
   require Ash.Query
 
   alias TcmEdu.Accounts.User
+  alias TcmEdu.Classes.ClassGroup
   alias TcmEdu.System.SuperAdmin
   alias TcmEduWeb.AdminUserImport
 
@@ -83,6 +84,17 @@ defmodule TcmEduWeb.AdminUsersImportTest do
       |> Enum.sort()
 
     assert emails == ["alice@example.com", "bob@example.com"]
+
+    # 班级列填了名称 → 自动创建班级并关联学生。
+    assert [%ClassGroup{id: class_id, name: "2024 级临床 1 班"}] =
+             Ash.read!(ClassGroup, tenant: @tenant, authorize?: false)
+
+    bob =
+      User
+      |> Ash.Query.filter(email == "bob@example.com")
+      |> Ash.read_one!(authorize?: false, tenant: @tenant)
+
+    assert bob.class_group_id == class_id
   end
 
   defp fixture_xlsx do
@@ -90,9 +102,9 @@ defmodule TcmEduWeb.AdminUsersImportTest do
 
     rows = [
       AdminUserImport.headers(),
-      ["alice@example.com", "Alice 教师", "教师", "password123"],
-      ["bad-email", "", "学生", "password123"],
-      ["bob@example.com", "Bob 学生", "学生", "password123"]
+      ["alice@example.com", "Alice 教师", "教师", "", "password123"],
+      ["bad-email", "", "学生", "", "password123"],
+      ["bob@example.com", "Bob 学生", "学生", "2024 级临床 1 班", "password123"]
     ]
 
     sheet = %Sheet{name: "用户", rows: rows}

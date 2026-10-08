@@ -22,8 +22,10 @@ defmodule TcmEduWeb.AdminUsersLive do
   require Ash.Query
 
   alias TcmEdu.Accounts.User
+  alias TcmEdu.Classes.ClassGroup
   alias TcmEdu.System.Organization
   alias TcmEduWeb.AdminUserImport
+  alias TcmEduWeb.UserAvatar
 
   on_mount {TcmEduWeb.AdminAuth, :ensure_admin}
 
@@ -45,10 +47,14 @@ defmodule TcmEduWeb.AdminUsersLive do
      |> assign(:tenants, tenants)
      |> assign(:tenant, tenant)
      |> assign(:role_filter, "all")
+     |> assign(:class_filter, "all")
+     |> assign(:class_groups, load_class_groups(actor(socket), tenant))
      |> assign(:modal, nil)
      |> assign(:role_editing, nil)
      |> assign(:deleting, nil)
      |> assign(:password_editing, nil)
+     |> assign(:editing, nil)
+     |> assign(:edit_form, nil)
      |> assign(:create_form, create_form(actor(socket), tenant, %{}))
      |> assign(:role_form, nil)
      |> assign(:password_form, nil)
@@ -59,6 +65,7 @@ defmodule TcmEduWeb.AdminUsersLive do
        max_entries: 1,
        max_file_size: 10_000_000
      )
+     |> UserAvatar.allow_avatar_upload()
      |> load_users()}
   end
 
@@ -67,7 +74,10 @@ defmodule TcmEduWeb.AdminUsersLive do
     socket =
       if socket.assigns.current_admin.role == "super_admin" and
            Enum.any?(socket.assigns.tenants, &(&1.schema_name == schema)) do
-        assign(socket, :tenant, schema)
+        socket
+        |> assign(:tenant, schema)
+        |> assign(:class_filter, "all")
+        |> assign(:class_groups, load_class_groups(actor(socket), schema))
       else
         socket
       end
@@ -87,6 +97,75 @@ defmodule TcmEduWeb.AdminUsersLive do
     {:noreply, socket |> assign(:role_filter, role) |> load_users()}
   end
 
+  def handle_event("filter-class", %{"class" => class_id}, socket) do
+    {:noreply, socket |> assign(:class_filter, class_id) |> load_users()}
+  end
+
+  def handle_event("open-edit", %{"id" => id}, socket) do
+    case find_user(socket, id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "用户不存在")}
+
+      user ->
+        {:noreply,
+         socket
+         |> assign(
+           modal: :edit,
+           editing: user,
+           edit_form: edit_form(actor(socket), socket.assigns.tenant, user, %{})
+         )
+         |> UserAvatar.reset_avatar_upload()}
+    end
+  end
+
+  def handle_event("validate-edit", %{"user" => params}, socket) do
+    {:noreply,
+     assign(socket, :edit_form, AshPhoenix.Form.validate(socket.assigns.edit_form, params))}
+  end
+
+  def handle_event("save-edit", %{"user" => params}, socket) do
+    form = AshPhoenix.Form.validate(socket.assigns.edit_form, params)
+
+    case AshPhoenix.Form.submit(form, params: params) do
+      {:ok, user} ->
+        case UserAvatar.consume_avatar(socket, user, socket.assigns.current_admin) do
+          {:error, message} ->
+            {:noreply, socket |> assign(:edit_form, form) |> put_flash(:error, message)}
+
+          _ok ->
+            {:noreply,
+             socket
+             |> assign(modal: nil, editing: nil, edit_form: nil)
+             |> put_flash(:info, "已更新 #{user.name || user.email} 的资料")
+             |> load_users()}
+        end
+
+      {:error, form} ->
+        {:noreply, assign(socket, :edit_form, form)}
+    end
+  end
+
+  def handle_event("remove-avatar", _params, socket) do
+    user = socket.assigns.editing
+
+    case UserAvatar.remove_avatar(user, socket.assigns.current_admin) do
+      :ok ->
+        socket = load_users(socket)
+        fresh = find_user(socket, user.id)
+
+        {:noreply,
+         socket
+         |> assign(
+           editing: fresh,
+           edit_form: edit_form(actor(socket), socket.assigns.tenant, fresh, %{})
+         )
+         |> put_flash(:info, "头像已移除")}
+
+      {:error, message} ->
+        {:noreply, put_flash(socket, :error, message)}
+    end
+  end
+
   def handle_event("open-create", _params, socket) do
     {:noreply,
      assign(socket,
@@ -97,7 +176,14 @@ defmodule TcmEduWeb.AdminUsersLive do
 
   def handle_event("close-modal", _params, socket) do
     {:noreply,
-     assign(socket, modal: nil, role_editing: nil, deleting: nil, password_editing: nil)}
+     assign(socket,
+       modal: nil,
+       role_editing: nil,
+       deleting: nil,
+       password_editing: nil,
+       editing: nil,
+       edit_form: nil
+     )}
   end
 
   def handle_event("validate-create", %{"user" => params}, socket) do
@@ -311,17 +397,67 @@ defmodule TcmEduWeb.AdminUsersLive do
   defp user_initial(_), do: "U"
 
   defp create_imported_users(rows, errors, actor, tenant) do
-    Enum.reduce(rows, {0, errors}, fn {row_number, attrs}, {created, failed} ->
-      case User
-           |> Ash.Changeset.for_create(:register_with_role, attrs, actor: actor, tenant: tenant)
-           |> Ash.create() do
-        {:ok, _} ->
-          {created + 1, failed}
+    {created, failed, _cache} =
+      Enum.reduce(rows, {0, errors, %{}}, fn {row_number, attrs}, {created, failed, cache} ->
+        {class_group_id, cache} = resolve_class(attrs[:class_name], cache, actor, tenant)
 
-        {:error, error} ->
-          {created, failed ++ [{row_number, "创建失败：#{import_short_message(error)}"}]}
-      end
-    end)
+        attrs =
+          attrs
+          |> Map.drop([:class_name])
+          |> put_class_group_id(class_group_id)
+
+        case User
+             |> Ash.Changeset.for_create(:register_with_role, attrs, actor: actor, tenant: tenant)
+             |> Ash.create() do
+          {:ok, _} ->
+            {created + 1, failed, cache}
+
+          {:error, error} ->
+            {created, failed ++ [{row_number, "创建失败：#{import_short_message(error)}"}], cache}
+        end
+      end)
+
+    {created, failed}
+  end
+
+  defp put_class_group_id(attrs, nil), do: attrs
+  defp put_class_group_id(attrs, id), do: Map.put(attrs, :class_group_id, id)
+
+  defp resolve_class(name, cache, _actor, _tenant) when name in [nil, ""], do: {nil, cache}
+
+  defp resolve_class(name, cache, actor, tenant) do
+    name = String.trim(name)
+
+    case Map.fetch(cache, name) do
+      {:ok, id} ->
+        {id, cache}
+
+      :error ->
+        id = find_or_create_class(name, actor, tenant)
+        {id, Map.put(cache, name, id)}
+    end
+  end
+
+  # 导入时按名称自动创建班级（已存在则复用）。
+  defp find_or_create_class(name, actor, tenant) do
+    case read_class_by_name(name, actor, tenant) do
+      {:ok, %ClassGroup{id: id}} ->
+        id
+
+      _ ->
+        case ClassGroup
+             |> Ash.Changeset.for_create(:create, %{name: name}, actor: actor, tenant: tenant)
+             |> Ash.create() do
+          {:ok, %ClassGroup{id: id}} -> id
+          _ -> read_class_by_name(name, actor, tenant) |> elem(1) |> Map.get(:id)
+        end
+    end
+  end
+
+  defp read_class_by_name(name, actor, tenant) do
+    ClassGroup
+    |> Ash.Query.filter(name == ^name)
+    |> Ash.read_one(actor: actor, tenant: tenant)
   end
 
   defp import_short_message(error) do
@@ -384,17 +520,22 @@ defmodule TcmEduWeb.AdminUsersLive do
             actor: actor(socket),
             tenant: socket.assigns.tenant
           )
+          |> Ash.Query.load([:class_group, :avatar_url])
           |> filter_by_role(socket.assigns[:role_filter] || "all")
 
         query
         |> Ash.read!()
         |> Enum.sort_by(& &1.inserted_at, {:desc, DateTime})
+        |> filter_by_class(socket.assigns[:class_filter] || "all")
       rescue
         _ -> []
       end
 
     assign(socket, :users, users)
   end
+
+  defp filter_by_class(users, "all"), do: users
+  defp filter_by_class(users, class_id), do: Enum.filter(users, &(&1.class_group_id == class_id))
 
   defp filter_by_role(query, "all"), do: query
 
@@ -403,6 +544,19 @@ defmodule TcmEduWeb.AdminUsersLive do
   end
 
   defp find_user(socket, id), do: Enum.find(socket.assigns.users, &(&1.id == id))
+
+  defp load_class_groups(actor, tenant) when is_binary(tenant) do
+    try do
+      ClassGroup
+      |> Ash.Query.for_read(:read, %{}, actor: actor, tenant: tenant)
+      |> Ash.Query.sort(name: :asc)
+      |> Ash.read!()
+    rescue
+      _ -> []
+    end
+  end
+
+  defp load_class_groups(_actor, _tenant), do: []
 
   # `:register_with_role` action 同时接受 attribute (`email`/`name`/`role`...) +
   # argument (`password`)。`AshPhoenix.Form` 会把两者都当作字段渲染,
@@ -440,6 +594,21 @@ defmodule TcmEduWeb.AdminUsersLive do
       params: params
     )
     |> to_form()
+  end
+
+  # `:admin_update_user` 接受资料字段 + `class_group_id`。
+  defp edit_form(actor, tenant, user, params) do
+    AshPhoenix.Form.for_update(user, :admin_update_user,
+      actor: actor,
+      tenant: tenant,
+      as: "user",
+      params: params
+    )
+    |> to_form()
+  end
+
+  defp class_options(class_groups) do
+    [{"未分班", ""} | Enum.map(class_groups, &{&1.name, &1.id})]
   end
 
   defp ash_message(error) do

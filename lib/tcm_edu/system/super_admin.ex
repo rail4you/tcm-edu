@@ -64,6 +64,8 @@ defmodule TcmEdu.System.SuperAdmin do
     define(:get_super_admin, action: :read, get_by: [:id])
     define(:get_super_admin_by_email, action: :read, get_by: [:email])
     define(:delete_super_admin, action: :destroy)
+    define(:update_super_admin_profile, action: :update_profile)
+    define(:change_super_admin_password, action: :change_password)
   end
 
   actions do
@@ -172,6 +174,61 @@ defmodule TcmEdu.System.SuperAdmin do
       accept([])
       require_atomic?(false)
       change(set_attribute(:last_login_at, &DateTime.utc_now/0))
+    end
+
+    update :update_profile do
+      description("超级管理员更新自己的资料")
+      require_atomic?(false)
+      accept([:name])
+    end
+
+    update :change_password do
+      description("超级管理员修改自己的密码（需提供当前密码）")
+      require_atomic?(false)
+      accept([])
+
+      argument(:current_password, :string, sensitive?: true, allow_nil?: false)
+
+      argument(:password, :string,
+        sensitive?: true,
+        allow_nil?: false,
+        constraints: [min_length: 6]
+      )
+
+      argument(:password_confirmation, :string, sensitive?: true, allow_nil?: false)
+
+      validate(fn changeset, _ctx ->
+        current = Ash.Changeset.get_argument(changeset, :current_password)
+        hashed = Ash.Changeset.get_data(changeset, :hashed_password)
+
+        if is_binary(current) and Bcrypt.verify_pass(current, hashed) do
+          :ok
+        else
+          {:error, field: :current_password, message: "当前密码不正确"}
+        end
+      end)
+
+      validate(fn changeset, _ctx ->
+        pwd = Ash.Changeset.get_argument(changeset, :password)
+        confirm = Ash.Changeset.get_argument(changeset, :password_confirmation)
+
+        if pwd && confirm && pwd == confirm do
+          :ok
+        else
+          {:error, field: :password_confirmation, message: "两次输入不一致"}
+        end
+      end)
+
+      change(
+        fn changeset, _ctx ->
+          Ash.Changeset.force_change_attribute(
+            changeset,
+            :hashed_password,
+            Bcrypt.hash_pwd_salt(Ash.Changeset.get_argument(changeset, :password))
+          )
+        end,
+        only_when_valid?: true
+      )
     end
   end
 

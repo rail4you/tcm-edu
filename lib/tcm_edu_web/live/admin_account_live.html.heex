@@ -1,0 +1,146 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.admin_shell current_admin={@current_admin} current_page={:account} page_title="账户设置">
+    <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body gap-4 p-4 sm:p-6">
+          <p class="font-medium">个人资料</p>
+
+          <div class="flex items-center gap-4">
+            <span class="avatar avatar-placeholder">
+              <span class="flex size-14 items-center justify-center overflow-hidden rounded-full bg-primary text-lg text-primary-content">
+                <img
+                  :if={@avatar_url}
+                  src={@avatar_url}
+                  alt="头像"
+                  class="size-full object-cover"
+                />
+                <span :if={!@avatar_url}>{admin_initial(@current_admin)}</span>
+              </span>
+            </span>
+            <div class="min-w-0">
+              <p class="truncate text-base font-semibold">{@current_admin.name}</p>
+              <p class="truncate text-sm text-base-content/60">{@current_admin.email}</p>
+              <div class="mt-1 flex flex-wrap gap-1">
+                <span class={[
+                  "badge badge-soft badge-sm",
+                  @current_admin.role == "super_admin" && "badge-secondary",
+                  @current_admin.role != "super_admin" && "badge-primary"
+                ]}>
+                  {role_label(@current_admin.role)}
+                </span>
+                <span class="badge badge-soft badge-sm badge-ghost">{@current_admin.tenant}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider my-0" />
+
+          <.form
+            for={@profile_form}
+            id="profile-form"
+            phx-change="validate-profile"
+            phx-submit="save-profile"
+            class="flex flex-col gap-3"
+          >
+            <.input field={@profile_form[:name]} type="text" label="姓名" placeholder="请输入姓名" />
+
+            <div :if={@current_admin.role != "super_admin"} class="flex flex-col gap-3">
+              <.input field={@profile_form[:phone]} type="text" label="手机号" placeholder="可选" />
+              <.input field={@profile_form[:job_title]} type="text" label="职称" placeholder="如：教授、讲师" />
+              <.input field={@profile_form[:school]} type="text" label="所属机构" placeholder="可选" />
+              <.input field={@profile_form[:major]} type="text" label="专业" placeholder="可选" />
+
+              <div class="form-control">
+                <span class="label-text mb-1 block text-sm">头像</span>
+                <div class="flex items-center gap-3">
+                  <span class="avatar">
+                    <span class="flex size-14 items-center justify-center overflow-hidden rounded-full bg-base-200">
+                      <img
+                        :if={@avatar_url}
+                        src={@avatar_url}
+                        alt="头像"
+                        class="size-full object-cover"
+                      />
+                      <span :if={!@avatar_url} class="text-xs text-base-content/50">无</span>
+                    </span>
+                  </span>
+                  <div class="flex flex-col items-start gap-1">
+                    <label class="btn btn-soft btn-sm">
+                      选择图片
+                      <.live_file_input upload={@uploads.avatar} class="hidden" />
+                    </label>
+                    <button
+                      :if={@avatar_url}
+                      type="button"
+                      class="btn btn-ghost btn-xs text-error"
+                      phx-click="remove-avatar"
+                    >
+                      移除头像
+                    </button>
+                    <p :for={err <- upload_errors(@uploads.avatar)} class="text-xs text-error">
+                      {TcmEduWeb.UserAvatar.error_text(err)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <.input
+                field={@profile_form[:bio]}
+                type="textarea"
+                label="个人简介"
+                placeholder="简单介绍一下自己"
+              />
+            </div>
+
+            <div class="card-actions justify-end">
+              <.button type="submit" phx-disable-with="保存中..." class="btn-primary">保存资料</.button>
+            </div>
+          </.form>
+        </div>
+      </div>
+
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body gap-4 p-4 sm:p-6">
+          <div>
+            <p class="font-medium">修改密码</p>
+            <p class="mt-1 text-xs text-base-content/60">修改后需使用新密码重新登录。</p>
+          </div>
+
+          <.form
+            for={@password_form}
+            id="password-form"
+            phx-change="validate-password"
+            phx-submit="save-password"
+            class="flex flex-col gap-3"
+          >
+            <.input
+              field={@password_form[:current_password]}
+              type="password"
+              label="当前密码"
+              placeholder="请输入当前密码"
+              required
+            />
+            <.input
+              field={@password_form[:password]}
+              type="password"
+              label="新密码"
+              placeholder="至少 6 位"
+              required
+            />
+            <.input
+              field={@password_form[:password_confirmation]}
+              type="password"
+              label="确认新密码"
+              placeholder="再次输入新密码"
+              required
+            />
+
+            <div class="card-actions justify-end">
+              <.button type="submit" phx-disable-with="保存中..." class="btn-primary">保存密码</.button>
+            </div>
+          </.form>
+        </div>
+      </div>
+    </div>
+  </.admin_shell>
+</Layouts.app>

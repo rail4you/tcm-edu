@@ -1,0 +1,115 @@
+<Layouts.app flash={@flash} shell={:admin}>
+  <.admin_shell current_admin={@current_admin} current_page={:classes} page_title="班级管理">
+    <:page_actions>
+      <span :if={@current_admin.role == "super_admin"} class="flex items-center gap-2">
+        <.form for={%{}} as={:tenant_filter} id="tenant-filter-form" phx-change="select-tenant" class="contents">
+          <label class="form-control w-full" for="tenant-filter-select">
+            <span class="sr-only">选择租户</span>
+            <select
+              id="tenant-filter-select"
+              name="tenant"
+              class="select select-sm w-64"
+              aria-label="选择租户"
+            >
+              <option :for={t <- @tenants} value={t.schema_name} selected={t.schema_name == @tenant}>
+                {t.name}（{t.schema_name}）
+              </option>
+            </select>
+          </label>
+        </.form>
+      </span>
+    </:page_actions>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body gap-4 p-4 sm:p-6">
+        <div>
+          <p class="font-medium">班级</p>
+          <p class="mt-1 text-xs text-base-content/60">
+            班级用于按名称组织学生；删除后原班级学生自动置为「未分班」。
+          </p>
+        </div>
+
+        <.form
+          for={@class_form}
+          id="create-class-form"
+          phx-change="validate-class"
+          phx-submit="create-class"
+          class="flex flex-wrap items-end gap-2"
+        >
+          <div class="min-w-48 flex-1">
+            <.input
+              field={@class_form[:name]}
+              type="text"
+              label="班级名称"
+              placeholder="如：2024 级临床 1 班"
+            />
+          </div>
+          <.button
+            type="submit"
+            phx-disable-with="添加中..."
+            class="btn-primary"
+            disabled={is_nil(@tenant)}
+          >
+            添加班级
+          </.button>
+        </.form>
+
+        <div class="overflow-x-auto rounded-box border border-base-300">
+          <table class="table table-zebra table-pin-rows">
+            <thead>
+              <tr>
+                <th>班级</th>
+                <th class="w-24 text-right">学生人数</th>
+                <th class="w-40 text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={cg <- @class_groups} id={"class-group-#{cg.id}"}>
+                <td>
+                  <form
+                    phx-submit="rename-class"
+                    id={"rename-class-form-#{cg.id}"}
+                    class="flex items-center gap-2"
+                  >
+                    <input type="hidden" name="class_id" value={cg.id} />
+                    <label class="sr-only" for={"rename-class-name-#{cg.id}"}>班级名称</label>
+                    <input
+                      id={"rename-class-name-#{cg.id}"}
+                      type="text"
+                      name="name"
+                      value={cg.name}
+                      class="input input-sm input-bordered w-full max-w-64"
+                    />
+                    <button type="submit" class="btn btn-ghost btn-sm">重命名</button>
+                  </form>
+                </td>
+                <td class="text-right tabular-nums">
+                  {Map.get(@student_counts, cg.id, 0)}
+                </td>
+                <td class="text-right">
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm text-error"
+                    id={"delete-class-#{cg.id}"}
+                    phx-click="delete-class"
+                    phx-value-id={cg.id}
+                  >
+                    删除
+                  </button>
+                </td>
+              </tr>
+              <tr :if={@class_groups == []}>
+                <td colspan="3">
+                  <div class="flex flex-col items-center gap-2 py-10">
+                    <.icon name="hero-rectangle-group" class="size-8 text-base-content/40" />
+                    <p class="text-sm text-base-content/60">还没有班级，先在上方添加</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </.admin_shell>
+</Layouts.app>

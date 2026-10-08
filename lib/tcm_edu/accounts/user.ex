@@ -30,8 +30,9 @@ defmodule TcmEdu.Accounts.User do
 
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAuthentication],
+    extensions: [AshAuthentication, AshStorage],
     authorizers: [Ash.Policy.Authorizer],
+    otp_app: :tcm_edu,
     domain: TcmEdu.Accounts
 
   multitenancy do
@@ -47,10 +48,6 @@ defmodule TcmEdu.Accounts.User do
     end
 
     attribute :name, :string do
-      public?(true)
-    end
-
-    attribute :avatar_url, :string do
       public?(true)
     end
 
@@ -76,6 +73,11 @@ defmodule TcmEdu.Accounts.User do
     attribute :major, :string do
       public?(true)
       description("学生专业")
+    end
+
+    attribute :student_no, :string do
+      public?(true)
+      description("学生学号")
     end
 
     attribute :hashed_password, :string do
@@ -104,6 +106,13 @@ defmodule TcmEdu.Accounts.User do
 
   identities do
     identity(:unique_email_per_tenant, [:email])
+  end
+
+  relationships do
+    belongs_to :class_group, TcmEdu.Classes.ClassGroup do
+      allow_nil?(true)
+      public?(true)
+    end
   end
 
   authentication do
@@ -168,7 +177,7 @@ defmodule TcmEdu.Accounts.User do
         * 角色必须 ∈ `[:tenant_admin, :teacher, :student]`
       """)
 
-      accept([:email, :name, :phone, :avatar_url, :role, :status])
+      accept([:email, :name, :phone, :role, :status, :class_group_id])
 
       argument :password, :string do
         allow_nil?(false)
@@ -195,7 +204,23 @@ defmodule TcmEdu.Accounts.User do
     update :update_profile do
       description("用户更新自己的资料（不能改 role/status/hashed_password）")
       require_atomic?(false)
-      accept([:name, :avatar_url, :phone, :bio, :job_title, :school, :major])
+      accept([:name, :phone, :bio, :job_title, :school, :major])
+    end
+
+    update :admin_update_user do
+      description("管理员编辑用户资料（姓名/联系方式/教师/学生字段/班级）")
+      require_atomic?(false)
+
+      accept([
+        :name,
+        :phone,
+        :bio,
+        :job_title,
+        :school,
+        :major,
+        :student_no,
+        :class_group_id
+      ])
     end
 
     update :update_role do
@@ -239,12 +264,29 @@ defmodule TcmEdu.Accounts.User do
 
       argument(:password_confirmation, :string, sensitive?: true, allow_nil?: false)
 
-      validate(confirm(:password, :password_confirmation))
+      # 不用 Ash 内置 confirm / PasswordValidation —— 它们写死英文 message，
+      # 改用 validate 块返回中文，让 AshPhoenix.Form.errors/2 直接读出。
+      validate(fn changeset, _ctx ->
+        current = Ash.Changeset.get_argument(changeset, :current_password)
+        hashed = Ash.Changeset.get_data(changeset, :hashed_password)
 
-      validate(
-        {AshAuthentication.Strategy.Password.PasswordValidation,
-         strategy_name: :password, password_argument: :current_password}
-      )
+        if is_binary(current) and Bcrypt.verify_pass(current, hashed) do
+          :ok
+        else
+          {:error, field: :current_password, message: "当前密码不正确"}
+        end
+      end)
+
+      validate(fn changeset, _ctx ->
+        pwd = Ash.Changeset.get_argument(changeset, :password)
+        confirm = Ash.Changeset.get_argument(changeset, :password_confirmation)
+
+        if pwd && confirm && pwd == confirm do
+          :ok
+        else
+          {:error, field: :password_confirmation, message: "两次输入不一致"}
+        end
+      end)
 
       change({AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password})
     end
@@ -282,6 +324,22 @@ defmodule TcmEdu.Accounts.User do
   postgres do
     table("users")
     repo(TcmEdu.Repo)
+
+    references do
+      reference(:class_group, on_delete: :nilify)
+    end
+  end
+
+  storage do
+    # 用户头像走项目 OSS（测试环境经 app config 覆盖为 AshStorage.Service.Test）。
+    service({TcmEdu.Storage.OSS.Service, []})
+
+    blob_resource(TcmEdu.Storage.Blob)
+    attachment_resource(TcmEdu.Storage.UserAttachment)
+
+    # 自动生成 `avatar` 关系、`avatar_url` calculation 与
+    # `attach_avatar` / `detach_avatar` / `purge_avatar` action。
+    has_one_attached(:avatar)
   end
 
   policies do
@@ -362,8 +420,18 @@ defmodule TcmEdu.Accounts.User do
       authorize_if(actor_attribute_equals(:role, :tenant_admin))
     end
 
-    # tenant_admin 创建 / 改角色 / 启停 / 删除本租户用户
+    # 头像附件：本人或 admin（与 update_profile 同权限）
+    policy action([:attach_avatar, :detach_avatar, :purge_avatar]) do
+      authorize_if(expr(id == ^actor(:id)))
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
+    end
+
+    # tenant_admin 创建 / 编辑资料 / 改角色 / 启停 / 删除本租户用户
     policy action(:register_with_role) do
+      authorize_if(actor_attribute_equals(:role, :tenant_admin))
+    end
+
+    policy action(:admin_update_user) do
       authorize_if(actor_attribute_equals(:role, :tenant_admin))
     end
 

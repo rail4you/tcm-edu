@@ -43,13 +43,13 @@ defmodule TcmEduWeb.AdminUserImportTest do
     path =
       write_xlsx([
         AdminUserImport.headers(),
-        ["alice@example.com", "Alice", "教师", "password123"],
-        ["bob@example.com", "", "学生", "secret123"],
-        ["carol@example.com", "Carol", "租户管理员", "carol123"],
-        ["bad-email", "", "教师", "password123"],
-        ["dave@example.com", "", "旁观者", "password123"],
-        ["eve@example.com", "", "教师", "123"],
-        ["frank@example.com", "", "教师", ""]
+        ["alice@example.com", "Alice", "教师", "", "password123"],
+        ["bob@example.com", "", "学生", "2024 级临床 1 班", "secret123"],
+        ["carol@example.com", "Carol", "租户管理员", "", "carol123"],
+        ["bad-email", "", "教师", "", "password123"],
+        ["dave@example.com", "", "旁观者", "", "password123"],
+        ["eve@example.com", "", "教师", "", "123"],
+        ["frank@example.com", "", "教师", "", ""]
       ])
 
     assert {:ok, rows, errors} = AdminUserImport.import_file(path)
@@ -57,7 +57,7 @@ defmodule TcmEduWeb.AdminUserImportTest do
     assert {2, %{email: "alice@example.com", role: :teacher, name: "Alice"}} =
              Enum.find(rows, fn {n, _} -> n == 2 end)
 
-    assert {3, %{email: "bob@example.com", role: :student, name: nil}} =
+    assert {3, %{email: "bob@example.com", role: :student, name: nil, class_name: "2024 级临床 1 班"}} =
              Enum.find(rows, fn {n, _} -> n == 3 end)
 
     assert {4, %{role: :tenant_admin}} = Enum.find(rows, fn {n, _} -> n == 4 end)
@@ -74,7 +74,7 @@ defmodule TcmEduWeb.AdminUserImportTest do
     path =
       write_xlsx([
         AdminUserImport.headers(),
-        ["MIXED@Example.COM", "Mixed Case", "学生", "password123"]
+        ["MIXED@Example.COM", "Mixed Case", "学生", "", "password123"]
       ])
 
     assert {:ok, [{2, attrs}], []} = AdminUserImport.import_file(path)
@@ -92,7 +92,7 @@ defmodule TcmEduWeb.AdminUserImportTest do
     too_many =
       [AdminUserImport.headers()] ++
         Enum.map(1..(AdminUserImport.max_rows() + 1), fn i ->
-          ["user-#{i}@example.com", "u#{i}", "学生", "password123"]
+          ["user-#{i}@example.com", "u#{i}", "学生", "", "password123"]
         end)
 
     path = write_xlsx(too_many)
@@ -104,9 +104,9 @@ defmodule TcmEduWeb.AdminUserImportTest do
     path =
       write_xlsx([
         AdminUserImport.headers(),
-        ["", "", "", ""],
-        ["valid@example.com", "Valid", "教师", "password123"],
-        ["", "", "", ""]
+        ["", "", "", "", ""],
+        ["valid@example.com", "Valid", "教师", "", "password123"],
+        ["", "", "", "", ""]
       ])
 
     # Row numbers renumber after blank rows are filtered out (same convention

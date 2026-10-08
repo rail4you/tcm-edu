@@ -21,7 +21,17 @@ defmodule TcmEduWeb.AdminComponents do
 
   attr :current_page, :atom,
     required: true,
-    values: [:dashboard, :tenants, :users, :knowledge, :ai_dashboard, :ai_keys, :login]
+    values: [
+      :dashboard,
+      :tenants,
+      :users,
+      :classes,
+      :knowledge,
+      :ai_dashboard,
+      :ai_keys,
+      :account,
+      :login
+    ]
 
   attr :page_title, :string, default: "工作台"
 
@@ -62,12 +72,6 @@ defmodule TcmEduWeb.AdminComponents do
             <div class="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p class="text-xl font-semibold">{@page_title}</p>
-                <div class="breadcrumbs text-xs text-base-content/60">
-                  <ul>
-                    <li>管理端</li>
-                    <li>{@page_title}</li>
-                  </ul>
-                </div>
               </div>
               <div :if={@page_actions != []} class="flex items-center gap-2">
                 {render_slot(@page_actions)}
@@ -156,23 +160,44 @@ defmodule TcmEduWeb.AdminComponents do
               {admin_initial(@current_admin)}
             </span>
           </button>
-          <ul
+          <div
             tabindex="0"
-            class="menu dropdown-content z-50 mt-2 w-52 rounded-box bg-base-100 p-2 shadow-md"
+            class="dropdown-content z-50 mt-2 w-60 overflow-hidden rounded-box bg-base-100 shadow-md"
           >
-            <li class="menu-title">
-              <span class="truncate">{@current_admin.email}</span>
-            </li>
-            <li>
+            <div class="flex items-center gap-3 px-4 py-3">
+              <span class="avatar avatar-placeholder shrink-0">
+                <span class="flex size-9 items-center justify-center rounded-full bg-primary text-xs text-primary-content">
+                  {admin_initial(@current_admin)}
+                </span>
+              </span>
+              <div class="min-w-0">
+                <p class="truncate text-sm font-semibold leading-tight">{@current_admin.name}</p>
+                <p class="truncate text-xs text-base-content/60">
+                  {role_label(@current_admin.role)}
+                </p>
+              </div>
+            </div>
+            <div class="border-t border-base-300"></div>
+            <div class="flex flex-col p-1">
+              <.link
+                navigate="/admin/account"
+                class="flex items-center gap-2 rounded-field px-3 py-2 text-sm hover:bg-base-200"
+              >
+                <.icon name="hero-user-circle" class="size-4" />
+                账户设置
+              </.link>
               <form action="/logout" method="post" id="admin-logout-form" class="contents">
                 <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
-                <button type="submit" class="w-full text-error hover:bg-error/10">
+                <button
+                  type="submit"
+                  class="flex w-full items-center gap-2 rounded-field px-3 py-2 text-sm text-error hover:bg-error/10"
+                >
                   <.icon name="hero-arrow-right-start-on-rectangle" class="size-4" />
                   退出登录
                 </button>
               </form>
-            </li>
-          </ul>
+            </div>
+          </div>
         </div>
       </div>
     </header>
@@ -263,10 +288,10 @@ defmodule TcmEduWeb.AdminComponents do
           </details>
         </li>
         <li>
-          <details open={@current_page in [:users, :knowledge]}>
+          <details open={@current_page in [:users, :classes]}>
             <summary>
               <.icon name="hero-users" class="size-4" />
-              <span>本机构</span>
+              <span>管理</span>
             </summary>
             <ul>
               <li>
@@ -277,11 +302,11 @@ defmodule TcmEduWeb.AdminComponents do
               </li>
               <li>
                 <.link
-                  navigate="/admin/knowledge"
-                  class={["w-full", @current_page == :knowledge && "menu-active"]}
+                  navigate="/admin/classes"
+                  class={["w-full", @current_page == :classes && "menu-active"]}
                 >
-                  <.icon name="hero-bookmark" class="size-4" />
-                  知识库
+                  <.icon name="hero-rectangle-group" class="size-4" />
+                  班级管理
                 </.link>
               </li>
             </ul>
@@ -347,11 +372,11 @@ defmodule TcmEduWeb.AdminComponents do
         </li>
         <li>
           <.link
-            navigate="/admin/knowledge"
-            class={["tooltip tooltip-right w-full", @current_page == :knowledge && "menu-active"]}
-            data-tip="知识库"
+            navigate="/admin/classes"
+            class={["tooltip tooltip-right w-full", @current_page == :classes && "menu-active"]}
+            data-tip="班级管理"
           >
-            <.icon name="hero-bookmark" class="size-4" />
+            <.icon name="hero-rectangle-group" class="size-4" />
           </.link>
         </li>
         <li :if={@current_admin.role == "super_admin"}>
@@ -377,13 +402,13 @@ defmodule TcmEduWeb.AdminComponents do
     """
   end
 
-  defp role_label("super_admin"), do: "超级管理员"
-  defp role_label("tenant_admin"), do: "租户管理员"
-  defp role_label(_), do: "管理员"
+  def role_label("super_admin"), do: "超级管理员"
+  def role_label("tenant_admin"), do: "租户管理员"
+  def role_label(_), do: "管理员"
 
-  defp admin_initial(%{name: name}) when is_binary(name) and byte_size(name) > 0 do
+  def admin_initial(%{name: name}) when is_binary(name) and byte_size(name) > 0 do
     name |> String.trim() |> String.first() |> String.upcase()
   end
 
-  defp admin_initial(_), do: "A"
+  def admin_initial(_), do: "A"
 end
