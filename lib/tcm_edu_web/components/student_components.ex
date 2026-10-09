@@ -119,7 +119,6 @@ defmodule TcmEduWeb.StudentComponents do
                   <li>
                     <.link
                       href="/logout"
-                      method="post"
                       class="flex items-center gap-2 text-error hover:bg-error/10"
                     >
                       <.icon name="hero-arrow-right-start-on-rectangle" class="size-4 shrink-0" />

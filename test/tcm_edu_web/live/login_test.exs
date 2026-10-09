@@ -294,12 +294,17 @@ defmodule TcmEduWeb.LoginTest do
     assert get_session(conn, "student_id") == nil
   end
 
-  test "password toggle markup is present", %{conn: conn} do
-    {:ok, _view, html} = live(conn, "/login")
+  test "password visibility can be toggled", %{conn: conn} do
+    {:ok, view, html} = live(conn, "/login")
 
-    assert html =~ "PasswordToggle"
-    assert html =~ "data-pw-toggle"
+    assert html =~ ~s(phx-click="toggle-password")
     assert html =~ "显示密码"
+    assert has_element?(view, "input#login-password-input[type='password']")
+
+    view |> element("button[aria-label='显示密码']") |> render_click()
+
+    assert has_element?(view, "input#login-password-input[type='text']")
+    assert has_element?(view, "button[aria-label='隐藏密码']")
   end
 
   test "visiting /logout with GET also signs out", %{conn: conn} do

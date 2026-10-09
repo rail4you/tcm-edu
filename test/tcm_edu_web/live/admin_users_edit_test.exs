@@ -99,6 +99,16 @@ defmodule TcmEduWeb.AdminUsersEditTest do
              class_group.id
   end
 
+  test "deletes a user", %{conn: conn, student: student} do
+    conn
+    |> visit("/admin/users")
+    |> click_button("#delete-user-#{student.id}", "删除")
+    |> click_button("#confirm-delete-btn", "确认删除")
+    |> assert_has("#flash-info")
+
+    assert {:error, _} = Ash.get(User, student.id, tenant: @tenant, authorize?: false)
+  end
+
   defp create_user(role, prefix) do
     User
     |> Ash.Changeset.for_create(

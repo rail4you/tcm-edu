@@ -42,7 +42,7 @@ defmodule TcmEduWeb.AdminComponents do
     ~H"""
     <div
       id="admin-shell"
-      class="drawer lg:drawer-open h-screen w-full overflow-hidden"
+      class="drawer lg:drawer-open h-screen w-full grid-rows-1 overflow-hidden"
       phx-hook="SidebarCollapse"
       data-collapse-key="tcm-admin-sidebar"
     >
@@ -61,13 +61,13 @@ defmodule TcmEduWeb.AdminComponents do
         })();
       </script>
 
-      <div class="drawer-content flex min-w-0 flex-col">
+      <div class="drawer-content flex min-h-0 min-w-0 flex-col">
         <.topbar
           current_admin={@current_admin}
           page_title={@page_title}
           current_page={@current_page}
         />
-        <main class="flex-1 overflow-y-auto bg-base-200/10">
+        <main class="min-h-0 flex-1 overflow-y-auto bg-base-200/10">
           <div class="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-6 p-4 lg:p-6">
             <div class="flex flex-wrap items-center justify-between gap-4">
               <div>
@@ -105,9 +105,13 @@ defmodule TcmEduWeb.AdminComponents do
           <.sidebar_menu current_admin={@current_admin} current_page={@current_page} />
           <div class="mt-auto border-t border-white/10 p-4 lg:is-drawer-close:flex lg:is-drawer-close:justify-center lg:is-drawer-close:p-2">
             <div class="flex items-center gap-2">
-              <span class="avatar avatar-placeholder shrink-0">
-                <span class="flex size-10 items-center justify-center rounded-full bg-primary text-sm text-primary-content">
-                  {admin_initial(@current_admin)}
+              <span class="size-10 shrink-0 overflow-hidden rounded-full bg-primary text-sm text-primary-content">
+                <span class="flex size-full items-center justify-center">
+                  <%= if avatar = Map.get(@current_admin, :avatar_url) do %>
+                    <img src={avatar} alt="头像" class="size-full object-cover" />
+                  <% else %>
+                    {admin_initial(@current_admin)}
+                  <% end %>
                 </span>
               </span>
               <div class="min-w-0 lg:is-drawer-close:hidden">
@@ -156,8 +160,12 @@ defmodule TcmEduWeb.AdminComponents do
         <.theme_menu portal={:admin} default_theme="light" />
         <div class="dropdown dropdown-end">
           <button tabindex="0" class="btn btn-ghost btn-circle avatar" aria-label="账户菜单">
-            <span class="flex size-10 items-center justify-center rounded-full bg-neutral text-sm text-neutral-content">
-              {admin_initial(@current_admin)}
+            <span class="flex size-10 items-center justify-center overflow-hidden rounded-full bg-neutral text-sm text-neutral-content">
+              <%= if avatar = Map.get(@current_admin, :avatar_url) do %>
+                <img src={avatar} alt="头像" class="size-full object-cover" />
+              <% else %>
+                {admin_initial(@current_admin)}
+              <% end %>
             </span>
           </button>
           <div
@@ -165,9 +173,13 @@ defmodule TcmEduWeb.AdminComponents do
             class="dropdown-content z-50 mt-2 w-60 overflow-hidden rounded-box bg-base-100 shadow-md"
           >
             <div class="flex items-center gap-3 px-4 py-3">
-              <span class="avatar avatar-placeholder shrink-0">
-                <span class="flex size-9 items-center justify-center rounded-full bg-primary text-xs text-primary-content">
-                  {admin_initial(@current_admin)}
+              <span class="size-9 shrink-0 overflow-hidden rounded-full bg-primary text-xs text-primary-content">
+                <span class="flex size-full items-center justify-center">
+                  <%= if avatar = Map.get(@current_admin, :avatar_url) do %>
+                    <img src={avatar} alt="头像" class="size-full object-cover" />
+                  <% else %>
+                    {admin_initial(@current_admin)}
+                  <% end %>
                 </span>
               </span>
               <div class="min-w-0">
@@ -186,16 +198,13 @@ defmodule TcmEduWeb.AdminComponents do
                 <.icon name="hero-user-circle" class="size-4" />
                 账户设置
               </.link>
-              <form action="/logout" method="post" id="admin-logout-form" class="contents">
-                <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
-                <button
-                  type="submit"
-                  class="flex w-full items-center gap-2 rounded-field px-3 py-2 text-sm text-error hover:bg-error/10"
-                >
-                  <.icon name="hero-arrow-right-start-on-rectangle" class="size-4" />
-                  退出登录
-                </button>
-              </form>
+              <.link
+                href="/logout"
+                class="flex w-full items-center gap-2 rounded-field px-3 py-2 text-sm text-error hover:bg-error/10"
+              >
+                <.icon name="hero-arrow-right-start-on-rectangle" class="size-4" />
+                退出登录
+              </.link>
             </div>
           </div>
         </div>

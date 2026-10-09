@@ -318,15 +318,15 @@ defmodule TcmEduWeb.AdminUsersLive do
     user = socket.assigns.deleting
 
     case Ash.destroy(user, actor: actor(socket), tenant: socket.assigns.tenant) do
-      {:ok, _} ->
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, ash_message(error))}
+
+      _ok ->
         {:noreply,
          socket
          |> assign(modal: nil, deleting: nil)
          |> put_flash(:info, "已删除 #{user.email}")
          |> load_users()}
-
-      {:error, error} ->
-        {:noreply, put_flash(socket, :error, ash_message(error))}
     end
   end
 

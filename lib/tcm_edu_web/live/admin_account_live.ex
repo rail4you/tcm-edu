@@ -135,7 +135,14 @@ defmodule TcmEduWeb.AdminAccountLive do
       end
 
     name = actor.full_name || actor.name || actor.email
-    Map.merge(admin, %{actor: actor, name: name, full_name: actor.full_name})
+    avatar = if is_binary(actor.avatar_url), do: actor.avatar_url, else: nil
+
+    Map.merge(admin, %{
+      actor: actor,
+      name: name,
+      full_name: actor.full_name,
+      avatar_url: avatar
+    })
   end
 
   defp load_avatar_url(%{role: "super_admin"}), do: nil

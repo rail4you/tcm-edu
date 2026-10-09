@@ -3,7 +3,7 @@
 //_Served as `/assets/app.js` (see `TcmEduWeb.static_paths/0`)._
 import { Socket } from "phoenix";
 import { LiveSocket } from "phoenix_live_view";
-import { SidebarCollapse, ThemeController, PasswordToggle, FlashAutoDismiss } from "./shell_hooks";
+import { SidebarCollapse, ThemeController, FlashAutoDismiss } from "./shell_hooks";
 
 const csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -11,7 +11,7 @@ const csrfToken = document
 
 const liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },
-  hooks: { SidebarCollapse, ThemeController, PasswordToggle, FlashAutoDismiss },
+  hooks: { SidebarCollapse, ThemeController, FlashAutoDismiss },
 });
 
 liveSocket.connect();

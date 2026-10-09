@@ -157,6 +157,7 @@ defmodule TcmEduWeb.AdminAuth do
            tenant: "public",
            email: to_string(admin.email),
            name: admin.name || to_string(admin.email),
+           avatar_url: nil,
            actor: admin
          }}
 
@@ -191,6 +192,7 @@ defmodule TcmEduWeb.AdminAuth do
            tenant: "public",
            email: to_string(admin.email),
            name: admin.name || to_string(admin.email),
+           avatar_url: nil,
            actor: admin
          }}
 
@@ -225,6 +227,8 @@ defmodule TcmEduWeb.AdminAuth do
   end
 
   defp user_to_admin(%User{} = user, tenant) do
+    user = load_avatar_url(user, tenant)
+
     %{
       id: user.id,
       role: "tenant_admin",
@@ -232,7 +236,18 @@ defmodule TcmEduWeb.AdminAuth do
       email: to_string(user.email),
       name: user.full_name || user.name || to_string(user.email),
       full_name: user.full_name,
+      avatar_url: avatar_url(user),
       actor: user
     }
   end
+
+  defp load_avatar_url(%User{} = user, tenant) do
+    case Ash.load(user, :avatar_url, tenant: tenant, authorize?: false) do
+      {:ok, loaded} -> loaded
+      _ -> user
+    end
+  end
+
+  defp avatar_url(%User{avatar_url: url}) when is_binary(url), do: url
+  defp avatar_url(_), do: nil
 end

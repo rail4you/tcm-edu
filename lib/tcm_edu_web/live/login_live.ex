@@ -48,6 +48,7 @@ defmodule TcmEduWeb.LoginLive do
      |> assign(:tenants, list_tenants())
      |> assign(:auth_error, nil)
      |> assign(:login_form, login_form(mode, %{}))
+     |> assign(:show_password, false)
      |> assign(:trigger_action, false)}
   end
 
@@ -68,6 +69,7 @@ defmodule TcmEduWeb.LoginLive do
      |> assign(:login_form, login_form(mode, %{}))
      |> assign(:trigger_action, false)
      |> assign(:auth_error, nil)
+     |> assign(:show_password, false)
      |> push_patch(to: mode_path(mode, role))}
   end
 
@@ -77,7 +79,12 @@ defmodule TcmEduWeb.LoginLive do
      |> assign(:role, role)
      |> assign(:trigger_action, false)
      |> assign(:auth_error, nil)
+     |> assign(:show_password, false)
      |> push_patch(to: mode_path(socket.assigns.mode, role))}
+  end
+
+  def handle_event("toggle-password", _params, socket) do
+    {:noreply, assign(socket, :show_password, not socket.assigns.show_password)}
   end
 
   def handle_event("validate", %{"login" => params}, socket) do
@@ -138,10 +145,14 @@ defmodule TcmEduWeb.LoginLive do
   attr :prompt, :string, default: nil
   attr :autocomplete, :string, default: nil
   attr :required, :boolean, default: false
+  attr :show_password, :boolean, default: false
 
   defp login_field(assigns) do
     field = assigns.form[assigns.field]
     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
+    input_type =
+      if assigns.type == "password" and assigns.show_password, do: "text", else: assigns.type
 
     assigns =
       assigns
@@ -150,9 +161,10 @@ defmodule TcmEduWeb.LoginLive do
       |> assign(:ferrors, Enum.map(errors, &TcmEduWeb.CoreComponents.translate_error/1))
       |> assign(:is_password, assigns.type == "password")
       |> assign(:is_select, not is_nil(assigns.options))
+      |> assign(:input_type, input_type)
 
     ~H"""
-    <div class="form-control w-full" id={@id} phx-hook={@is_password && "PasswordToggle"}>
+    <div class="form-control w-full" id={@id}>
       <label class="label" for={"#{@id}-input"}>
         <span class="label-text">{@label}</span>
       </label>
@@ -163,10 +175,10 @@ defmodule TcmEduWeb.LoginLive do
         />
         <input
           :if={!@is_select}
-          type={@type}
+          type={@input_type}
           id={"#{@id}-input"}
           name={@fname}
-          value={Phoenix.HTML.Form.normalize_value(@type, @fvalue)}
+          value={Phoenix.HTML.Form.normalize_value(@input_type, @fvalue)}
           class={[
             "input input-bordered w-full pl-10",
             @is_password && "pr-11",
@@ -189,12 +201,12 @@ defmodule TcmEduWeb.LoginLive do
         <button
           :if={@is_password}
           type="button"
-          data-pw-toggle
+          phx-click="toggle-password"
           class="btn btn-ghost btn-sm btn-square absolute right-1 top-1/2 -translate-y-1/2"
-          aria-label="显示密码"
+          aria-label={if @show_password, do: "隐藏密码", else: "显示密码"}
         >
-          <span data-eye><.icon name="hero-eye" class="size-5" /></span>
-          <span data-eye-off class="hidden"><.icon name="hero-eye-slash" class="size-5" /></span>
+          <span :if={!@show_password}><.icon name="hero-eye" class="size-5" /></span>
+          <span :if={@show_password}><.icon name="hero-eye-slash" class="size-5" /></span>
         </button>
       </div>
       <.error :for={msg <- @ferrors}>{msg}</.error>
