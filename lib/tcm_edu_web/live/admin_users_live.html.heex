@@ -109,8 +109,12 @@
                       </span>
                     </span>
                     <div class="min-w-0">
-                      <p class="truncate font-medium">{user.name || user.email}</p>
-                      <p class="truncate text-xs text-base-content/60">{user.email}</p>
+                      <p class="truncate font-medium">
+                        {user.full_name || user.name || user.email}
+                      </p>
+                      <p class="truncate text-xs text-base-content/60">
+                        登录名 {user.name || "—"} · {user.email}
+                      </p>
                     </div>
                   </div>
                 </td>
@@ -208,9 +212,33 @@
           class="mt-4 flex flex-col gap-3"
         >
           <.input field={@create_form[:email]} type="email" label="邮箱" placeholder="user@example.com" required />
-          <.input field={@create_form[:name]} type="text" label="姓名" placeholder="可选" />
+          <.input
+            field={@create_form[:name]}
+            type="text"
+            label="登录名"
+            placeholder="无 @ 时可用于登录"
+          />
+          <.input field={@create_form[:full_name]} type="text" label="姓名" placeholder="可选" />
+          <.input field={@create_form[:phone]} type="text" label="手机号" placeholder="可选" />
           <.input field={@create_form[:password]} type="password" label="初始密码" placeholder="至少 6 位" required />
           <.input field={@create_form[:role]} type="select" label="角色" options={role_options(@current_admin.role)} />
+
+          <div :if={selected_role(@create_form) == "teacher"} class="flex flex-col gap-3">
+            <.input field={@create_form[:job_title]} type="text" label="职称" placeholder="如：教授、讲师" />
+            <.input field={@create_form[:school]} type="text" label="所属院校" placeholder="可选" />
+            <.input field={@create_form[:bio]} type="textarea" label="个人简介" placeholder="可选" />
+          </div>
+
+          <div :if={selected_role(@create_form) == "student"} class="flex flex-col gap-3">
+            <.input field={@create_form[:student_no]} type="text" label="学号" placeholder="可选" />
+            <.input field={@create_form[:major]} type="text" label="专业" placeholder="可选" />
+            <.input
+              field={@create_form[:class_group_id]}
+              type="select"
+              label="班级"
+              options={class_options(@class_groups)}
+            />
+          </div>
           <div class="modal-action">
             <button type="button" class="btn btn-soft" phx-click="close-modal">取消</button>
             <.button type="submit" phx-disable-with="创建中..." class="btn-primary">创建</.button>
@@ -241,7 +269,8 @@
           phx-submit="save-edit"
           class="mt-4 flex flex-col gap-3"
         >
-          <.input field={@edit_form[:name]} type="text" label="姓名" placeholder="请输入姓名" />
+          <.input field={@edit_form[:name]} type="text" label="登录名" placeholder="请输入登录名" />
+          <.input field={@edit_form[:full_name]} type="text" label="姓名" placeholder="请输入姓名" />
           <.input field={@edit_form[:phone]} type="text" label="手机号" placeholder="可选" />
 
           <div class="form-control">

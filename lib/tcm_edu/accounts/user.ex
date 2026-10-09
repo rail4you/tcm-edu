@@ -49,6 +49,12 @@ defmodule TcmEdu.Accounts.User do
 
     attribute :name, :string do
       public?(true)
+      description("登录名（用户名；可用于无 @ 登录）")
+    end
+
+    attribute :full_name, :string do
+      public?(true)
+      description("姓名（真实姓名，展示用）")
     end
 
     attribute :phone, :string do
@@ -177,7 +183,20 @@ defmodule TcmEdu.Accounts.User do
         * 角色必须 ∈ `[:tenant_admin, :teacher, :student]`
       """)
 
-      accept([:email, :name, :phone, :role, :status, :class_group_id])
+      accept([
+        :email,
+        :name,
+        :full_name,
+        :phone,
+        :role,
+        :status,
+        :class_group_id,
+        :job_title,
+        :school,
+        :bio,
+        :major,
+        :student_no
+      ])
 
       argument :password, :string do
         allow_nil?(false)
@@ -204,7 +223,7 @@ defmodule TcmEdu.Accounts.User do
     update :update_profile do
       description("用户更新自己的资料（不能改 role/status/hashed_password）")
       require_atomic?(false)
-      accept([:name, :phone, :bio, :job_title, :school, :major])
+      accept([:name, :full_name, :phone, :bio, :job_title, :school, :major, :student_no])
     end
 
     update :admin_update_user do
@@ -213,6 +232,7 @@ defmodule TcmEdu.Accounts.User do
 
       accept([
         :name,
+        :full_name,
         :phone,
         :bio,
         :job_title,

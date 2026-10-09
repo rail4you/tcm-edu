@@ -102,9 +102,21 @@ defmodule TcmEduWeb.AdminUsersImportTest do
 
     rows = [
       AdminUserImport.headers(),
-      ["alice@example.com", "Alice 教师", "教师", "", "password123"],
-      ["bad-email", "", "学生", "", "password123"],
-      ["bob@example.com", "Bob 学生", "学生", "2024 级临床 1 班", "password123"]
+      ["alice@example.com", "alice", "Alice 教师", "", "教师", "", "教授", "", "", "", "password123"],
+      ["bad-email", "", "", "", "学生", "", "", "", "", "", "password123"],
+      [
+        "bob@example.com",
+        "bob",
+        "Bob 学生",
+        "",
+        "学生",
+        "2024 级临床 1 班",
+        "",
+        "",
+        "针灸推拿学",
+        "2024001",
+        "password123"
+      ]
     ]
 
     sheet = %Sheet{name: "用户", rows: rows}

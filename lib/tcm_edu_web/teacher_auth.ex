@@ -129,7 +129,7 @@ defmodule TcmEduWeb.TeacherAuth do
       role: to_string(user.role),
       tenant: tenant,
       email: to_string(user.email),
-      name: user.name || to_string(user.email),
+      name: user.full_name || user.name || to_string(user.email),
       actor: user
     }
   end

@@ -89,7 +89,7 @@ defmodule TcmEduWeb.AdminAccountLiveTest do
     |> assert_has("#flash-info")
     |> assert_has("p", "新名字")
 
-    assert Ash.get!(User, admin.id, tenant: @tenant, authorize?: false).name == "新名字"
+    assert Ash.get!(User, admin.id, tenant: @tenant, authorize?: false).full_name == "新名字"
   end
 
   test "rejects a wrong current password", %{conn: conn} do

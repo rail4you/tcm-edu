@@ -55,7 +55,7 @@ defmodule TcmEduWeb.AdminUsersLive do
      |> assign(:password_editing, nil)
      |> assign(:editing, nil)
      |> assign(:edit_form, nil)
-     |> assign(:create_form, create_form(actor(socket), tenant, %{}))
+     |> assign(:create_form, create_form(actor(socket), tenant, %{"role" => "student"}))
      |> assign(:role_form, nil)
      |> assign(:password_form, nil)
      |> assign(:import_modal, false)
@@ -170,7 +170,7 @@ defmodule TcmEduWeb.AdminUsersLive do
     {:noreply,
      assign(socket,
        modal: :create,
-       create_form: create_form(actor(socket), socket.assigns.tenant, %{})
+       create_form: create_form(actor(socket), socket.assigns.tenant, %{"role" => "student"})
      )}
   end
 
@@ -385,6 +385,11 @@ defmodule TcmEduWeb.AdminUsersLive do
   end
 
   attr :role, :atom, required: true
+
+  defp user_initial(%{full_name: full_name})
+       when is_binary(full_name) and byte_size(full_name) > 0 do
+    full_name |> String.trim() |> String.first() |> String.upcase()
+  end
 
   defp user_initial(%{name: name}) when is_binary(name) and byte_size(name) > 0 do
     name |> String.trim() |> String.first() |> String.upcase()
@@ -609,6 +614,13 @@ defmodule TcmEduWeb.AdminUsersLive do
 
   defp class_options(class_groups) do
     [{"未分班", ""} | Enum.map(class_groups, &{&1.name, &1.id})]
+  end
+
+  defp selected_role(form) do
+    case form[:role].value do
+      nil -> nil
+      value -> to_string(value)
+    end
   end
 
   defp ash_message(error) do

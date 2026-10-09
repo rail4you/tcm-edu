@@ -42,9 +42,15 @@
             phx-submit="save-profile"
             class="flex flex-col gap-3"
           >
-            <.input field={@profile_form[:name]} type="text" label="姓名" placeholder="请输入姓名" />
+            <.input
+              field={@profile_form[:name]}
+              type="text"
+              label={if @current_admin.role == "super_admin", do: "姓名", else: "登录名"}
+              placeholder="请输入登录名"
+            />
 
             <div :if={@current_admin.role != "super_admin"} class="flex flex-col gap-3">
+              <.input field={@profile_form[:full_name]} type="text" label="姓名" placeholder="请输入姓名" />
               <.input field={@profile_form[:phone]} type="text" label="手机号" placeholder="可选" />
               <.input field={@profile_form[:job_title]} type="text" label="职称" placeholder="如：教授、讲师" />
               <.input field={@profile_form[:school]} type="text" label="所属机构" placeholder="可选" />

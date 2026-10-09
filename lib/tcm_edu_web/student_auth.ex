@@ -131,7 +131,7 @@ defmodule TcmEduWeb.StudentAuth do
       role: "student",
       tenant: tenant,
       email: to_string(user.email),
-      name: user.name || to_string(user.email),
+      name: user.full_name || user.name || to_string(user.email),
       actor: user
     }
   end

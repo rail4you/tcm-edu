@@ -230,7 +230,8 @@ defmodule TcmEduWeb.AdminAuth do
       role: "tenant_admin",
       tenant: tenant,
       email: to_string(user.email),
-      name: user.name || to_string(user.email),
+      name: user.full_name || user.name || to_string(user.email),
+      full_name: user.full_name,
       actor: user
     }
   end

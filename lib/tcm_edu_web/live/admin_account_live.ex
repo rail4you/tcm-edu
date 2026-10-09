@@ -134,7 +134,8 @@ defmodule TcmEduWeb.AdminAccountLive do
         _ -> actor
       end
 
-    Map.merge(admin, %{actor: actor, name: actor.name || actor.email})
+    name = actor.full_name || actor.name || actor.email
+    Map.merge(admin, %{actor: actor, name: name, full_name: actor.full_name})
   end
 
   defp load_avatar_url(%{role: "super_admin"}), do: nil
